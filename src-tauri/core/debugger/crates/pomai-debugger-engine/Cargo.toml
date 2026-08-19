@@ -1,0 +1,47 @@
+[package]
+name = "pomai-debugger-engine"
+version = "0.1.0"
+edition = "2021"
+authors = ["Pomai Systems Team"]
+description = "Native Debug Adapter Protocol Engine for Pomai Studio"
+
+[dependencies]
+pomai-dap-protocol = { path = "../pomai-dap-protocol" }
+pomai-debugger-types = { path = "../pomai-debugger-types" }
+pomai-lldb-sys = { path = "../pomai-lldb-sys" }
+
+backtrace = "0.3"
+base64 = "0.22"
+bytes = "1.0"
+clap = { version = "4.5", default-features = false, features = ["std", "derive", "help", "usage"] }
+dotenvy = "0.15"
+env_logger = { version = "0.11", default-features = false }
+futures = "0.3"
+fuzzy-matcher = "0.3"
+lazy_static = "1.3"
+libc = "0.2"
+log = "0.4"
+nom = "8.0"
+nom-language = "0.1"
+parse_int = "0.5"
+regex-lite = "0.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["raw_value"] }
+tokio = { version = "1.0", features = ["full"] }
+tokio-util = { version = "0.7", features = ["codec"] }
+
+[target.'cfg(unix)'.dependencies]
+termios = "0.3"
+
+[target.'cfg(windows)'.dependencies]
+winapi = { version = "0.3", features = ["std", "fileapi", "namedpipeapi", "wincon", "errhandlingapi"] }
+
+[features]
+no_link_args = ["pomai-lldb-sys/no_link_args"]
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "pomai-debugger"
+path = "bin/main.rs"

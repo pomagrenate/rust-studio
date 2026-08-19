@@ -1,0 +1,13 @@
+[workspace]
+members = [
+  "crates/pomai-dap-protocol",
+  "crates/pomai-debugger-types",
+  "crates/pomai-lldb-sys",
+  "crates/pomai-debugger-engine",
+]
+resolver = "2"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1

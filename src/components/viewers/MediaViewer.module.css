@@ -1,0 +1,55 @@
+.mediaContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  background-color: var(--pm-bg-editor, #1e1e1e);
+  color: var(--pm-fg-default);
+  overflow: hidden;
+  font-family: var(--pm-font-ui, sans-serif);
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.mediaCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  background-color: var(--pm-bg-sidebar, #252526);
+  border: 1px solid var(--pm-border-default, #3c3c3c);
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  max-width: 680px;
+  width: 100%;
+}
+
+.mediaTitle {
+  font-size: 15px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  word-break: break-all;
+}
+
+.videoElement {
+  max-width: 100%;
+  max-height: 480px;
+  border-radius: 4px;
+  outline: none;
+  background-color: #000000;
+}
+
+.audioElement {
+  width: 100%;
+  outline: none;
+}
+
+.metaInfo {
+  font-size: 11.5px;
+  color: var(--pm-fg-subtle, #888888);
+}

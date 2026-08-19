@@ -1,0 +1,220 @@
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background-color: var(--pm-bg-panel, #ffffff);
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--pm-border-default, #e5e5e5);
+  background-color: var(--pm-bg-panel-header, #f3f3f3);
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.errorIcon {
+  font-size: var(--font-size-lg, 20px);
+  color: #cf222e;
+}
+
+.header h2 {
+  margin: 0;
+  font-size: var(--font-size-base, 16px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--pm-fg-default, #24292f);
+}
+
+.closeButton {
+  background: transparent;
+  border: none;
+  color: var(--pm-fg-subtle, #6e7781);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-lg, 18px);
+  transition: background-color 0.1s;
+}
+
+.closeButton:hover {
+  background-color: var(--pm-bg-hover, #f3f3f3);
+  color: var(--pm-fg-default, #24292f);
+}
+
+.content {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.message {
+  font-size: var(--font-size-sm, 13px);
+  line-height: 1.5;
+  color: var(--pm-fg-default, #24292f);
+  margin-bottom: 12px;
+}
+
+.details {
+  font-size: var(--font-size-sm, 12px);
+  color: var(--pm-fg-subtle, #6e7781);
+  background-color: var(--pm-bg-muted, #f6f8fa);
+  padding: 8px 12px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+
+.terminalSection {
+  margin-top: 16px;
+}
+
+.terminalToggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 1px solid var(--pm-border-input, #cecece);
+  color: var(--pm-fg-default, #24292f);
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: var(--font-size-sm, 12px);
+  font-weight: var(--font-weight-medium, 500);
+  transition: background-color 0.1s;
+}
+
+.terminalToggle:hover {
+  background-color: var(--pm-bg-hover, #f3f3f3);
+}
+
+.terminal {
+  margin-top: 8px;
+  border: 1px solid var(--pm-border-default, #e5e5e5);
+  border-radius: 4px;
+  overflow: hidden;
+  background-color: var(--pm-bg-tertiary, #1e1e1e);
+}
+
+.terminalBlock {
+  border-bottom: 1px solid var(--pm-border-default, #e5e5e5);
+}
+
+.terminalBlock:last-child {
+  border-bottom: none;
+}
+
+.terminalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background-color: var(--pm-bg-secondary, #252526);
+  border-bottom: 1px solid var(--pm-border-default, #e5e5e5);
+}
+
+.terminalHeader span {
+  font-size: var(--font-size-xs, 11px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--pm-fg-subtle, #cccccc);
+  text-transform: uppercase;
+}
+
+.copyButton {
+  background: transparent;
+  border: none;
+  color: var(--pm-fg-subtle, #cccccc);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-sm, 12px);
+  transition: color 0.1s;
+}
+
+.copyButton:hover {
+  color: var(--pm-fg-default, #ffffff);
+}
+
+.terminalContent {
+  padding: 8px 12px;
+  font-family: var(--font-mono, "Consolas", "Monaco", monospace);
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--pm-fg-default, #cccccc);
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.errorContent {
+  color: #ff6b68;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--pm-border-default, #e5e5e5);
+}
+
+.retryButton,
+.closeModalButton {
+  padding: 8px 16px;
+  font-size: var(--font-size-sm, 13px);
+  font-weight: var(--font-weight-medium, 500);
+  border-radius: 4px;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.1s;
+}
+
+.retryButton {
+  background-color: var(--pm-accent, #005fb8);
+  color: #ffffff;
+}
+
+.retryButton:hover {
+  background-color: var(--pm-accent-hover, #0069cc);
+}
+
+.closeModalButton {
+  background-color: var(--pm-bg-secondary, #f3f3f3);
+  color: var(--pm-fg-default, #24292f);
+}
+
+.closeModalButton:hover {
+  background-color: var(--pm-bg-hover, #eaeaea);
+}

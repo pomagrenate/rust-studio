@@ -1,0 +1,275 @@
+/**
+ * EditorLayout.module.css — Rust Studio Floating Island Layout
+ */
+
+.layout {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  background-color: var(--pm-bg-app, #0d0d0f);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.navbarWrapper {
+  flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.mainContainer {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.activityBarWrapper {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--pm-bg-activitybar, #121316);
+  border-right: 1px solid var(--pm-border-default, #282b33);
+}
+
+/* ── Primary Sidebar (Floating Pane) ── */
+.sidebarWrapper {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: transparent;
+  position: relative;
+  box-sizing: border-box;
+  overflow: hidden;
+  z-index: 5;
+}
+
+.sidebarResizer {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 50;
+  user-select: none;
+  transition: background-color 0.15s ease;
+}
+
+.sidebarResizer:hover,
+.sidebarResizer.isResizing {
+  background-color: var(--pm-accent-rust, #f74c00);
+}
+
+/* ── Editor Canvas: Floating Island ── */
+.editorArea {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: calc(100% - 16px);
+  margin: 8px 8px 8px 0;
+  background-color: var(--pm-bg-editor, #14161b);
+  border: 1px solid var(--pm-border-default, #282b33);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  position: relative;
+  box-sizing: border-box;
+  z-index: 1;
+}
+
+.editorContentWrapper {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.splitEditorContainer {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.splitEditorPane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 160px;
+  overflow: hidden;
+  position: relative;
+  box-sizing: border-box;
+  border-right: 1px solid var(--pm-border-default, #282b33);
+}
+
+.splitEditorPane:last-child {
+  border-right: none;
+}
+
+/* ── Ember Resizer Divider Between Split Groups ── */
+.editorGroupResizer {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 40;
+  user-select: none;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.editorGroupResizer:hover,
+.editorGroupResizer.isResizing {
+  background-color: #f74c00;
+  box-shadow: 0 0 10px rgba(247, 76, 0, 0.7);
+}
+
+/* ── Bottom Tool Panels (Build, Terminal, Problems, Debug...) ── */
+.terminalPanelWrapper {
+  height: 260px;
+  min-height: 150px;
+  max-height: 60%;
+  flex-shrink: 0;
+  width: 100%;
+  border-top: 1px solid var(--pm-border-default, #282b33);
+  background-color: var(--pm-bg-editor, #14161b);
+  overflow: hidden;
+}
+
+/* ── Global Editor Toolbar Actions ── */
+.globalEditorToolbar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  z-index: 50;
+  padding-right: 8px;
+  background: transparent;
+  pointer-events: none;
+}
+
+.globalToolbarSpacer {
+  flex: 1;
+}
+
+.globalToolbarActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  pointer-events: auto;
+}
+
+.globalToolbarBtn {
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pm-fg-subtle, #8b949e);
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+
+.globalToolbarBtn:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: var(--pm-fg-default, #e5e5e5);
+}
+
+.tabActionsWrapper {
+  position: relative;
+}
+
+.moreDropdownMenu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  width: 240px;
+  background-color: var(--pm-bg-sidebar, #121316);
+  border: 1px solid var(--pm-border-default, #282b33);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  border-radius: 6px;
+  padding: 4px 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  animation: dropdownFade 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dropdownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 6px 12px 6px 28px;
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  color: var(--pm-fg-default, #d8dee9);
+  font-size: 12.5px;
+  position: relative;
+  transition: background-color 0.1s ease;
+}
+
+.menuItem:hover {
+  background-color: rgba(247, 76, 0, 0.15);
+  color: #f74c00;
+}
+
+.menuCheck {
+  position: absolute;
+  left: 8px;
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+}
+
+.menuLabel {
+  flex: 1;
+}
+
+.menuShortcut {
+  color: var(--pm-fg-subtle, #8b949e);
+  font-size: 11px;
+}
+
+.menuItem:hover .menuShortcut {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.menuSeparator {
+  height: 1px;
+  background-color: var(--pm-border-default, #282b33);
+  margin: 4px 0;
+}

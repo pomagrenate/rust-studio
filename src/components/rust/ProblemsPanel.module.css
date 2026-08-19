@@ -1,0 +1,538 @@
+/**
+ * ProblemsPanel.module.css — JetBrains RustRover Style Problems Tool Window
+ * Fully responsive to Light and Dark themes via useTheme CSS variables.
+ */
+
+.problemsContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background-color: var(--pm-bg-panel, #ffffff);
+  color: var(--pm-fg-default, #24292f);
+  font-family: var(--font-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+  font-size: var(--font-size-sm, 13px);
+  overflow: hidden;
+  user-select: none;
+  border-top: 1px solid var(--pm-border-panel, #d8d8d8);
+}
+
+/* ── Header Subtabs Bar ── */
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 32px;
+  min-height: 32px;
+  max-height: 32px;
+  background-color: var(--pm-bg-panel-header, #f3f3f3);
+  border-bottom: 1px solid var(--pm-border-panel, #d8d8d8);
+  padding: 0 8px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.headerTitle {
+  font-size: var(--font-size-sm, 12.5px);
+  font-weight: var(--font-weight-bold, 700);
+  color: var(--pm-fg-default, #24292f);
+  padding: 0 6px;
+}
+
+.subTabsList {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.subTab {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--pm-fg-muted, #57606a);
+  font-size: var(--font-size-sm, 12px);
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.1s ease;
+}
+
+.subTab:hover {
+  background-color: rgba(128, 128, 128, 0.1);
+  color: var(--pm-fg-default, #24292f);
+}
+
+.subTabActive {
+  background-color: var(--pm-bg-tab-active, #ffffff) !important;
+  color: var(--pm-fg-default, #24292f) !important;
+  border-color: var(--pm-border-panel, #d8d8d8) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+.tabBadge {
+  background-color: var(--pm-accent, #005fb8);
+  color: #ffffff;
+  font-size: 10.5px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.iconBtn {
+  all: unset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  color: var(--pm-fg-muted, #57606a);
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+
+.iconBtn:hover {
+  background-color: rgba(128, 128, 128, 0.12);
+  color: var(--pm-fg-default, #24292f);
+}
+
+/* ── Panel Body Split ── */
+.panelBody {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  background-color: var(--pm-bg-panel, #ffffff);
+}
+
+/* ── Left Action Bar ── */
+.leftActionBar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 36px;
+  background-color: var(--pm-bg-panel-header, #f3f3f3);
+  border-right: 1px solid var(--pm-border-panel, #d8d8d8);
+  padding: 8px 0;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.actionToolBtn {
+  all: unset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  color: var(--pm-fg-muted, #57606a);
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.12s ease;
+}
+
+.actionToolBtn:hover {
+  background-color: rgba(128, 128, 128, 0.15);
+  color: var(--pm-fg-default, #24292f);
+}
+
+.actionToolBtnActive {
+  background-color: var(--pm-accent, #005fb8);
+  color: #ffffff !important;
+}
+
+.actionToolBtnActive:hover {
+  background-color: var(--pm-accent, #004a91);
+}
+
+/* ── Content View Area ── */
+.contentArea {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  overflow-y: auto;
+  padding: 4px 0;
+  background-color: var(--pm-bg-panel, #ffffff);
+}
+
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 140px;
+  color: var(--pm-fg-muted, #57606a);
+  font-size: var(--font-size-sm, 13px);
+}
+
+/* ── File Problem Group ── */
+.fileGroup {
+  margin-bottom: 4px;
+}
+
+.fileGroupHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background-color: rgba(128, 128, 128, 0.05);
+  cursor: pointer;
+  font-size: var(--font-size-sm, 12px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--pm-fg-default, #24292f);
+  border-bottom: 1px solid rgba(128, 128, 128, 0.08);
+}
+
+.fileGroupHeader:hover {
+  background-color: rgba(128, 128, 128, 0.1);
+}
+
+.fileName {
+  color: var(--pm-fg-default, #24292f);
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+.filePathSubtle {
+  color: var(--pm-fg-muted, #57606a);
+  font-weight: 400;
+  font-size: var(--font-size-xs, 11px);
+  margin-left: 4px;
+}
+
+.badgePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10.5px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  margin-left: auto;
+}
+
+.badgePillError {
+  background-color: rgba(207, 34, 46, 0.15);
+  color: #cf222e;
+}
+
+.badgePillWarning {
+  background-color: rgba(154, 103, 0, 0.15);
+  color: #9a6700;
+}
+
+/* ── Clippy Specific Styles ── */
+.clippyProgress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-xs, 11px);
+  color: var(--pm-fg-muted, #57606a);
+  padding: 4px 8px;
+  background: rgba(128, 128, 128, 0.08);
+  border-radius: 4px;
+}
+
+.applyFixBtn {
+  margin-top: 8px;
+  padding: 4px 12px;
+  font-size: var(--font-size-xs, 11px);
+  background: #1a7f37;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.applyFixBtn:hover {
+  background: #1c8e3e;
+}
+
+.applyFixBtn:active {
+  background: #176f31;
+}
+
+/* ── Problem Item Row ── */
+.problemRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 5px 12px 5px 32px;
+  cursor: pointer;
+  font-size: var(--font-size-sm, 12px);
+  line-height: 1.45;
+  transition: background-color 0.1s ease;
+  border-left: 2px solid transparent;
+}
+
+.problemRow:hover {
+  background-color: rgba(128, 128, 128, 0.08);
+}
+
+.problemRowActive {
+  background-color: rgba(0, 95, 184, 0.12) !important;
+  border-left-color: var(--pm-accent, #005fb8);
+}
+
+.problemIconError {
+  color: #cf222e;
+  font-size: 14px;
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+
+.problemIconWarning {
+  color: #9a6700;
+  font-size: 14px;
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+
+.problemIconInfo {
+  color: var(--pm-accent, #005fb8);
+  font-size: 14px;
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+
+.problemMessage {
+  flex: 1;
+  color: var(--pm-fg-default, #24292f);
+}
+
+.problemCode {
+  color: var(--pm-fg-muted, #57606a);
+  font-family: var(--font-mono, "JetBrains Mono", Consolas, monospace);
+  font-size: var(--font-size-xs, 11px);
+  margin-left: 6px;
+}
+
+.problemLocation {
+  color: var(--pm-fg-muted, #57606a);
+  font-size: var(--font-size-xs, 11px);
+  font-family: var(--font-mono, "JetBrains Mono", Consolas, monospace);
+  margin-left: 8px;
+  white-space: nowrap;
+}
+
+/* ── Pomai Linter (Semgrep Core) View ── */
+.linterContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0;
+  overflow: hidden;
+}
+
+.linterToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background-color: var(--pm-bg-panel-header, #f3f3f3);
+  border-bottom: 1px solid var(--pm-border-panel, #d8d8d8);
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.linterToolbarLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.runScanBtn {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background-color: var(--pm-accent, #005fb8);
+  color: #ffffff;
+  border-radius: 4px;
+  font-size: var(--font-size-sm, 12px);
+  font-weight: var(--font-weight-semibold, 600);
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.runScanBtn:hover {
+  opacity: 0.9;
+}
+
+.presetSelect {
+  padding: 3px 8px;
+  font-size: var(--font-size-sm, 12px);
+  border-radius: 4px;
+  border: 1px solid var(--pm-border-panel, #d8d8d8);
+  background-color: var(--pm-bg-panel, #ffffff);
+  color: var(--pm-fg-default, #24292f);
+  outline: none;
+  cursor: pointer;
+}
+
+.filterPillsGroup {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background-color: rgba(128, 128, 128, 0.08);
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.filterPillBtn {
+  all: unset;
+  font-size: var(--font-size-xs, 11px);
+  padding: 2px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--pm-fg-muted, #57606a);
+  transition: all 0.1s ease;
+}
+
+.filterPillBtn:hover {
+  color: var(--pm-fg-default, #24292f);
+}
+
+.filterPillBtnActive {
+  background-color: var(--pm-bg-panel, #ffffff);
+  color: var(--pm-fg-default, #24292f) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+.linterSearchInput {
+  padding: 3px 8px;
+  font-size: var(--font-size-sm, 12px);
+  border-radius: 4px;
+  border: 1px solid var(--pm-border-panel, #d8d8d8);
+  background-color: var(--pm-bg-panel, #ffffff);
+  color: var(--pm-fg-default, #24292f);
+  outline: none;
+  width: 140px;
+}
+
+.linterMetricsBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 14px;
+  background-color: rgba(128, 128, 128, 0.04);
+  border-bottom: 1px solid var(--pm-border-panel, #d8d8d8);
+  font-size: 11.5px;
+  color: var(--pm-fg-muted, #57606a);
+}
+
+.metricsBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 500;
+}
+
+.linterFindingsList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.findingCard {
+  border: 1px solid var(--pm-border-panel, #d8d8d8);
+  border-radius: 5px;
+  padding: 8px 12px;
+  background-color: var(--pm-bg-panel, #ffffff);
+  cursor: pointer;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.findingCard:hover {
+  border-color: var(--pm-accent, #005fb8);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.findingCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.findingCheckId {
+  font-family: var(--font-mono, monospace);
+  font-size: var(--font-size-xs, 11px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--pm-accent, #005fb8);
+  background-color: rgba(0, 95, 184, 0.08);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.findingSeverityBadge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+.severityError {
+  background-color: rgba(207, 34, 46, 0.15);
+  color: #cf222e;
+}
+
+.severityWarning {
+  background-color: rgba(154, 103, 0, 0.15);
+  color: #9a6700;
+}
+
+.severityInfo {
+  background-color: rgba(0, 95, 184, 0.15);
+  color: #005fb8;
+}
+
+.findingLocation {
+  font-family: var(--font-mono, monospace);
+  font-size: var(--font-size-xs, 11px);
+  color: var(--pm-fg-muted, #57606a);
+}
+
+.findingMessage {
+  font-size: var(--font-size-sm, 12.5px);
+  color: var(--pm-fg-default, #24292f);
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
+.findingSnippet {
+  background-color: var(--pm-bg-panel-header, #f3f3f3);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-family: var(--font-mono, monospace);
+  font-size: 11.5px;
+  color: var(--pm-syntax-variable, #001080);
+  border-left: 3px solid var(--pm-accent, #005fb8);
+  white-space: pre-wrap;
+  word-break: break-all;
+}

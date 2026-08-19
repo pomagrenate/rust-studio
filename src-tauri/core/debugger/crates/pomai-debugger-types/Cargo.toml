@@ -1,0 +1,11 @@
+[package]
+name = "pomai-debugger-types"
+version = "0.1.0"
+edition = "2021"
+authors = ["Pomai Systems Team"]
+description = "Debugger types and schema definitions for Pomai Studio"
+
+[dependencies]
+schemars = "1.0.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"

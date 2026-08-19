@@ -1,0 +1,97 @@
+.imageViewerContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background-color: var(--pm-bg-editor, #1e1e1e);
+  color: var(--pm-fg-default);
+  overflow: hidden;
+  user-select: none;
+  font-family: var(--pm-font-ui, sans-serif);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  background-color: var(--pm-bg-sidebar, #252526);
+  border-bottom: 1px solid var(--pm-border-default, #333333);
+  font-size: 11.5px;
+  min-height: 30px;
+  box-sizing: border-box;
+}
+
+.toolbarBtn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 1px solid var(--pm-border-default, #3c3c3c);
+  border-radius: 3px;
+  padding: 2px 8px;
+  color: var(--pm-fg-default);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.toolbarBtn:hover {
+  background-color: var(--pm-bg-sidebar-hover, rgba(255, 255, 255, 0.08));
+}
+
+.zoomLabel {
+  font-family: monospace;
+  font-size: 11px;
+  min-width: 45px;
+  text-align: center;
+  color: var(--pm-fg-subtle, #888888);
+}
+
+.infoDivider {
+  width: 1px;
+  height: 16px;
+  background-color: var(--pm-border-default, #3c3c3c);
+  margin: 0 4px;
+}
+
+.infoBadge {
+  color: var(--pm-fg-subtle, #888888);
+  font-size: 11px;
+  margin-left: auto;
+}
+
+.canvasViewport {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  /* Checkerboard pattern for alpha transparency */
+  background-image: 
+    linear-gradient(45deg, rgba(0,0,0,0.08) 25%, transparent 25%), 
+    linear-gradient(-45deg, rgba(0,0,0,0.08) 25%, transparent 25%), 
+    linear-gradient(45deg, transparent 75%, rgba(0,0,0,0.08) 75%), 
+    linear-gradient(-45deg, transparent 75%, rgba(0,0,0,0.08) 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+}
+
+.canvasViewport:active {
+  cursor: grabbing;
+}
+
+.imageWrapper {
+  display: inline-block;
+  transform-origin: center center;
+  transition: transform 0.05s ease-out;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.imageElement {
+  display: block;
+  max-width: none;
+  max-height: none;
+  pointer-events: none;
+}

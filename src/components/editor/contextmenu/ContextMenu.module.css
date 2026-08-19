@@ -1,0 +1,152 @@
+/**
+ * ContextMenu.module.css - Rust Studio Theme Support
+ * Uses CSS variables for theme-aware styling with Rust-orange accents
+ */
+
+.contextMenu {
+  position: fixed;
+  background: var(--pm-bg-panel, #ffffff);
+  border: 1px solid var(--pm-border-default, #d0d7de);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(140, 149, 159, 0.2), 0 2px 6px rgba(140, 149, 159, 0.15);
+  min-width: 220px;
+  max-width: 320px;
+  max-height: 420px;
+  overflow-y: auto;
+  z-index: 999999;
+  padding: 4px;
+  font-size: var(--font-size-sm, 13px);
+  font-family: var(--font-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "JetBrains Mono", Helvetica, Arial, sans-serif);
+  color: var(--pm-fg-default, #1f2328);
+  box-sizing: border-box;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  padding: 5px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.08s ease, color 0.08s ease;
+  font-size: var(--font-size-sm, 12.5px);
+  line-height: 20px;
+}
+
+/* Hover & Keyboard Active with Rust Accents */
+.menuItem:hover:not(.disabled),
+.menuItem.active:not(.disabled) {
+  background: rgba(247, 76, 0, 0.1);
+  color: #d44300;
+}
+
+.menuItem:hover:not(.disabled) .menuItemIcon,
+.menuItem.active:not(.disabled) .menuItemIcon {
+  color: #f74c00;
+}
+
+.menuItem:hover:not(.disabled) .menuItemShortcut,
+.menuItem.active:not(.disabled) .menuItemShortcut {
+  color: #d44300;
+  opacity: 0.9;
+}
+
+.menuItem.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.menuItemContent {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 8px;
+}
+
+.menuItemIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  font-size: 15px;
+  color: var(--pm-fg-muted, #656d76);
+  flex-shrink: 0;
+  transition: color 0.08s ease;
+}
+
+.menuItemLabel {
+  flex: 1;
+  color: inherit;
+  font-weight: var(--font-weight-medium, 500);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.1px;
+}
+
+.menuItemShortcut {
+  color: var(--pm-fg-muted, #656d76);
+  font-size: var(--font-size-xs, 11.5px);
+  margin-left: 16px;
+  font-family: var(--font-mono, "JetBrains Mono", Consolas, monospace);
+  font-weight: var(--font-weight-medium, 500);
+  letter-spacing: -0.2px;
+}
+
+.submenuIndicator {
+  margin-left: 8px;
+  font-size: var(--font-size-sm, 13px);
+  color: var(--pm-fg-muted, #656d76);
+  flex-shrink: 0;
+}
+
+.separator {
+  height: 1px;
+  background: var(--pm-border-default, #e1e4e8);
+  margin: 4px 2px;
+}
+
+/* ── Submenu Panel ───────────────────────────────────────────────────────── */
+
+.submenu {
+  position: fixed;
+  background: var(--pm-bg-panel, #ffffff);
+  border: 1px solid var(--pm-border-default, #d0d7de);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(140, 149, 159, 0.25), 0 2px 6px rgba(140, 149, 159, 0.15);
+  min-width: 200px;
+  max-width: 300px;
+  max-height: 400px;
+  overflow-y: auto;
+  z-index: 1000000;
+  padding: 4px;
+  font-size: var(--font-size-sm, 13px);
+  font-family: var(--font-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "JetBrains Mono", Helvetica, Arial, sans-serif);
+  color: var(--pm-fg-default, #1f2328);
+  box-sizing: border-box;
+}
+
+/* ── Custom Scrollbar (Light & Clean) ────────────────────────────────────── */
+
+.contextMenu::-webkit-scrollbar,
+.submenu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.contextMenu::-webkit-scrollbar-track,
+.submenu::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.contextMenu::-webkit-scrollbar-thumb,
+.submenu::-webkit-scrollbar-thumb {
+  background: var(--pm-border-default, #d0d7de);
+  border-radius: 3px;
+}
+
+.contextMenu::-webkit-scrollbar-thumb:hover,
+.submenu::-webkit-scrollbar-thumb:hover {
+  background: var(--pm-border-panel, #afb8c1);
+}

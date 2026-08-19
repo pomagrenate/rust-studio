@@ -1,0 +1,12 @@
+[package]
+name = "pomai-dap-protocol"
+version = "0.1.0"
+edition = "2021"
+authors = ["Pomai Systems Team"]
+description = "Debug Adapter Protocol definitions for Pomai Studio"
+
+[dependencies]
+pomai-debugger-types = { path = "../pomai-debugger-types" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+typify = "0.4.2"

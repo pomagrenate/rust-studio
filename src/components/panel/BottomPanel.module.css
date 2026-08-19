@@ -1,0 +1,354 @@
+/**
+ * BottomPanel.module.css — JetBrains RustRover Style Terminal Tool Window
+ * Fully Theme-Agnostic (Light & Dark Theme responsive via useTheme.ts CSS variables).
+ */
+
+.panelContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background-color: var(--pm-bg-panel, #ffffff);
+  color: var(--pm-fg-default, #24292f);
+  border-top: 1px solid var(--pm-border-panel, #d8d8d8);
+  position: relative;
+  overflow: hidden;
+}
+
+.panelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 32px;
+  min-height: 32px;
+  max-height: 32px;
+  background-color: var(--pm-bg-panel-header, #f3f3f3);
+  border-bottom: 1px solid var(--pm-border-panel, #d8d8d8);
+  padding: 0 8px;
+  user-select: none;
+  box-sizing: border-box;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
+
+.titleBadge {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--pm-fg-default, #24292f);
+  margin-right: 6px;
+  letter-spacing: 0.2px;
+}
+
+.tabList {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tabItem {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--pm-fg-muted, #57606a);
+  background: transparent;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.1s ease;
+}
+
+.tabItem:hover {
+  background-color: rgba(128, 128, 128, 0.1);
+  color: var(--pm-fg-default, #24292f);
+}
+
+.tabItemActive {
+  background-color: var(--pm-bg-tab-active, #ffffff);
+  color: var(--pm-fg-default, #24292f);
+  border-color: var(--pm-border-panel, #d8d8d8);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  font-weight: 600;
+}
+
+.tabCloseBtn {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  cursor: pointer;
+  opacity: 0.6;
+  font-size: 11px;
+  transition: opacity 0.1s, background-color 0.1s;
+}
+
+.tabCloseBtn:hover {
+  opacity: 1;
+  background-color: rgba(128, 128, 128, 0.2);
+  color: var(--pm-fg-default, #24292f);
+}
+
+.addControls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  position: relative;
+}
+
+.tabAddBtn, .tabDropdownBtn {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 22px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--pm-fg-muted, #57606a);
+  transition: all 0.1s ease;
+}
+
+.tabAddBtn {
+  width: 22px;
+  font-size: 14px;
+}
+
+.tabDropdownBtn {
+  width: 18px;
+  font-size: 12px;
+}
+
+.tabAddBtn:hover, .tabDropdownBtn:hover {
+  background-color: rgba(128, 128, 128, 0.12);
+  color: var(--pm-fg-default, #24292f);
+}
+
+.profileDropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  background-color: var(--pm-bg-panel, #ffffff);
+  border: 1px solid var(--pm-border-panel, #d8d8d8);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  min-width: 200px;
+  padding: 4px 0;
+  z-index: 1000;
+}
+
+.profileItem {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 14px;
+  box-sizing: border-box;
+  color: var(--pm-fg-default, #24292f);
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: background-color 0.1s ease, color 0.1s ease;
+}
+
+.profileItem:hover {
+  background-color: var(--pm-accent, #005fb8);
+  color: #ffffff !important;
+}
+
+.profileItem:hover svg {
+  color: #ffffff !important;
+}
+
+.profileSeparator {
+  height: 1px;
+  background-color: var(--pm-border-panel, #d8d8d8);
+  margin: 4px 0;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  position: relative;
+}
+
+.actionBtn {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--pm-fg-muted, #57606a);
+  font-size: 14px;
+  transition: all 0.1s ease;
+}
+
+.actionBtn:hover, .actionBtnActive {
+  background-color: rgba(128, 128, 128, 0.12);
+  color: var(--pm-fg-default, #24292f);
+}
+
+.moreActionsDropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background-color: var(--pm-bg-panel, #ffffff);
+  border: 1px solid var(--pm-border-panel, #d8d8d8);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  min-width: 220px;
+  padding: 4px 0;
+  z-index: 1000;
+}
+
+.panelBody {
+  flex: 1;
+  width: 100%;
+  height: calc(100% - 32px);
+  position: relative;
+  background-color: var(--pm-bg-panel, #ffffff);
+  overflow: hidden;
+}
+
+/* ── Split Panes Container ── */
+.splitPanesContainer {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+}
+
+.splitHorizontal {
+  flex-direction: row;
+}
+
+.splitVertical {
+  flex-direction: column;
+}
+
+.paneWrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 60px;
+  min-height: 40px;
+  background-color: var(--pm-bg-panel, #ffffff);
+}
+
+.paneHeader {
+  height: 24px;
+  min-height: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 8px;
+  background-color: var(--pm-bg-panel-header, #f3f3f3);
+  border-bottom: 1px solid var(--pm-border-panel, #d8d8d8);
+  font-size: 11.5px;
+  color: var(--pm-fg-muted, #57606a);
+  user-select: none;
+}
+
+.paneHeaderActive {
+  background-color: var(--pm-bg-tab-active, #ffffff);
+  color: var(--pm-fg-default, #24292f);
+  font-weight: 600;
+}
+
+.paneTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.paneActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.paneActionBtn {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--pm-fg-muted, #57606a);
+  font-size: 12px;
+  transition: all 0.1s ease;
+}
+
+.paneActionBtn:hover {
+  background-color: rgba(128, 128, 128, 0.15);
+  color: var(--pm-fg-default, #24292f);
+}
+
+.resizerHorizontal {
+  width: 5px;
+  cursor: col-resize;
+  background-color: var(--pm-border-panel, #d8d8d8);
+  transition: background-color 0.15s ease;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.resizerHorizontal:hover, .resizerHorizontal.isResizing {
+  background-color: var(--pm-accent, #005fb8);
+}
+
+.resizerVertical {
+  height: 5px;
+  cursor: row-resize;
+  background-color: var(--pm-border-panel, #d8d8d8);
+  transition: background-color 0.15s ease;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.resizerVertical:hover, .resizerVertical.isResizing {
+  background-color: var(--pm-accent, #005fb8);
+}
+
+.terminalCanvas {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  padding: 4px 8px;
+  box-sizing: border-box;
+  background-color: var(--pm-bg-panel, #ffffff);
+  overflow: hidden;
+  position: relative;
+}
+
+/* xterm overrides */
+.terminalCanvas :global(.xterm) {
+  height: 100%;
+  padding: 2px 0;
+}
+
+.terminalCanvas :global(.xterm-viewport) {
+  background-color: transparent !important;
+}

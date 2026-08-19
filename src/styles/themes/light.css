@@ -1,0 +1,105 @@
+/**
+ * Light Theme — pomai-studio (DEFAULT THEME)
+ *
+ * All values are CSS custom properties scoped to [data-theme="light"] and :root.
+ * Switching themes = one attribute flip on <html>.
+ */
+
+[data-theme="light"],
+:root {
+  /* ─── Chrome / Shell ───────────────────────────────────────────────── */
+  --pm-bg-app:                #f3f3f3;   /* window background                */
+  --pm-bg-activitybar:        #f8f8f8;   /* activity bar on left             */
+  --pm-bg-activitybar-active: #ffffff;
+  --pm-bg-sidebar:            #f3f3f3;   /* file-explorer & search panel     */
+  --pm-bg-sidebar-hover:      #e8e8e8;   /* hovered tree item                */
+  --pm-bg-sidebar-active:     #e0e0e0;   /* selected tree item               */
+  --pm-bg-panel:              #ffffff;   /* bottom panel background          */
+  --pm-bg-panel-header:       #f3f3f3;   /* bottom panel tab header          */
+  --pm-bg-navbar:             #f8f8f8;   /* top header background            */
+  --pm-bg-navbar-hover:       rgba(0, 0, 0, 0.06);
+  --pm-bg-statusbar:          #005fb8;   /* bottom bar (VS Code light blue)  */
+  --pm-bg-tab-active:         #ffffff;   /* focused tab                      */
+  --pm-bg-tab-inactive:       #ececec;   /* unfocused tab                    */
+  --pm-bg-tab-hover:          #e0e0e0;
+
+  /* ─── Inputs & Controls ────────────────────────────────────────────── */
+  --pm-bg-input:              #ffffff;
+  --pm-border-input:          #cecece;
+  --pm-border-input-focus:    #005fb8;
+
+  /* ─── Editor Surface ────────────────────────────────────────────────── */
+  --pm-bg-editor:             #ffffff;   /* main editing area                */
+  --pm-bg-editor-gutter:      #fcfcfc;   /* line-number column               */
+  --pm-bg-selection:          rgba(173, 214, 255, 0.6); /* text selection   */
+  --pm-bg-line-active:        rgba(0, 0, 0, 0.04);      /* cursor line tint */
+  --pm-bg-line-hover:         rgba(0, 0, 0, 0.02);
+
+  /* ─── Borders / Dividers ────────────────────────────────────────────── */
+  --pm-border-default:        #e5e5e5;
+  --pm-border-panel:          #d8d8d8;
+  --pm-border-tab:            #d0d0d0;
+  --pm-border-focus:          #005fb8;
+  --pm-border-gutter:         #e8e8e8;
+
+  /* ─── Text ──────────────────────────────────────────────────────────── */
+  --pm-fg-default:            #24292f;   /* primary text                     */
+  --pm-fg-muted:              #57606a;   /* comments, placeholder            */
+  --pm-fg-subtle:             #6e7781;   /* line numbers, breadcrumbs        */
+  --pm-fg-on-accent:          #ffffff;   /* text on coloured backgrounds     */
+  --pm-fg-statusbar:          #ffffff;
+
+  /* ─── Syntax Tokens ─────────────────────────────────────────────────── */
+  --pm-syntax-keyword:        #af00db;   /* import, const, function …       */
+  --pm-syntax-string:         #a31515;   /* "hello"                         */
+  --pm-syntax-number:         #098658;   /* 42, 3.14                        */
+  --pm-syntax-comment:        #008000;   /* // line comments                 */
+  --pm-syntax-fn:             #795e26;   /* function names                  */
+  --pm-syntax-type:           #267f99;   /* TypeScript types, Rust structs   */
+  --pm-syntax-variable:       #001080;   /* identifiers                     */
+  --pm-syntax-operator:       #000000;   /* + - = =>                        */
+  --pm-syntax-punctuation:    #000000;   /* {} () ,                         */
+  --pm-syntax-tag:            #800000;   /* HTML/JSX tags                   */
+  --pm-syntax-attr:           #ff0000;   /* HTML attributes                 */
+
+  /* ─── Accent / Interactive ──────────────────────────────────────────── */
+  --pm-accent:                #005fb8;
+  --pm-accent-hover:          #0069cc;
+  --pm-accent-muted:          rgba(0, 95, 184, 0.12);
+
+  /* ─── Cursor ────────────────────────────────────────────────────────── */
+  --pm-cursor-color:          #000000;
+  --pm-cursor-width:          2px;
+
+  /* ─── Scrollbar ─────────────────────────────────────────────────────── */
+  --pm-scrollbar-thumb:       rgba(0, 0, 0, 0.20);
+  --pm-scrollbar-thumb-hover: rgba(0, 0, 0, 0.35);
+  --pm-scrollbar-track:       transparent;
+
+  /* ─── Typography ────────────────────────────────────────────────────── */
+  --pm-font-ui:               "Inter", "Segoe UI", system-ui, sans-serif;
+  --pm-font-mono:             "JetBrains Mono", "Cascadia Code", "Fira Code",
+                              "Consolas", "Courier New", monospace;
+  --pm-font-size-ui:          14px;
+  --pm-font-size-editor:      15px;
+  --pm-line-height-editor:    1.55;
+  --pm-tab-size:              4;
+
+  /* ─── Sizing / Layout ───────────────────────────────────────────────── */
+  --pm-sidebar-width:         260px;
+  --pm-statusbar-height:      28px;
+  --pm-tab-height:            38px;
+  --pm-navbar-height:         44px;
+  --pm-activitybar-width:     54px;
+  --pm-gutter-width:          60px;     /* wide enough for 5-digit line nums */
+  --pm-indent-guide-color:    rgba(0, 0, 0, 0.08);
+
+  /* ─── Motion ────────────────────────────────────────────────────────── */
+  --pm-transition-fast:       80ms ease;
+  --pm-transition-base:       150ms ease;
+
+  /* ─── Shadows ───────────────────────────────────────────────────────── */
+  --pm-shadow-panel:          0 1px 3px rgba(0, 0, 0, 0.08);
+  --pm-shadow-dropdown:       0 4px 12px rgba(0, 0, 0, 0.12);
+  --pm-shadow-modal:          0 8px 32px rgba(0, 0, 0, 0.15);
+}

@@ -1,0 +1,406 @@
+/**
+ * Navbar.module.css — Rust Studio Style Modern Header
+ * Unique Rust-inspired design with solid backgrounds and Rust-themed colors
+ */
+
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 52px;
+  background-color: var(--pm-bg-navbar, #f5f5f5);
+  color: var(--pm-fg-default, #24292f);
+  border-bottom: none;
+  user-select: none;
+  font-size: 14px;
+  padding: 5px 16px;
+  box-sizing: border-box;
+  z-index: 100;
+  position: relative;
+  -webkit-app-region: drag;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  width: 100%;
+}
+
+.navLeft,
+.navCenter,
+.navRight {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  -webkit-app-region: no-drag;
+}
+
+.navLeft {
+  gap: 12px;
+}
+
+/* ── Standard Button Styles ── */
+.iconBtn {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  color: var(--pm-fg-muted, #57606a);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  -webkit-app-region: no-drag;
+  background: transparent;
+}
+
+.iconBtn:hover {
+  background: rgba(206, 65, 43, 0.12);
+  color: var(--pm-fg-default, #24292f);
+  transform: translateY(-1px);
+}
+
+.iconBtnActive {
+  background: linear-gradient(135deg, rgba(206, 65, 43, 0.15), rgba(222, 165, 132, 0.15));
+  color: #ce412b;
+  box-shadow: 0 2px 8px rgba(206, 65, 43, 0.2);
+}
+
+.iconBtnDisabled {
+  opacity: 0.35 !important;
+  cursor: not-allowed !important;
+  color: var(--pm-fg-subtle, #8c9099) !important;
+}
+
+.iconBtnDisabled:hover {
+  background-color: transparent !important;
+  color: var(--pm-fg-subtle, #8c9099) !important;
+  transform: none !important;
+}
+
+.navArrows {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 8px;
+  -webkit-app-region: no-drag;
+}
+
+/* ── Workspace Pill & Git Pill ── */
+.workspacePill,
+.gitPill {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  color: var(--pm-fg-default, #24292f);
+  font-size: 13.5px;
+  font-weight: 600;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background: rgba(206, 65, 43, 0.08);
+  -webkit-app-region: no-drag;
+  border: 1px solid rgba(206, 65, 43, 0.15);
+}
+
+.workspacePill:hover,
+.gitPill:hover {
+  background: rgba(206, 65, 43, 0.15);
+  border-color: rgba(206, 65, 43, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(206, 65, 43, 0.15);
+}
+
+.workspacePillActive,
+.gitPillActive {
+  background: linear-gradient(135deg, rgba(206, 65, 43, 0.2), rgba(222, 165, 132, 0.2));
+  border-color: rgba(206, 65, 43, 0.4);
+  box-shadow: 0 2px 12px rgba(206, 65, 43, 0.25);
+}
+
+.projectAvatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #ce412b, #a33122);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(206, 65, 43, 0.3);
+}
+
+.pillChevron {
+  font-size: 11px;
+  color: var(--pm-fg-muted, #57606a);
+  margin-left: 2px;
+  transition: transform 0.2s ease;
+}
+
+.workspacePill:hover .pillChevron,
+.gitPill:hover .pillChevron {
+  transform: translateY(1px);
+}
+
+/* ── Dropdown Menus ── */
+.dropdownMenu {
+  position: absolute;
+  top: 100%;
+  background: linear-gradient(180deg,
+      var(--pm-bg-panel, #ffffff) 0%,
+      var(--pm-bg-panel-dark, #f8f8f8) 100%);
+  border: 1px solid rgba(206, 65, 43, 0.2);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  padding: 6px 0;
+  z-index: 1000;
+  min-width: 260px;
+  animation: dropdownFade 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  margin-top: 8px;
+}
+
+@keyframes dropdownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.workspaceDropdown {
+  left: 100px;
+  width: 360px;
+}
+
+.gitDropdown {
+  left: 260px;
+  width: 300px;
+}
+
+.hamburgerDropdown {
+  left: 12px;
+  width: 260px;
+}
+
+.dropdownSectionTitle {
+  padding: 10px 16px 6px 16px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--pm-fg-muted, #57606a);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.dropdownDivider {
+  height: 1px;
+  background: linear-gradient(90deg,
+      transparent,
+      rgba(206, 65, 43, 0.2),
+      transparent);
+  margin: 6px 0;
+}
+
+.menuItem {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 36px;
+  padding: 0 16px;
+  cursor: pointer;
+  color: var(--pm-fg-default, #24292f);
+  font-size: 13.5px;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+  border-radius: 8px;
+  margin: 2px 8px;
+}
+
+.menuItem:hover {
+  background: linear-gradient(135deg, rgba(206, 65, 43, 0.1), rgba(222, 165, 132, 0.1));
+  color: #ce412b;
+  transform: translateX(2px);
+}
+
+.menuItem:hover .menuItemIcon {
+  color: #ce412b;
+}
+
+.menuItemIcon {
+  color: var(--pm-fg-muted, #57606a);
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+}
+
+.menuItemText {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+.menuItemShortcut {
+  color: var(--pm-fg-subtle, #6e7781);
+  font-size: 11px;
+  margin-left: auto;
+  background: rgba(206, 65, 43, 0.08);
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.menuItem:hover .menuItemShortcut {
+  background: rgba(206, 65, 43, 0.15);
+  color: #ce412b;
+}
+
+/* ── Workspace List Item ── */
+.projectRowItem {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border-radius: 8px;
+  margin: 2px 8px;
+}
+
+.projectRowItem:hover {
+  background: linear-gradient(135deg, rgba(206, 65, 43, 0.1), rgba(222, 165, 132, 0.1));
+  transform: translateX(2px);
+}
+
+.projectRowItem:hover .projectRowPath {
+  color: rgba(206, 65, 43, 0.7);
+}
+
+.projectRowText {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  gap: 3px;
+}
+
+.projectRowName {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--pm-fg-default, #24292f);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.projectRowPath {
+  font-size: 11px;
+  color: var(--pm-fg-muted, #57606a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Submenu nesting ── */
+.submenuWrapper {
+  position: relative;
+}
+
+.submenu {
+  position: absolute;
+  left: 100%;
+  top: 0;
+  background: linear-gradient(180deg,
+      var(--pm-bg-panel, #ffffff) 0%,
+      var(--pm-bg-panel-dark, #f8f8f8) 100%);
+  border: 1px solid rgba(206, 65, 43, 0.2);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  padding: 6px 0;
+  min-width: 260px;
+  z-index: 1001;
+  margin-left: 8px;
+}
+
+/* ── Nav Center & Right ── */
+.navCenter {
+  gap: 12px;
+}
+
+.navRight {
+  gap: 8px;
+}
+
+.runActionsGroup {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 8px;
+  -webkit-app-region: no-drag;
+}
+
+.runDropdownWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.runDropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 8px;
+  background: linear-gradient(180deg,
+      var(--pm-bg-panel, #ffffff) 0%,
+      var(--pm-bg-panel-dark, #f8f8f8) 100%);
+  border: 1px solid rgba(206, 65, 43, 0.2);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  padding: 6px 0;
+  min-width: 200px;
+  z-index: 1000;
+  animation: dropdownFade 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.windowControls {
+  display: flex;
+  align-items: center;
+  margin-left: 12px;
+  -webkit-app-region: no-drag;
+}
+
+.windowControlBtn {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 36px;
+  color: var(--pm-fg-muted, #57606a);
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 8px;
+  -webkit-app-region: no-drag;
+}
+
+.windowControlBtn:hover {
+  background: rgba(206, 65, 43, 0.12);
+  color: var(--pm-fg-default, #24292f);
+}
+
+.windowControlClose:hover {
+  background: linear-gradient(135deg, #ce412b, #a33122) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(206, 65, 43, 0.4);
+}

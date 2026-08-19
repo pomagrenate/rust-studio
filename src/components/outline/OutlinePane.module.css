@@ -1,0 +1,247 @@
+.outlineSection {
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: var(--pm-fg-default, #24292f);
+  background-color: transparent;
+  border-top: 1px solid var(--pm-border-default, #282b33);
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.outlineSectionCollapsed {
+  flex: 0 0 auto;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  cursor: pointer;
+  height: 32px;
+  min-height: 32px;
+  box-sizing: border-box;
+  transition: background-color 0.1s ease;
+  flex-shrink: 0;
+}
+
+.header:hover {
+  background-color: var(--pm-bg-sidebar-hover, rgba(255, 255, 255, 0.05));
+}
+
+.headerTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--pm-fg-subtle, #8b949e);
+  flex: 1;
+}
+
+.headerTitle svg {
+  font-size: 12px;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  position: relative;
+  transition: opacity 0.1s ease;
+}
+
+.header:hover .headerActions,
+.headerActionsOpen {
+  opacity: 1 !important;
+}
+
+.actionBtn {
+  all: unset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  color: var(--pm-fg-subtle, #8b949e);
+  cursor: pointer;
+  transition: background-color 0.1s, color 0.1s;
+}
+
+.actionBtn:hover {
+  background-color: var(--pm-bg-sidebar-active, rgba(255, 255, 255, 0.1));
+  color: var(--pm-fg-default, #e5e5e5);
+}
+
+.actionBtn svg {
+  font-size: 14px;
+}
+
+.menuDropdown {
+  background-color: var(--pm-bg-sidebar, #121316);
+  border: 1px solid var(--pm-border-default, #282b33);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  padding: 4px 0;
+  min-width: 180px;
+  z-index: 9999;
+  animation: dropdownFade 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dropdownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.menuGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.menuGroupTitle {
+  padding: 6px 12px 2px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--pm-fg-subtle, #8b949e);
+  letter-spacing: 0.5px;
+}
+
+.menuItem {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  color: var(--pm-fg-default, #d8dee9);
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: background-color 0.1s, color 0.1s;
+}
+
+.menuItem:hover {
+  background-color: rgba(247, 76, 0, 0.15);
+  color: #f74c00;
+}
+
+.menuCheck {
+  width: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.menuDivider {
+  height: 1px;
+  background-color: var(--pm-border-default, #282b33);
+  margin: 4px 0;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 6px;
+}
+
+.filterBar {
+  padding: 4px 12px 6px;
+  flex-shrink: 0;
+}
+
+.filterInput {
+  width: 100%;
+  height: 24px;
+  background-color: var(--pm-bg-input, rgba(0, 0, 0, 0.2));
+  border: 1px solid var(--pm-border-default, #282b33);
+  border-radius: 4px;
+  color: var(--pm-fg-default, #d8dee9);
+  font-size: 12px;
+  font-family: inherit;
+  padding: 0 8px;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.1s;
+}
+
+.filterInput:focus {
+  border-color: #f74c00;
+}
+
+.symbolList {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.symbolTreeBranch {
+  display: flex;
+  flex-direction: column;
+}
+
+.symbolRow {
+  display: flex;
+  align-items: center;
+  height: 24px;
+  padding-right: 12px;
+  cursor: pointer;
+  font-size: 12.5px;
+  color: var(--pm-fg-default, #d8dee9);
+  white-space: nowrap;
+  transition: background-color 0.1s;
+}
+
+.symbolRow:hover {
+  background-color: var(--pm-bg-sidebar-hover, rgba(255, 255, 255, 0.05));
+}
+
+.symbolIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 6px;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.symbolName {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.symbolLine {
+  font-size: 11px;
+  color: var(--pm-fg-subtle, #8b949e);
+  margin-left: 8px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+.empty {
+  padding: 10px 12px 14px 28px;
+  font-size: 12px;
+  color: var(--pm-fg-subtle, #8b949e);
+  font-style: italic;
+  line-height: 1.4;
+  flex: 1;
+}

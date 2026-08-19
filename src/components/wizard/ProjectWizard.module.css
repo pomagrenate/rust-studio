@@ -1,0 +1,349 @@
+.wizardRoot {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background-color: #ffffff;
+  color: #1f2328;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  overflow-y: auto;
+  padding: clamp(20px, 3vw, 36px);
+  box-sizing: border-box;
+}
+
+/* ── Top Header & Filters (No Double Sidebar!) ── */
+
+.wizardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.headerIcon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background-color: rgba(9, 105, 218, 0.1);
+  color: #0969da;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.headerTitle {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1f2328;
+}
+
+.searchWrapper {
+  position: relative;
+  width: 260px;
+}
+
+.searchInput {
+  width: 100%;
+  height: 34px;
+  background-color: #ffffff;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  padding: 0 10px 0 32px;
+  font-size: 12.5px;
+  outline: none;
+  color: #1f2328;
+  box-sizing: border-box;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.searchInput:focus {
+  border-color: #0969da;
+  box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.15);
+}
+
+.searchIcon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #8c959f;
+  pointer-events: none;
+}
+
+/* ── Horizontal Category Filter Pills ── */
+
+.categoryPillBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.categoryPill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background-color: #f6f8fa;
+  border: 1px solid #d0d7de;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  white-space: nowrap;
+}
+
+.categoryPill:hover {
+  background-color: #eaeef2;
+  color: #111827;
+  border-color: #afb8c1;
+}
+
+.categoryPillActive {
+  background-color: #0969da !important;
+  color: #ffffff !important;
+  border-color: #0969da !important;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(9, 105, 218, 0.25);
+}
+
+.categoryPillCount {
+  font-size: 11px;
+  background-color: rgba(0, 0, 0, 0.08);
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.categoryPillActive .categoryPillCount {
+  background-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+/* ── Template Grid ── */
+
+.templateGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+/* ── Configuration Form Panel ── */
+
+.configPanel {
+  background-color: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.configHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 14px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.configTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.featuresList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.featurePill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  color: #15803d;
+  background-color: rgba(34, 197, 94, 0.1);
+  padding: 3px 9px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.formLabel {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.formInput {
+  height: 36px;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 0 12px;
+  font-size: 13px;
+  outline: none;
+  color: #0f172a;
+  box-sizing: border-box;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.formInput:focus {
+  border-color: #0969da;
+  box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.15);
+}
+
+.inputGroup {
+  display: flex;
+  gap: 8px;
+}
+
+.browseBtn {
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 0 14px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #334155;
+  cursor: pointer;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.12s;
+}
+
+.browseBtn:hover {
+  background-color: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+/* ── Real Terminal Command Preview ── */
+
+.cliPreviewBox {
+  background-color: #1e293b;
+  color: #f8fafc;
+  border-radius: 8px;
+  padding: 14px 18px;
+  font-family: "Cascadia Code", "Consolas", "Courier New", monospace;
+  font-size: 12.5px;
+  line-height: 1.6;
+  overflow-x: auto;
+  border: 1px solid #334155;
+}
+
+.cliHeader {
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cliCommandLine {
+  color: #4ade80;
+}
+
+/* ── Actions Footer ── */
+
+.wizardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.primaryCreateBtn {
+  background-color: #16a34a;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 9px 22px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.12s, transform 0.05s;
+  box-shadow: 0 2px 6px rgba(22, 163, 74, 0.25);
+}
+
+.primaryCreateBtn:hover {
+  background-color: #15803d;
+}
+
+.primaryCreateBtn:active {
+  transform: scale(0.98);
+}
+
+.primaryCreateBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+  transform: none;
+}
+
+.cancelBtn {
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.cancelBtn:hover {
+  background-color: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.errorBanner {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  white-space: pre-wrap;
+}

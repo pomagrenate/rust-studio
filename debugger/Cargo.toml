@@ -1,0 +1,13 @@
+[workspace]
+members = [
+  "src/adapter-protocol",
+  "src/codelldb-launch",
+  "src/codelldb-types",
+  "src/codelldb",
+  "src/lldb-stub",
+  "src/lldb",
+]
+resolver = "1"
+
+[profile.release]
+debug = true

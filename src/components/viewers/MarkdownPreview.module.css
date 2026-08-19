@@ -1,0 +1,236 @@
+.markdownContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background-color: var(--pm-bg-editor, #ffffff);
+  color: var(--pm-fg-default);
+  overflow: hidden;
+  font-family: var(--pm-font-ui, sans-serif);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background-color: var(--pm-bg-sidebar, #f8f8f8);
+  border-bottom: 1px solid var(--pm-border-default, #e5e5e5);
+  font-size: 11.5px;
+  min-height: 30px;
+  box-sizing: border-box;
+}
+
+.modeToggle {
+  display: flex;
+  align-items: center;
+  background-color: var(--pm-bg-input, #ffffff);
+  border: 1px solid var(--pm-border-default, #cecece);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.modeBtn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  padding: 3px 8px;
+  font-size: 11px;
+  color: var(--pm-fg-subtle, #6e7781);
+  cursor: pointer;
+}
+
+.modeBtnActive {
+  background-color: var(--pm-accent, #005fb8);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.viewArea {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+.editorPane {
+  flex: 1;
+  height: 100%;
+  overflow: hidden;
+  border-right: 1px solid var(--pm-border-default, #e5e5e5);
+}
+
+.previewPane {
+  flex: 1;
+  height: 100%;
+  overflow-y: auto;
+  padding: 24px 32px;
+  background-color: var(--pm-bg-editor, #ffffff);
+  color: var(--pm-fg-default, #24292f);
+  line-height: 1.65;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+/* ── Typography & Markdown Elements ── */
+
+.previewPane h1 {
+  font-size: 24px;
+  font-weight: 700;
+  border-bottom: 1px solid var(--pm-border-default, #eaecef);
+  padding-bottom: 6px;
+  margin-top: 16px;
+  margin-bottom: 12px;
+}
+
+.previewPane h2 {
+  font-size: 20px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--pm-border-default, #eaecef);
+  padding-bottom: 4px;
+  margin-top: 18px;
+  margin-bottom: 10px;
+}
+
+.previewPane h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 14px;
+  margin-bottom: 8px;
+}
+
+.previewPane p {
+  margin-top: 0;
+  margin-bottom: 12px;
+}
+
+.previewPane hr {
+  height: 1px;
+  background-color: var(--pm-border-default, #e1e4e8);
+  border: none;
+  margin: 20px 0;
+}
+
+/* ── GitHub Style Alerts ── */
+
+.alertBox {
+  padding: 10px 14px;
+  margin: 12px 0;
+  border-left: 4px solid #0969da;
+  background-color: rgba(9, 105, 218, 0.06);
+  border-radius: 0 4px 4px 0;
+}
+
+.alertNote {
+  border-left-color: #0969da;
+  background-color: rgba(9, 105, 218, 0.06);
+}
+
+.alertTip {
+  border-left-color: #1a7f37;
+  background-color: rgba(26, 127, 55, 0.06);
+}
+
+.alertImportant {
+  border-left-color: #8250df;
+  background-color: rgba(130, 80, 223, 0.06);
+}
+
+.alertWarning {
+  border-left-color: #9a6700;
+  background-color: rgba(154, 103, 0, 0.06);
+}
+
+.alertCaution {
+  border-left-color: #cf222e;
+  background-color: rgba(207, 34, 46, 0.06);
+}
+
+.alertTitle {
+  font-weight: 700;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── Code Blocks ── */
+
+.codeBlock {
+  background-color: var(--pm-bg-sidebar, #f6f8fa);
+  border: 1px solid var(--pm-border-default, #e1e4e8);
+  border-radius: 6px;
+  padding: 12px;
+  margin: 12px 0;
+  overflow-x: auto;
+  font-family: "Consolas", "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.inlineCode {
+  background-color: rgba(175, 184, 193, 0.2);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: "Consolas", "Courier New", monospace;
+  font-size: 12px;
+}
+
+/* ── Tables ── */
+
+.tableWrapper {
+  overflow-x: auto;
+  margin: 14px 0;
+}
+
+.markdownTable {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13px;
+}
+
+.markdownTable th,
+.markdownTable td {
+  border: 1px solid var(--pm-border-default, #d0d7de);
+  padding: 6px 12px;
+}
+
+.markdownTable th {
+  background-color: var(--pm-bg-sidebar, #f6f8fa);
+  font-weight: 600;
+}
+
+.markdownTable tr:nth-child(even) {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* ── Mermaid Box ── */
+
+.mermaidBox {
+  background-color: var(--pm-bg-sidebar, #f6f8fa);
+  border: 1px solid var(--pm-border-default, #e1e4e8);
+  border-radius: 6px;
+  padding: 16px;
+  margin: 14px 0;
+  text-align: center;
+  font-family: monospace;
+  font-size: 12px;
+}
+
+/* ── Math Block ── */
+
+.mathDisplay {
+  padding: 12px;
+  margin: 12px 0;
+  text-align: center;
+  font-style: italic;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 16px;
+  background-color: var(--pm-bg-sidebar, #f6f8fa);
+  border-radius: 4px;
+}

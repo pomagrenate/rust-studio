@@ -1,0 +1,383 @@
+#
+# Copyright (c) 2024-2025 Semgrep Inc.
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public License
+# version 2.1 as published by the Free Software Foundation.
+#
+# This library is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the file
+# LICENSE for more details.
+#
+from pathlib import Path
+from typing import List
+from unittest.mock import patch
+
+import pytest
+
+import semgrep.semgrep_interfaces.semgrep_output_v1 as out
+from semdep.subproject_matchers import ExactLockfileManifestMatcher
+from semdep.subproject_matchers import ExactManifestOnlyMatcher
+from semdep.subproject_matchers import SubprojectMatcher
+from semgrep.resolve_dependency_source import resolve_dependency_source
+from semgrep.resolve_dependency_source import ResolveDependenciesRpcResult
+from semgrep.resolve_subprojects import match_subprojects
+from semgrep.subproject import DependencyResolutionConfig
+from semgrep.subproject import subproject_to_plan_output
+from semgrep.types import fake_targets_of_paths
+
+
+@pytest.mark.quick
+@pytest.mark.parametrize(
+    ["file_paths", "matchers", "expected_subprojects"],
+    [
+        (
+            # verify that when two matchers both look for the same files, only the first subproject includes the overlapping file.
+            [
+                Path("requirements.in"),
+                Path("requirements.txt"),
+                Path("requirements3.txt"),
+            ],
+            [
+                ExactLockfileManifestMatcher(
+                    lockfile_name="requirements.txt",
+                    manifest_name="requirements.in",
+                    lockfile_kind=out.LockfileKind(value=out.PipRequirementsTxt()),
+                    manifest_kind=out.ManifestKind(value=out.RequirementsIn()),
+                    ecosystem=out.Ecosystem(value=out.Pypi()),
+                    make_manifest_only_subprojects=False,
+                ),
+                ExactLockfileManifestMatcher(
+                    lockfile_name="requirements3.txt",
+                    manifest_name="requirements.in",
+                    lockfile_kind=out.LockfileKind(value=out.PipRequirementsTxt()),
+                    manifest_kind=out.ManifestKind(value=out.RequirementsIn()),
+                    ecosystem=out.Ecosystem(value=out.Pypi()),
+                    make_manifest_only_subprojects=False,
+                ),
+            ],
+            [
+                out.Subproject(
+                    root_dir=out.Fpath("."),
+                    dependency_source=out.DependencySource(
+                        out.ManifestLockfile(
+                            (
+                                out.Manifest(
+                                    out.ManifestKind(value=out.RequirementsIn()),
+                                    out.Fpath("requirements.in"),
+                                ),
+                                out.Lockfile(
+                                    out.LockfileKind(out.PipRequirementsTxt()),
+                                    out.Fpath("requirements.txt"),
+                                ),
+                            )
+                        ),
+                    ),
+                    ecosystem=out.Ecosystem(value=out.Pypi()),
+                ),
+                out.Subproject(
+                    root_dir=out.Fpath("."),
+                    dependency_source=out.DependencySource(
+                        out.LockfileOnly(
+                            out.Lockfile(
+                                out.LockfileKind(out.PipRequirementsTxt()),
+                                out.Fpath("requirements3.txt"),
+                            )
+                        )
+                    ),
+                    ecosystem=out.Ecosystem(value=out.Pypi()),
+                ),
+            ],
+        ),
+        (
+            # verify that we correctly use the second matcher when the first is a match for the manifest
+            # but not for the lockfile.
+            [
+                Path("requirements.in"),
+                Path("requirements3.txt"),
+            ],
+            [
+                ExactLockfileManifestMatcher(
+                    lockfile_name="requirements.txt",
+                    manifest_name="requirements.in",
+                    lockfile_kind=out.LockfileKind(value=out.PipRequirementsTxt()),
+                    manifest_kind=out.ManifestKind(value=out.RequirementsIn()),
+                    ecosystem=out.Ecosystem(value=out.Pypi()),
+                    make_manifest_only_subprojects=False,
+                ),
+                ExactLockfileManifestMatcher(
+                    lockfile_name="requirements3.txt",
+                    manifest_name="requirements.in",
+                    lockfile_kind=out.LockfileKind(value=out.PipRequirementsTxt()),
+                    manifest_kind=out.ManifestKind(value=out.RequirementsIn()),
+                    ecosystem=out.Ecosystem(value=out.Pypi()),
+                    make_manifest_only_subprojects=False,
+                ),
+            ],
+            [
+                out.Subproject(
+                    root_dir=out.Fpath("."),
+                    dependency_source=out.DependencySource(
+                        out.ManifestLockfile(
+                            (
+                                out.Manifest(
+                                    out.ManifestKind(value=out.RequirementsIn()),
+                                    out.Fpath("requirements.in"),
+                                ),
+                                out.Lockfile(
+                                    out.LockfileKind(out.PipRequirementsTxt()),
+                                    out.Fpath("requirements3.txt"),
+                                ),
+                            )
+                        ),
+                    ),
+                    ecosystem=out.Ecosystem(value=out.Pypi()),
+                ),
+            ],
+        ),
+        (
+            # verify that when one subproject contains another, both the parent and the child are found separately
+            [
+                Path("pom.xml"),
+                Path("child-a/pom.xml"),
+                Path("child-b/pom.xml"),
+            ],
+            [
+                ExactManifestOnlyMatcher(
+                    manifest_kind=out.ManifestKind(out.PomXml()),
+                    manifest_name="pom.xml",
+                    ecosystem=out.Ecosystem(value=out.Pypi()),
+                )
+            ],
+            [
+                out.Subproject(
+                    root_dir=out.Fpath("."),
+                    dependency_source=out.DependencySource(
+                        out.ManifestOnly(
+                            out.Manifest(
+                                out.ManifestKind(out.PomXml()),
+                                out.Fpath("pom.xml"),
+                            )
+                        )
+                    ),
+                    ecosystem=out.Ecosystem(value=out.Pypi()),
+                ),
+                out.Subproject(
+                    root_dir=out.Fpath("child-a"),
+                    dependency_source=out.DependencySource(
+                        out.ManifestOnly(
+                            out.Manifest(
+                                out.ManifestKind(out.PomXml()),
+                                out.Fpath("child-a/pom.xml"),
+                            )
+                        )
+                    ),
+                    ecosystem=out.Ecosystem(value=out.Pypi()),
+                ),
+                out.Subproject(
+                    root_dir=out.Fpath("child-b"),
+                    dependency_source=out.DependencySource(
+                        out.ManifestOnly(
+                            out.Manifest(
+                                out.ManifestKind(out.PomXml()),
+                                out.Fpath("child-b/pom.xml"),
+                            )
+                        )
+                    ),
+                    ecosystem=out.Ecosystem(value=out.Pypi()),
+                ),
+            ],
+        ),
+    ],
+)
+def test_find_subprojects(
+    file_paths: List[Path],
+    matchers: List[SubprojectMatcher],
+    expected_subprojects: List[out.Subproject],
+) -> None:
+    result = match_subprojects(fake_targets_of_paths(file_paths), matchers)
+    assert sorted(result, key=lambda s: str(s.root_dir)) == sorted(
+        expected_subprojects, key=lambda s: str(s.root_dir)
+    )
+
+
+@pytest.mark.quick
+def test_subproject_plan_output_fields() -> None:
+    """subproject_to_plan_output produces the expected fields."""
+    sub = out.Subproject(
+        root_dir=out.Fpath("my-app"),
+        dependency_source=out.DependencySource(
+            out.ManifestOnly(
+                out.Manifest(
+                    out.ManifestKind(out.PomXml()),
+                    out.Fpath("my-app/pom.xml"),
+                )
+            )
+        ),
+        ecosystem=out.Ecosystem(value=out.Maven()),
+    )
+    plan = subproject_to_plan_output(sub, True)
+    assert plan.root_dir == out.Fpath("my-app")
+    assert plan.resolution_planned is True
+    assert len(plan.subproject_id) == 64  # SHA-256 hex digest
+
+
+@pytest.mark.quick
+def test_subproject_id_is_deterministic() -> None:
+    """The same subproject always produces the same ID."""
+    sub = out.Subproject(
+        root_dir=out.Fpath("src"),
+        dependency_source=out.DependencySource(
+            out.ManifestLockfile(
+                (
+                    out.Manifest(
+                        out.ManifestKind(out.PackageJson()),
+                        out.Fpath("src/package.json"),
+                    ),
+                    out.Lockfile(
+                        out.LockfileKind(out.NpmPackageLockJson()),
+                        out.Fpath("src/package-lock.json"),
+                    ),
+                )
+            )
+        ),
+        ecosystem=out.Ecosystem(value=out.Npm()),
+    )
+    id1 = subproject_to_plan_output(sub, True).subproject_id
+    id2 = subproject_to_plan_output(sub, False).subproject_id
+    assert id1 == id2  # resolution_planned doesn't affect ID
+
+
+@pytest.mark.quick
+def test_subproject_id_differs_for_different_paths() -> None:
+    """Different dependency source paths produce different IDs."""
+    sub_a = out.Subproject(
+        root_dir=out.Fpath("a"),
+        dependency_source=out.DependencySource(
+            out.ManifestOnly(
+                out.Manifest(
+                    out.ManifestKind(out.BuildGradle()),
+                    out.Fpath("a/build.gradle"),
+                )
+            )
+        ),
+        ecosystem=out.Ecosystem(value=out.Maven()),
+    )
+    sub_b = out.Subproject(
+        root_dir=out.Fpath("b"),
+        dependency_source=out.DependencySource(
+            out.ManifestOnly(
+                out.Manifest(
+                    out.ManifestKind(out.BuildGradle()),
+                    out.Fpath("b/build.gradle"),
+                )
+            )
+        ),
+        ecosystem=out.Ecosystem(value=out.Maven()),
+    )
+    id_a = subproject_to_plan_output(sub_a, True).subproject_id
+    id_b = subproject_to_plan_output(sub_b, True).subproject_id
+    assert id_a != id_b
+
+
+# Please don't use @patch because it can't be typechecked and makes refactoring
+# particularly tricky.
+@pytest.mark.quick
+@patch("semgrep.resolve_dependency_source._resolve_dependencies_rpc")
+def test_ptt_unconditionally_generates_dependency_graphs(
+    mock_dynamic_resolve, tmp_path: Path
+) -> None:
+    manifest_file = open(tmp_path / "requirements.in", "w")
+    manifest_file.write("requests==2.25.1")
+    manifest_file.close()
+    lockfile_file = open(tmp_path / "requirements.txt", "w")
+    lockfile_file.write("requests==2.25.1")
+    lockfile_file.close()
+
+    mock_dynamic_resolve.return_value = ResolveDependenciesRpcResult(
+        new_deps=[], new_errors=[], new_targets=[]
+    )
+    dep_source = out.DependencySource(
+        out.ManifestLockfile(
+            (
+                out.Manifest(
+                    out.ManifestKind(value=out.RequirementsIn()),
+                    out.Fpath(str((tmp_path / "requirements.in"))),
+                ),
+                out.Lockfile(
+                    out.LockfileKind(value=out.PipRequirementsTxt()),
+                    out.Fpath(str(tmp_path / "requirements.txt")),
+                ),
+            )
+        ),
+    )
+
+    res = resolve_dependency_source(
+        dep_source, DependencyResolutionConfig(True, True, True, False)
+    )
+    assert not isinstance(res.deps, out.UnresolvedReason)
+    assert res.deps[0] == out.ResolutionMethod(out.DynamicResolution())
+
+    mock_dynamic_resolve.mock_assert_called_once_with(
+        Path("requirements.txt"), out.ManifestKind(value=out.RequirementsIn())
+    )
+
+
+# Please don't use @patch because it can't be typechecked and makes refactoring
+# particularly tricky.
+@pytest.mark.quick
+@patch("semdep.parsers.requirements.parse_requirements")
+@patch("semgrep.resolve_dependency_source._resolve_dependencies_rpc")
+def test_ptt_unconditional_graph_generation_falls_back_on_lockfile_parsing(
+    mock_dynamic_resolve, mock_parse_requirements, tmp_path: Path
+) -> None:
+    manifest_file = open(tmp_path / "requirements.in", "w")
+    manifest_file.write("requests==2.25.1")
+    manifest_file.close()
+    lockfile_file = open(tmp_path / "requirements.txt", "w")
+    lockfile_file.write("requests==2.25.1")
+    lockfile_file.close()
+
+    mock_dynamic_resolve.return_value = ResolveDependenciesRpcResult(
+        new_deps=None, new_errors=[], new_targets=[]
+    )
+    mock_parse_requirements.return_value = (
+        [
+            out.FoundDependency(
+                package="requests",
+                version="2.25.1",
+                ecosystem=out.Ecosystem(value=out.Pypi()),
+                allowed_hashes={},
+                transitivity=out.DependencyKind(value=out.Direct()),
+            )
+        ],
+        [],
+    )
+
+    dep_source = out.DependencySource(
+        out.ManifestLockfile(
+            (
+                out.Manifest(
+                    out.ManifestKind(value=out.RequirementsIn()),
+                    out.Fpath(str((tmp_path / "requirements.in"))),
+                ),
+                out.Lockfile(
+                    out.LockfileKind(value=out.PipRequirementsTxt()),
+                    out.Fpath(str(tmp_path / "requirements.txt")),
+                ),
+            )
+        ),
+    )
+    res = resolve_dependency_source(
+        dep_source, DependencyResolutionConfig(True, True, True, False)
+    )
+    deps = res.deps
+    assert not isinstance(deps, out.UnresolvedReason)
+    assert deps[0] == out.ResolutionMethod(out.LockfileParsing())
+    assert len(deps[1]) == 1
+    assert deps[1][0].value[0].package == "requests"
+
+    mock_parse_requirements.mock_assert_called_once_with(
+        Path(tmp_path / "requirements.txt"), Path(tmp_path / "requirements.in")
+    )

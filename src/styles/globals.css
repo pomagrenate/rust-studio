@@ -1,0 +1,100 @@
+/**
+ * globals.css — Reset, base typography, and scrollbar normalization.
+ *
+ * Import order in main.tsx:
+ *   1. globals.css   ← this file (base layer)
+ *   2. light.css     ← default theme tokens
+ *   3. dark.css      ← dark overrides (loaded but only active when data-theme="dark")
+ *   4. components    ← component-scoped CSS modules
+ */
+
+/* ── Google Fonts import ────────────────────────────────────────────────── */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap");
+
+/* ── Hard reset ─────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  /* Default to light — JS will flip to 'dark' when user toggles */
+  font-family: var(--pm-font-ui);
+  font-size: var(--pm-font-size-ui);
+  line-height: 1.5;
+  /* Smooth colour transitions when switching themes */
+  transition: background-color var(--pm-transition-base),
+              color var(--pm-transition-base);
+  /* Disable the system-level rubber-band scroll that bleeds into Tauri */
+  overscroll-behavior: none;
+}
+
+body {
+  background-color: var(--pm-bg-app);
+  color: var(--pm-fg-default);
+  font-family: var(--pm-font-ui);
+  /* Fill the Tauri window — no scrollbars on body itself */
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  user-select: none; /* Prevent accidental text selection on UI */
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Thin, theme-aware scrollbars (Webkit / Blink) ─────────────────────── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--pm-scrollbar-track);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--pm-scrollbar-thumb);
+  border-radius: 4px;
+  transition: background var(--pm-transition-fast);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--pm-scrollbar-thumb-hover);
+}
+
+/* ── Focus-visible ring (keyboard navigation) ───────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--pm-border-focus);
+  outline-offset: 1px;
+}
+
+/* ── Text selection colours ─────────────────────────────────────────────── */
+::selection {
+  background: var(--pm-bg-selection);
+}
+
+/* ── Utility helpers ────────────────────────────────────────────────────── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

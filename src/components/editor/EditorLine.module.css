@@ -1,0 +1,204 @@
+/**
+ * EditorLine.module.css
+ * High-Contrast Light Mode Styling
+ */
+
+.line {
+  display: flex;
+  align-items: baseline;
+  height: 21px;
+  min-height: 21px;
+  font-family: var(--editor-font-family, "JetBrains Mono", Consolas, monospace);
+  font-size: var(--editor-font-size, 13.5px);
+  line-height: var(--editor-line-height, 21px);
+  color: #1f2328;
+  background-color: transparent;
+  white-space: pre;
+  tab-size: 4;
+  transition: background-color 0.1s;
+  /* Debug: ensure lines are visible */
+  position: relative;
+  z-index: 1;
+}
+
+.line:hover {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+.lineActive {
+  background-color: rgba(247, 76, 0, 0.08) !important;
+}
+
+.lineActive .lineNumber {
+  color: #f74c00 !important;
+  font-weight: var(--font-weight-bold, 700);
+}
+
+.lineExecuting {
+  background-color: rgba(254, 211, 48, 0.25) !important;
+  border-left: 3px solid #e3b341 !important;
+}
+
+/* ── Gutter ────────────────────────────────────────────────────────────── */
+
+.lineNumber {
+  width: 48px;
+  min-width: 48px;
+  padding-right: 16px;
+  text-align: right;
+  color: #656d76;
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-medium, 500);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  border-right: 1px solid #e1e4e8;
+  box-sizing: content-box;
+}
+
+.gutterBreakpoint {
+  width: 8px;
+  height: 8px;
+  min-width: 8px;
+  border-radius: 50%;
+  background-color: #cf222e;
+  box-shadow: 0 0 4px rgba(207, 34, 46, 0.6);
+  display: inline-block;
+}
+
+.gutterExecutionArrow {
+  color: #d29922;
+  display: inline-flex;
+  align-items: center;
+}
+
+.gutterError {
+  color: #cf222e;
+  display: inline-flex;
+  align-items: center;
+}
+
+.gutterWarning {
+  color: #9a6700;
+  display: inline-flex;
+  align-items: center;
+}
+
+.gutterInfo {
+  color: #0969da;
+  display: inline-flex;
+  align-items: center;
+}
+
+.gutterHint {
+  color: #656d76;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* ── Content area ─────────────────────────────────────────────────────────── */
+
+.lineContent {
+  padding-left: 16px;
+  flex: 1;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: baseline;
+  position: relative;
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+/* ── Squiggly Underlines ─────────────────────────────────────────────────── */
+
+.diagError {
+  text-decoration: underline wavy #cf222e !important;
+  text-decoration-thickness: 1.5px !important;
+  text-underline-offset: 3px !important;
+}
+
+.diagWarning {
+  text-decoration: underline wavy #9a6700 !important;
+  text-decoration-thickness: 1.5px !important;
+  text-underline-offset: 3px !important;
+}
+
+.diagInformation {
+  text-decoration: underline wavy #0969da !important;
+  text-decoration-thickness: 1.5px !important;
+  text-underline-offset: 3px !important;
+}
+
+.diagHint {
+  text-decoration: underline dotted #656d76 !important;
+  text-underline-offset: 3px !important;
+}
+
+/* ── Inline Variable Values ───────────────────────────────────────────────── */
+
+.inlineDebugValue {
+  display: inline-block;
+  margin-left: 20px;
+  font-family: var(--font-mono, "JetBrains Mono", Consolas, monospace);
+  font-size: var(--font-size-xs, 12px);
+  font-style: italic;
+  color: #0969da;
+  opacity: 0.9;
+  user-select: none;
+  white-space: nowrap;
+}
+
+/* ── Syntax Highlighting Tokens (High Contrast on White) ─────────────────── */
+
+.tok_plain {
+  color: #1f2328;
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+.tok_keyword {
+  color: #cf222e;
+  font-weight: var(--font-weight-bold, 700);
+}
+
+.tok_string {
+  color: #0a3069;
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+.tok_number {
+  color: #0550ae;
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+.tok_comment {
+  color: #6e7781;
+  font-style: italic;
+  font-weight: var(--font-weight-medium, 500);
+}
+
+.tok_fn {
+  color: #8250df;
+  font-weight: var(--font-weight-bold, 700);
+}
+
+.tok_type {
+  color: #953800;
+  font-weight: var(--font-weight-bold, 700);
+}
+
+.tok_variable {
+  color: #1f2328;
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+.tok_operator {
+  color: #cf222e;
+  font-weight: var(--font-weight-bold, 700);
+}
+
+.tok_punctuation {
+  color: #24292f;
+  font-weight: var(--font-weight-semibold, 600);
+}

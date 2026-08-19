@@ -1,0 +1,108 @@
+/**
+ * StatusBar.module.css — JetBrains RustRover Style Status Bar
+ */
+
+.statusBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--pm-statusbar-height, 28px);
+  padding: 0 12px;
+  background-color: var(--pm-bg-statusbar);
+  color: var(--pm-fg-statusbar);
+  font-family: var(--font-ui);
+  font-size: var(--font-size-sm, 13px);
+  flex-shrink: 0;
+  gap: 6px;
+  user-select: none;
+}
+
+.statusLeft,
+.statusRight {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.statusItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  height: var(--pm-statusbar-height, 28px);
+  border-radius: 0;
+  white-space: nowrap;
+  opacity: 0.95;
+  transition: background-color var(--pm-transition-fast);
+  cursor: pointer;
+  font-size: var(--font-size-sm, 13px);
+}
+
+.statusItem:hover {
+  background-color: rgba(255, 255, 255, 0.14);
+}
+
+.statusSep {
+  opacity: 0.35;
+  font-size: var(--font-size-xs, 11px);
+}
+
+.dirtyDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.9);
+  flex-shrink: 0;
+}
+
+.themeToggle {
+  all: unset;
+  display: flex;
+  align-items: center;
+  height: var(--pm-statusbar-height, 28px);
+  padding: 0 10px;
+  font-size: var(--font-size-sm, 13px);
+  font-family: var(--font-ui);
+  color: var(--pm-fg-statusbar);
+  cursor: pointer;
+  border-radius: 0;
+  transition: background-color var(--pm-transition-fast);
+  white-space: nowrap;
+}
+
+.themeToggle:hover {
+  background-color: rgba(255, 255, 255, 0.16);
+}
+
+.themeToggle:focus-visible {
+  outline: 1px solid rgba(255, 255, 255, 0.6);
+  outline-offset: -1px;
+}
+
+/* ── LSP Status Indicators ───────────────────────────────────────────────── */
+
+.lspStatusReady {
+  color: #4ec9b0;
+  font-weight: var(--font-weight-medium, 500);
+}
+
+.lspStatusStarting {
+  color: #cca700;
+  font-weight: var(--font-weight-medium, 500);
+}
+
+.lspStatusIndexing {
+  color: #3794ff;
+  font-weight: var(--font-weight-medium, 500);
+}
+
+.lspStatusError {
+  color: #f14c4c;
+  font-weight: var(--font-weight-medium, 500);
+}
+
+.lspStatusStopped {
+  color: #858585;
+  font-weight: var(--font-weight-medium, 500);
+}

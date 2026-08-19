@@ -1,0 +1,80 @@
+/* ── Add Dropdown (New File/Directory picker) ── */
+.addDropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 240px;
+  background-color: var(--pm-bg-sidebar, #1c1e22);
+  border: 1px solid var(--pm-border-default, #33363d);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  z-index: 2000;
+  overflow: hidden;
+  animation: dropdownFade 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dropdownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.addDropdownSearch {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--pm-border-default, #33363d);
+}
+
+.addDropdownSearchInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--pm-fg-default, #e5e5e5);
+  font-size: 13px;
+}
+
+.addDropdownSearchInput::placeholder {
+  color: var(--pm-fg-subtle, #6e7681);
+}
+
+.addDropdownItem {
+  display: flex;
+  align-items: center;
+  padding: 7px 14px;
+  cursor: pointer;
+  color: var(--pm-fg-default, #e5e5e5);
+  font-size: 13px;
+  transition: background-color 0.1s;
+  gap: 0;
+}
+
+.addDropdownItem:hover {
+  background-color: rgba(255, 255, 255, 0.07);
+}
+
+.addDropdownItemActive {
+  background-color: rgba(0, 95, 184, 0.25) !important;
+  color: #5ba4f5 !important;
+}
+
+.addDropdownShortcut {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--pm-fg-subtle, #6e7681);
+  white-space: nowrap;
+  padding-left: 16px;
+}
+
+.dropdownDivider {
+  height: 1px;
+  background-color: var(--pm-border-default, #33363d);
+  margin: 4px 0;
+}

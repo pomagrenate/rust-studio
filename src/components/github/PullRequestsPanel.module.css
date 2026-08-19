@@ -1,0 +1,360 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--pm-border-default, #e5e5e5);
+  background-color: var(--pm-bg-panel-header, #f3f3f3);
+  min-height: 32px;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pm-fg-default, #24292f);
+}
+
+.count {
+  background-color: var(--pm-bg-badge, #e1e1e1);
+  color: var(--pm-fg-default, #24292f);
+  border-radius: 10px;
+  padding: 0 6px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.filterSelect {
+  font-size: 11px;
+  padding: 2px 6px;
+  border: 1px solid var(--pm-border-input, #cecece);
+  border-radius: 3px;
+  background-color: var(--pm-bg-input, #ffffff);
+  color: var(--pm-fg-default, #24292f);
+  cursor: pointer;
+}
+
+.iconButton {
+  background: transparent;
+  border: none;
+  color: var(--pm-fg-subtle, #6e7781);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: background-color 0.1s;
+}
+
+.iconButton:hover:not(:disabled) {
+  background-color: var(--pm-bg-hover, #f3f3f3);
+  color: var(--pm-fg-default, #24292f);
+}
+
+.iconButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background-color: #ffeef0;
+  border-bottom: 1px solid #ffc1c8;
+  color: #cf222e;
+  font-size: 11px;
+}
+
+.dismissButton {
+  background: transparent;
+  border: none;
+  color: #cf222e;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dismissButton:hover {
+  background-color: rgba(207, 34, 46, 0.1);
+}
+
+.createForm {
+  padding: 12px;
+  border-bottom: 1px solid var(--pm-border-default, #e5e5e5);
+  background-color: var(--pm-bg-muted, #f6f8fa);
+}
+
+.formRow {
+  margin-bottom: 8px;
+}
+
+.formRow:last-child {
+  margin-bottom: 0;
+}
+
+.titleInput,
+.bodyInput {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 12px;
+  border: 1px solid var(--pm-border-input, #cecece);
+  border-radius: 3px;
+  background-color: var(--pm-bg-input, #ffffff);
+  color: var(--pm-fg-default, #24292f);
+  outline: none;
+  box-sizing: border-box;
+}
+
+.titleInput:focus,
+.bodyInput:focus {
+  border-color: var(--pm-border-focus, #005fb8);
+}
+
+.bodyInput {
+  resize: vertical;
+  font-family: var(--pm-font-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+}
+
+.branchInputs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.branchInputs > div {
+  flex: 1;
+}
+
+.branchInputs label {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--pm-fg-subtle, #6e7781);
+  margin-bottom: 2px;
+}
+
+.branchInput {
+  width: 100%;
+  padding: 4px 6px;
+  font-size: 11px;
+  border: 1px solid var(--pm-border-input, #cecece);
+  border-radius: 3px;
+  background-color: var(--pm-bg-input, #ffffff);
+  color: var(--pm-fg-default, #24292f);
+  font-family: var(--pm-font-mono, "Consolas", "Monaco", monospace);
+  box-sizing: border-box;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--pm-fg-default, #24292f);
+  cursor: pointer;
+}
+
+.formActions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.cancelButton,
+.createButton {
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 3px;
+  cursor: pointer;
+  border: none;
+}
+
+.cancelButton {
+  background-color: var(--pm-bg-secondary, #f3f3f3);
+  color: var(--pm-fg-default, #24292f);
+}
+
+.cancelButton:hover {
+  background-color: var(--pm-bg-hover, #eaeaea);
+}
+
+.createButton {
+  background-color: var(--pm-accent, #005fb8);
+  color: #ffffff;
+}
+
+.createButton:hover:not(:disabled) {
+  background-color: var(--pm-accent-hover, #0069cc);
+}
+
+.createButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.prList {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--pm-fg-subtle, #6e7781);
+  font-size: 12px;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.prItem {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--pm-border-default, #e5e5e5);
+  cursor: pointer;
+  transition: background-color 0.1s;
+}
+
+.prItem:hover {
+  background-color: var(--pm-bg-hover, #f3f3f3);
+}
+
+.prIcon {
+  margin-right: 8px;
+  font-size: 16px;
+}
+
+.openIcon {
+  color: #2ea043;
+}
+
+.closedIcon {
+  color: #cf222e;
+}
+
+.mergedIcon {
+  color: #a371f7;
+}
+
+.prContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.prHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.prTitle {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--pm-fg-default, #24292f);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.prStatus {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 1px 4px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.open {
+  background-color: #dafbe1;
+  color: #1a7f37;
+}
+
+.closed {
+  background-color: #ffeef0;
+  color: #cf222e;
+}
+
+.merged {
+  background-color: #f0f0ff;
+  color: #6a4f9f;
+}
+
+.draftBadge {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--pm-fg-subtle, #6e7781);
+  background-color: var(--pm-bg-muted, #f6f8fa);
+  padding: 1px 4px;
+  border-radius: 3px;
+  border: 1px solid var(--pm-border-default, #e5e5e5);
+}
+
+.prMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  color: var(--pm-fg-subtle, #6e7781);
+}
+
+.prLink {
+  background: transparent;
+  border: none;
+  color: var(--pm-fg-subtle, #6e7781);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: color 0.1s;
+}
+
+.prLink:hover {
+  color: var(--pm-accent, #005fb8);
+}

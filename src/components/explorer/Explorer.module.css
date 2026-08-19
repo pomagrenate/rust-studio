@@ -1,0 +1,221 @@
+.explorerPane {
+  display: flex;
+  flex-direction: column;
+  height: calc(100% - 16px);
+  width: calc(100% - 16px);
+  margin: 8px;
+  color: var(--pm-fg-default);
+  font-size: 14px;
+  overflow: hidden;
+  box-sizing: border-box;
+  background-color: var(--pm-bg-sidebar, #121316);
+  border: 1px solid var(--pm-border-default, #282b33);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  position: relative;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--pm-fg-subtle, #8b949e);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--pm-border-default, #282b33);
+  min-height: 36px;
+  height: 36px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.headerActionIcon {
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pm-fg-subtle, #8b949e);
+  font-weight: 800;
+  line-height: 1;
+  font-size: 25px;
+  transition: background-color 0.1s ease, color 0.1s ease;
+}
+
+.headerActionIcon:hover {
+  background-color: var(--pm-bg-sidebar-active, rgba(255, 255, 255, 0.1));
+  color: var(--pm-fg-default, #e5e5e5);
+}
+
+/* ── Project Tree & External Libs (Tự động scroll độc lập) ── */
+.treeArea {
+  flex: 1 1 0%;
+  min-height: 30%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 6px 0;
+  box-sizing: border-box;
+}
+
+/* ── Outline & Timeline Container (Cố định ở đáy, max 70% height) ── */
+.bottomPanesContainer {
+  display: flex;
+  flex-direction: column;
+  flex: 0 1 auto;
+  max-height: 70%;
+  min-height: fit-content;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-top: 1px solid var(--pm-border-default, #282b33);
+  background-color: var(--pm-bg-sidebar, #121316);
+  z-index: 10;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 2px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 12.5px;
+  color: var(--pm-fg-default);
+  user-select: none;
+  height: 30px;
+  min-height: 30px;
+  box-sizing: border-box;
+  transition: background-color 0.1s ease;
+}
+
+.sectionHeader:focus-visible,
+.sectionHeader:active {
+  outline: 1px solid rgba(247, 76, 0, 0.4);
+}
+
+.sectionTitle {
+  flex: 1;
+  font-weight: 700;
+  font-size: 12.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+}
+
+.sectionHeader:hover {
+  background-color: var(--pm-bg-sidebar-hover, rgba(255, 255, 255, 0.05));
+}
+
+.sectionHeaderIcon {
+  margin-right: 6px;
+  font-size: 15px;
+  transition: transform 0.1s;
+}
+
+.sectionActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.sectionHeader:hover .sectionActions {
+  opacity: 1;
+}
+
+.actionIcon {
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: var(--pm-fg-subtle);
+}
+
+.actionIcon:hover {
+  background-color: var(--pm-bg-sidebar-active, rgba(255, 255, 255, 0.1));
+  color: var(--pm-fg-default);
+}
+
+.sectionContent {
+  display: flex;
+  flex-direction: column;
+  padding: 2px 0;
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+.inlineInputRow {
+  display: flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 8px;
+  box-sizing: border-box;
+}
+
+.inlineInput {
+  flex: 1;
+  height: 22px;
+  background-color: var(--pm-bg-input, rgba(0, 0, 0, 0.3));
+  border: 1px solid rgba(247, 76, 0, 0.5);
+  color: var(--pm-fg-default);
+  font-size: 13px;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  padding: 0 8px;
+  outline: none;
+  border-radius: 4px;
+  min-width: 0;
+}
+
+.emptyWorkspace {
+  padding: 20px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--pm-fg-default);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.emptyWorkspaceText {
+  color: var(--pm-fg-subtle, #8b949e);
+}
+
+.primaryBtn {
+  background-color: #d45b11;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  padding: 8px 12px;
+  cursor: pointer;
+  width: 100%;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  transition: all 0.1s ease;
+  outline: none;
+}
+
+.primaryBtn:hover {
+  background-color: #f74c00;
+}

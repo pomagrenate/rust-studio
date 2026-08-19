@@ -1,0 +1,342 @@
+/**
+ * TestExplorer.module.css — JetBrains RustRover Style Test Explorer Tool Window
+ * Integrated with CodeLLDB (pomai-debugger) for 1-click test execution and test debugging.
+ */
+
+.testExplorerContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background-color: var(--pm-bg-panel, #ffffff);
+  color: var(--pm-fg-default, #24292f);
+  font-family: var(--pm-font-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+  font-size: 13px;
+  overflow: hidden;
+  user-select: none;
+  border-top: 1px solid var(--pm-border-panel, #d8d8d8);
+}
+
+/* ── Header Toolbar ── */
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 32px;
+  min-height: 32px;
+  max-height: 32px;
+  background-color: var(--pm-bg-panel-header, #f3f3f3);
+  border-bottom: 1px solid var(--pm-border-panel, #d8d8d8);
+  padding: 0 8px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.headerTitle {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--pm-fg-default, #24292f);
+  padding: 0 4px;
+}
+
+.statsPills {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.statBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.statPassed {
+  background-color: rgba(26, 127, 55, 0.15);
+  color: #1a7f37;
+}
+
+.statFailed {
+  background-color: rgba(207, 34, 46, 0.15);
+  color: #cf222e;
+}
+
+.statTotal {
+  background-color: rgba(128, 128, 128, 0.12);
+  color: var(--pm-fg-default, #24292f);
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.runAllBtn {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background-color: #1a7f37;
+  color: #ffffff;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.1s ease;
+}
+
+.runAllBtn:hover {
+  opacity: 0.9;
+}
+
+.debugAllBtn {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background-color: var(--pm-accent, #005fb8);
+  color: #ffffff;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.1s ease;
+}
+
+.debugAllBtn:hover {
+  opacity: 0.9;
+}
+
+.iconBtn {
+  all: unset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  color: var(--pm-fg-muted, #57606a);
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+
+.iconBtn:hover {
+  background-color: rgba(128, 128, 128, 0.12);
+  color: var(--pm-fg-default, #24292f);
+}
+
+/* ── Split Body Layout ── */
+.panelBody {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* ── Left Test Tree Pane ── */
+.treePane {
+  width: 380px;
+  min-width: 250px;
+  max-width: 600px;
+  height: 100%;
+  border-right: 1px solid var(--pm-border-panel, #d8d8d8);
+  display: flex;
+  flex-direction: column;
+  background-color: var(--pm-bg-panel, #ffffff);
+  flex-shrink: 0;
+}
+
+.filterBar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background-color: var(--pm-bg-panel-header, #f3f3f3);
+  border-bottom: 1px solid var(--pm-border-panel, #d8d8d8);
+}
+
+.searchInput {
+  all: unset;
+  flex: 1;
+  padding: 3px 8px;
+  font-size: 12px;
+  background-color: var(--pm-bg-panel, #ffffff);
+  border: 1px solid var(--pm-border-panel, #d8d8d8);
+  border-radius: 4px;
+  color: var(--pm-fg-default, #24292f);
+}
+
+.filterBtnGroup {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background-color: rgba(128, 128, 128, 0.08);
+  padding: 2px;
+  border-radius: 4px;
+}
+
+.filterBtn {
+  all: unset;
+  padding: 2px 6px;
+  font-size: 11px;
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--pm-fg-muted, #57606a);
+}
+
+.filterBtnActive {
+  background-color: var(--pm-bg-panel, #ffffff);
+  color: var(--pm-fg-default, #24292f) !important;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.treeList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.moduleGroup {
+  margin-bottom: 2px;
+}
+
+.moduleHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pm-fg-default, #24292f);
+  background-color: rgba(128, 128, 128, 0.03);
+}
+
+.moduleHeader:hover {
+  background-color: rgba(128, 128, 128, 0.08);
+}
+
+.testRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 28px;
+  cursor: pointer;
+  font-size: 12px;
+  border-left: 2px solid transparent;
+  transition: background-color 0.1s ease;
+}
+
+.testRow:hover {
+  background-color: rgba(128, 128, 128, 0.08);
+}
+
+.testRowActive {
+  background-color: rgba(0, 95, 184, 0.12) !important;
+  border-left-color: var(--pm-accent, #005fb8);
+  font-weight: 500;
+}
+
+.testName {
+  font-family: var(--pm-font-mono, monospace);
+  font-size: 12px;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.testDuration {
+  font-size: 10.5px;
+  color: var(--pm-fg-muted, #57606a);
+  margin-left: auto;
+}
+
+.testActionsGroup {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
+}
+
+.testRow:hover .testActionsGroup {
+  display: flex;
+}
+
+.actionBtnMini {
+  all: unset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+
+.actionBtnMini:hover {
+  background-color: rgba(128, 128, 128, 0.2);
+}
+
+/* ── Right Output / Console Pane ── */
+.outputPane {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--pm-bg-panel, #ffffff);
+}
+
+.outputHeader {
+  height: 28px;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  background-color: var(--pm-bg-panel-header, #f3f3f3);
+  border-bottom: 1px solid var(--pm-border-panel, #d8d8d8);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--pm-fg-muted, #57606a);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.outputLogs {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px;
+  font-family: var(--pm-font-mono, monospace);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 140px;
+  color: var(--pm-fg-muted, #57606a);
+  font-size: 13px;
+}

@@ -1,0 +1,180 @@
+/**
+ * Welcome.module.css — JetBrains RustRover Style Spacious Welcome Tab
+ */
+
+.welcomeContainer {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  padding-top: 48px;
+  padding-bottom: 48px;
+  background-color: var(--pm-bg-editor, #ffffff);
+  color: var(--pm-fg-default, #24292f);
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.content {
+  max-width: 780px;
+  width: 100%;
+  padding: 0 32px;
+}
+
+.heroHeader {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.heroLogo {
+  width: 48px;
+  height: 48px;
+  color: #dea584;
+}
+
+.title {
+  font-size: 30px;
+  font-weight: 700;
+  margin: 0 0 6px 0;
+  color: var(--pm-fg-default, #24292f);
+  letter-spacing: -0.5px;
+}
+
+.subtitle {
+  font-size: 15px;
+  color: var(--pm-fg-subtle, #6e7781);
+  margin: 0;
+}
+
+.section {
+  margin-bottom: 32px;
+}
+
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 16px 0;
+  color: var(--pm-fg-default, #24292f);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.actionGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.actionCard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background-color: var(--pm-bg-tab-inactive, #f8f9fa);
+  border: 1px solid var(--pm-border-default, #e5e5e5);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.actionCard:hover {
+  background-color: var(--pm-bg-sidebar-hover, #eef2ff);
+  border-color: var(--pm-accent, #3574f0);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(53, 116, 240, 0.1);
+}
+
+.actionIcon {
+  font-size: 24px;
+  color: var(--pm-accent, #3574f0);
+  flex-shrink: 0;
+}
+
+.actionCardText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.actionTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--pm-fg-default, #24292f);
+}
+
+.actionDesc {
+  font-size: 13px;
+  color: var(--pm-fg-subtle, #6e7781);
+}
+
+.shortcutGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.shortcutItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background-color: var(--pm-bg-tab-inactive, #f8f9fa);
+  border: 1px solid var(--pm-border-default, #e5e5e5);
+  border-radius: 6px;
+}
+
+.shortcutLabel {
+  font-size: 13.5px;
+  color: var(--pm-fg-default, #24292f);
+}
+
+.keybind {
+  font-family: var(--pm-font-mono, monospace);
+  font-size: 12px;
+  padding: 3px 7px;
+  background-color: var(--pm-bg-app, #ececec);
+  border: 1px solid var(--pm-border-default, #d0d0d0);
+  border-radius: 4px;
+  color: var(--pm-fg-default, #24292f);
+  font-weight: 600;
+}
+
+/* Empty Screen */
+.emptyContainer {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  background-color: var(--pm-bg-editor);
+  color: var(--pm-fg-muted);
+}
+
+.watermark {
+  opacity: 0.08;
+  margin-bottom: 32px;
+  pointer-events: none;
+}
+
+.shortcuts {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 320px;
+}
+
+.shortcutRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+}

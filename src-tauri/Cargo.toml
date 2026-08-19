@@ -1,0 +1,74 @@
+[package]
+name = "pomai-studio"
+version = "0.1.0"
+description = "pomai-studio — a high-performance Rust/Tauri code editor"
+authors = ["Pomai"]
+edition = "2021"
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "pomai_studio_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["protocol-asset"] }
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Text buffer — battle-tested O(log N) rope data structure
+ropey = "1.6"
+
+# Async runtime for non-blocking file I/O
+tokio = { version = "1", features = ["full"] }
+
+# Cross-platform file system watching (inotify/FSEvents/ReadDirectoryChanges)
+notify = "6"
+
+# Efficient recursive directory traversal
+walkdir = "2"
+
+# Concurrent document registry (lock-free HashMap)
+dashmap = "5"
+
+# Faster Mutex/RwLock than std
+parking_lot = "0.12"
+
+# Ergonomic error handling
+thiserror = "1"
+tauri-plugin-dialog = "2.7.2"
+urlencoding = "2.1.3"
+portable-pty = "0.9.0"
+regex = "1"
+toml = "0.8"
+
+# ── LSP Host / rust-analyzer orchestration ────────────────────────────────────
+# Channels for cross-thread message passing without locking
+crossbeam-channel = "0.5"
+# CancellationToken, timeout, async utilities
+tokio-util = { version = "0.7", features = ["rt"] }
+# Ergonomic, one-liner error propagation in the LSP subsystem
+anyhow = "1"
+# Unique request IDs for LSP request/response correlation
+uuid = { version = "1", features = ["v4"] }
+
+# ── Tree-sitter Syntax Highlighting ──────────────────────────────────────────
+tree-sitter = "0.24"
+tree-sitter-rust = "0.23"
+tree-sitter-highlight = "0.24"
+
+# ── GitHub Integration ───────────────────────────────────────────────────────
+octocrab = "0.41"
+keyring = "3"
+base64 = "0.22"
+
+[profile.release]
+# Maximum optimisation for the release binary
+opt-level = 3
+lto = true
+codegen-units = 1

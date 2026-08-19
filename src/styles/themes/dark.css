@@ -1,0 +1,100 @@
+/**
+ * Dark Theme — pomai-studio
+ *
+ * Toggle with: document.documentElement.setAttribute('data-theme', 'dark')
+ * Palette: VS Code Dark+
+ */
+
+[data-theme="dark"] {
+  /* ─── Chrome / Shell ───────────────────────────────────────────────── */
+  --pm-bg-app:                #1e1e1e;
+  --pm-bg-activitybar:        #181818;
+  --pm-bg-activitybar-active: #1e1e1e;
+  --pm-bg-sidebar:            #252526;
+  --pm-bg-sidebar-hover:      #2a2d2e;
+  --pm-bg-sidebar-active:     #37373d;
+  --pm-bg-panel:              #1e1e1e;
+  --pm-bg-panel-header:       #252526;
+  --pm-bg-navbar:             #1e1f22;
+  --pm-bg-navbar-hover:       rgba(255, 255, 255, 0.08);
+  --pm-bg-statusbar:          #007acc;
+  --pm-bg-tab-active:         #1e1e1e;
+  --pm-bg-tab-inactive:       #2d2d2d;
+  --pm-bg-tab-hover:          #353535;
+
+  /* ─── Inputs & Controls ────────────────────────────────────────────── */
+  --pm-bg-input:              #313131;
+  --pm-border-input:          #3c3c3c;
+  --pm-border-input-focus:    #007acc;
+
+  /* ─── Editor Surface ────────────────────────────────────────────────── */
+  --pm-bg-editor:             #1e1e1e;
+  --pm-bg-editor-gutter:      #1e1e1e;
+  --pm-bg-selection:          rgba(38, 79, 120, 0.65);
+  --pm-bg-line-active:        rgba(255, 255, 255, 0.04);
+  --pm-bg-line-hover:         rgba(255, 255, 255, 0.02);
+
+  /* ─── Borders / Dividers ────────────────────────────────────────────── */
+  --pm-border-default:        #282828;
+  --pm-border-panel:          #3c3c3c;
+  --pm-border-tab:            #3c3c3c;
+  --pm-border-focus:          #007acc;
+  --pm-border-gutter:         #2a2a2a;
+
+  /* ─── Text ──────────────────────────────────────────────────────────── */
+  --pm-fg-default:            #d4d4d4;
+  --pm-fg-muted:              #6a9955;
+  --pm-fg-subtle:             #858585;
+  --pm-fg-on-accent:          #ffffff;
+  --pm-fg-statusbar:          #ffffff;
+
+  /* ─── Syntax Tokens ─────────────────────────────────────────────────── */
+  --pm-syntax-keyword:        #c586c0;
+  --pm-syntax-string:         #ce9178;
+  --pm-syntax-number:         #b5cea8;
+  --pm-syntax-comment:        #6a9955;
+  --pm-syntax-fn:             #dcdcaa;
+  --pm-syntax-type:           #4ec9b0;
+  --pm-syntax-variable:       #9cdcfe;
+  --pm-syntax-operator:       #d4d4d4;
+  --pm-syntax-punctuation:    #d4d4d4;
+  --pm-syntax-tag:            #4ec9b0;
+  --pm-syntax-attr:           #9cdcfe;
+
+  /* ─── Accent / Interactive ──────────────────────────────────────────── */
+  --pm-accent:                #007acc;
+  --pm-accent-hover:          #1b8ee6;
+  --pm-accent-muted:          rgba(0, 122, 204, 0.15);
+
+  /* ─── Cursor ────────────────────────────────────────────────────────── */
+  --pm-cursor-color:          #aeafad;
+  --pm-cursor-width:          2px;
+
+  /* ─── Scrollbar ─────────────────────────────────────────────────────── */
+  --pm-scrollbar-thumb:       rgba(255, 255, 255, 0.18);
+  --pm-scrollbar-thumb-hover: rgba(255, 255, 255, 0.35);
+  --pm-scrollbar-track:       transparent;
+
+  /* ─── Typography ────────────────────────────────────────────────────── */
+  --pm-font-ui:               "Inter", "Segoe UI", system-ui, sans-serif;
+  --pm-font-mono:             "JetBrains Mono", "Cascadia Code", "Fira Code",
+                              "Consolas", "Courier New", monospace;
+  --pm-font-size-ui:          14px;
+  --pm-font-size-editor:      15px;
+  --pm-line-height-editor:    1.55;
+  --pm-tab-size:              4;
+
+  /* ─── Sizing / Layout ───────────────────────────────────────────────── */
+  --pm-sidebar-width:         260px;
+  --pm-statusbar-height:      28px;
+  --pm-tab-height:            38px;
+  --pm-navbar-height:         44px;
+  --pm-activitybar-width:     54px;
+  --pm-gutter-width:          60px;
+  --pm-indent-guide-color:    rgba(255, 255, 255, 0.08);
+
+  /* ─── Shadows ───────────────────────────────────────────────────────── */
+  --pm-shadow-panel:          0 1px 3px rgba(0, 0, 0, 0.4);
+  --pm-shadow-dropdown:       0 4px 12px rgba(0, 0, 0, 0.5);
+  --pm-shadow-modal:          0 8px 32px rgba(0, 0, 0, 0.6);
+}

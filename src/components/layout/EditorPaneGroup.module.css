@@ -1,0 +1,42 @@
+/**
+ * EditorPaneGroup.module.css — Rust Studio Style (Inside Floating Island)
+ */
+
+.groupContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  min-width: 150px;
+  overflow: hidden;
+  position: relative;
+  background-color: transparent;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.groupCanvas {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.editorGroupResizer {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  width: 5px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 40;
+  user-select: none;
+}
+
+.editorGroupResizer:hover,
+.editorGroupResizer.isResizing {
+  background-color: rgba(247, 76, 0, 0.5);
+}

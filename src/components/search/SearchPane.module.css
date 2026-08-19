@@ -1,0 +1,393 @@
+.searchPane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background-color: var(--pm-bg-sidebar, #f3f3f3);
+  color: var(--pm-fg-default, #24292f);
+  overflow: hidden;
+  user-select: none;
+  font-family: var(--pm-font-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif);
+}
+
+.searchHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 35px;
+  min-height: 35px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--pm-border-default, #e5e5e5);
+}
+
+.searchTitle {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--pm-fg-subtle, #6e7781);
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.headerButton {
+  background: transparent;
+  border: none;
+  color: var(--pm-fg-subtle, #6e7781);
+  cursor: pointer;
+  padding: 3px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.headerButton:hover {
+  color: var(--pm-fg-default, #24292f);
+  background-color: var(--pm-bg-sidebar-hover, rgba(0, 0, 0, 0.05));
+}
+
+.inputsContainer {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-bottom: 1px solid var(--pm-border-default, #e5e5e5);
+}
+
+.inputRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  position: relative;
+}
+
+.toggleReplaceBtn {
+  background: transparent;
+  border: none;
+  color: var(--pm-fg-subtle, #6e7781);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.toggleReplaceBtn:hover {
+  color: var(--pm-fg-default, #24292f);
+}
+
+.inputWrapper {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  background-color: var(--pm-bg-input, #ffffff);
+  border: 1px solid var(--pm-border-input, #cecece);
+  border-radius: 2px;
+  padding: 0 4px 0 6px;
+  height: 26px;
+  box-sizing: border-box;
+}
+
+.inputWrapper:focus-within {
+  border-color: var(--pm-accent, #005fb8);
+  outline: 1px solid var(--pm-accent, #005fb8);
+}
+
+.textInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--pm-fg-default, #24292f);
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  min-width: 0;
+}
+
+.textInput::placeholder {
+  color: var(--pm-fg-muted, #8c8c8c);
+}
+
+.inInputActions {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.inInputToggle {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--pm-fg-subtle, #6e7781);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 2px;
+  font-size: 11px;
+  font-family: var(--pm-font-mono, monospace);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  user-select: none;
+}
+
+.inInputToggle:hover {
+  color: var(--pm-fg-default, #24292f);
+  background-color: var(--pm-bg-sidebar-hover, rgba(0, 0, 0, 0.05));
+}
+
+.inInputToggle.toggleActive {
+  background-color: var(--pm-accent-muted, rgba(0, 95, 184, 0.15));
+  border-color: var(--pm-accent, #005fb8);
+  color: var(--pm-accent, #005fb8);
+  font-weight: 600;
+}
+
+.replaceAllButton {
+  background: transparent;
+  border: none;
+  color: var(--pm-fg-subtle, #6e7781);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.replaceAllButton:hover {
+  color: var(--pm-fg-default, #24292f);
+  background-color: var(--pm-bg-sidebar-hover, rgba(0, 0, 0, 0.05));
+}
+
+.detailsToggleRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  color: var(--pm-fg-subtle, #6e7781);
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.detailsToggleRow:hover {
+  color: var(--pm-fg-default, #24292f);
+}
+
+.detailsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.detailsLabel {
+  font-size: 11px;
+  color: var(--pm-fg-subtle, #6e7781);
+  margin-bottom: 2px;
+}
+
+.detailsInput {
+  background-color: var(--pm-bg-input, #ffffff);
+  border: 1px solid var(--pm-border-input, #cecece);
+  border-radius: 2px;
+  color: var(--pm-fg-default, #24292f);
+  font-size: 11px;
+  padding: 4px 6px;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.detailsInput:focus {
+  border-color: var(--pm-accent, #005fb8);
+}
+
+.messageArea {
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--pm-fg-muted, #57606a);
+}
+
+.resultsArea {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 0;
+}
+
+.fileNode {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px 4px 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.fileNode:hover {
+  background-color: var(--pm-bg-sidebar-hover, rgba(0, 0, 0, 0.04));
+}
+
+.fileNodeContent {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fileIcon {
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+}
+
+.fileName {
+  color: var(--pm-fg-default, #24292f);
+  font-weight: 500;
+}
+
+.filePath {
+  color: var(--pm-fg-muted, #6e7781);
+  font-size: 11px;
+  margin-left: 4px;
+}
+
+.fileCountBadge {
+  background-color: var(--pm-bg-sidebar-active, #e0e0e0);
+  color: var(--pm-fg-default, #24292f);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.fileActions {
+  display: none;
+  align-items: center;
+  gap: 2px;
+}
+
+.fileNode:hover .fileActions {
+  display: flex;
+}
+
+.fileActionButton {
+  background: transparent;
+  border: none;
+  color: var(--pm-fg-subtle, #6e7781);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.fileActionButton:hover {
+  color: var(--pm-fg-default, #24292f);
+  background-color: var(--pm-bg-sidebar-hover, rgba(0, 0, 0, 0.1));
+}
+
+.matchList {
+  display: flex;
+  flex-direction: column;
+}
+
+.matchRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 8px 3px 28px;
+  cursor: pointer;
+  font-family: var(--pm-font-mono, "Consolas", monospace);
+  font-size: 11px;
+  color: var(--pm-fg-default, #24292f);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.matchRow:hover {
+  background-color: var(--pm-bg-sidebar-hover, rgba(0, 0, 0, 0.05));
+}
+
+.matchContent {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lineNumber {
+  color: var(--pm-fg-subtle, #6e7781);
+  min-width: 24px;
+  text-align: right;
+}
+
+.lineText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.highlight {
+  background-color: rgba(234, 179, 8, 0.4);
+  color: inherit;
+  border-radius: 1px;
+  font-weight: 700;
+}
+
+.matchActions {
+  display: none;
+  align-items: center;
+  gap: 2px;
+}
+
+.matchRow:hover .matchActions {
+  display: flex;
+}
+
+.emptyState {
+  padding: 16px 12px;
+  font-size: 12px;
+  color: var(--pm-fg-muted, #6e7781);
+  line-height: 1.5;
+}
+
+.openFolderLink {
+  color: var(--pm-accent, #005fb8);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.progressBar {
+  height: 2px;
+  width: 100%;
+  background-color: var(--pm-accent-muted, rgba(0, 95, 184, 0.2));
+  overflow: hidden;
+}
+
+.progressIndicator {
+  height: 100%;
+  width: 50%;
+  background-color: var(--pm-accent, #005fb8);
+  animation: indeterminate 1.2s infinite ease-in-out;
+}
+
+@keyframes indeterminate {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}

@@ -1,0 +1,54 @@
+/**
+ * HoverTooltip.module.css — LSP hover tooltip styles
+ */
+
+.tooltip {
+  position: fixed;
+  z-index: 10000;
+  background-color: var(--pm-bg-tooltip);
+  border: 1px solid var(--pm-border-default);
+  border-radius: 6px;
+  padding: 8px 12px;
+  max-width: 400px;
+  max-height: 300px;
+  overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  font-family: var(--pm-font-ui);
+  font-size: 13px;
+  color: var(--pm-fg-default);
+  pointer-events: auto;
+}
+
+.tooltipText {
+  margin: 4px 0;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.tooltipCodeBlock {
+  margin: 8px 0;
+  background-color: var(--pm-bg-code);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.tooltipCodeLanguage {
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--pm-fg-subtle);
+  background-color: var(--pm-bg-code-header);
+  border-bottom: 1px solid var(--pm-border-default);
+}
+
+.tooltipCodeValue {
+  margin: 0;
+  padding: 8px;
+  font-family: var(--pm-font-mono);
+  font-size: 12px;
+  line-height: 1.4;
+  overflow-x: auto;
+  white-space: pre;
+  color: var(--pm-fg-default);
+}

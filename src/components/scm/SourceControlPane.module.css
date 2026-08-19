@@ -1,0 +1,591 @@
+.scmPane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  color: var(--pm-fg-default);
+  font-size: 13px;
+  overflow: hidden;
+  background-color: var(--pm-bg-sidebar, #f3f3f3);
+  user-select: none;
+  font-family: var(--pm-font-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--pm-fg-subtle, #6e7781);
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  min-height: 35px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.headerBtn {
+  background: transparent;
+  border: none;
+  color: var(--pm-fg-subtle);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.headerBtn:hover {
+  background-color: var(--pm-bg-sidebar-hover);
+  color: var(--pm-fg-default);
+}
+
+.topSection {
+  padding: 4px 10px 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-bottom: 1px solid var(--pm-border-default, #e5e5e5);
+  flex-shrink: 0;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  padding: 4px 6px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--pm-fg-default);
+  height: 24px;
+  min-height: 24px;
+  box-sizing: border-box;
+}
+
+.sectionHeader:hover {
+  background-color: var(--pm-bg-sidebar-hover);
+}
+
+.sectionTitle {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.countBadge {
+  background-color: var(--pm-bg-sidebar-active, #e1e1e1);
+  color: var(--pm-fg-default);
+  border-radius: 10px;
+  padding: 0 6px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.sectionActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.commitInputWrapper {
+  position: relative;
+  width: 100%;
+}
+
+.commitInput {
+  width: 100%;
+  height: 30px;
+  background-color: var(--pm-bg-input, #ffffff);
+  border: 1px solid var(--pm-border-input, #cecece);
+  border-radius: 3px;
+  padding: 0 26px 0 8px;
+  font-size: 12px;
+  font-family: var(--pm-font-ui);
+  color: var(--pm-fg-default);
+  outline: none;
+  box-sizing: border-box;
+}
+
+.commitInput:focus {
+  border-color: var(--pm-border-focus, #005fb8);
+}
+
+.inputSparkle {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--pm-fg-subtle, #888888);
+  font-size: 14px;
+  pointer-events: none;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.primarySyncBtn {
+  background-color: var(--pm-accent, #005fb8);
+  color: #ffffff;
+  border: none;
+  border-radius: 3px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  transition: background-color 0.1s;
+}
+
+.primarySyncBtn:hover {
+  background-color: var(--pm-accent-hover, #0069cc);
+}
+
+.primarySyncBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* ── File Lists ── */
+
+.fileListArea {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 6px;
+}
+
+.fileRow {
+  display: flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px 0 20px;
+  cursor: pointer;
+  font-size: 12.5px;
+  color: var(--pm-fg-default);
+  white-space: nowrap;
+  overflow: hidden;
+  position: relative;
+}
+
+.fileRow:hover {
+  background-color: var(--pm-bg-sidebar-hover);
+}
+
+.fileName {
+  font-weight: 500;
+  margin-right: 6px;
+}
+
+.filePath {
+  font-size: 11px;
+  color: var(--pm-fg-subtle, #6e7781);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.statusBadge {
+  font-size: 11px;
+  font-weight: 700;
+  margin-left: 6px;
+  padding: 0 2px;
+}
+
+.statusM { color: #e58e26; }
+.statusA { color: #2ea043; }
+.statusD { color: #cf222e; }
+.statusU { color: #2ea043; }
+
+.fileActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 6px;
+  opacity: 0;
+}
+
+.fileRow:hover .fileActions {
+  opacity: 1;
+}
+
+.rowActionBtn {
+  background: transparent;
+  border: none;
+  color: var(--pm-fg-subtle);
+  cursor: pointer;
+  padding: 1px 3px;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+}
+
+.rowActionBtn:hover {
+  background-color: var(--pm-bg-sidebar-active);
+  color: var(--pm-fg-default);
+}
+
+/* ── Graph Section ── */
+
+.graphContainer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 120px;
+}
+
+.graphHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--pm-fg-default);
+  height: 26px;
+  min-height: 26px;
+  border-top: 1px solid var(--pm-border-default, #e5e5e5);
+  border-bottom: 1px solid var(--pm-border-default, #e5e5e5);
+  box-sizing: border-box;
+}
+
+.graphHeader:hover {
+  background-color: var(--pm-bg-sidebar-hover);
+}
+
+.graphTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.graphActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.graphActionPill {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: normal;
+  text-transform: none;
+  background: transparent;
+  border: none;
+  color: var(--pm-fg-subtle);
+  cursor: pointer;
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.graphActionPill:hover {
+  background-color: var(--pm-bg-sidebar-active);
+  color: var(--pm-fg-default);
+}
+
+.graphScrollArea {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 0;
+}
+
+.graphNodeRow {
+  display: flex;
+  align-items: center;
+  height: 22px;
+  min-height: 22px;
+  padding: 0 10px 0 6px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--pm-fg-default);
+  position: relative;
+  white-space: nowrap;
+}
+
+.graphNodeRow:hover {
+  background-color: var(--pm-bg-sidebar-hover);
+}
+
+.graphTrackCol {
+  width: 22px;
+  height: 22px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.graphTrackLineTop {
+  position: absolute;
+  top: 0;
+  bottom: 50%;
+  width: 2px;
+  background-color: #8a3ffc;
+  left: calc(50% - 1px);
+}
+
+.graphTrackLineBottom {
+  position: absolute;
+  top: 50%;
+  bottom: 0;
+  width: 2px;
+  background-color: #8a3ffc;
+  left: calc(50% - 1px);
+}
+
+.graphDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #8a3ffc;
+  z-index: 2;
+}
+
+.graphDotHead {
+  background-color: #a855f7;
+  box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.3);
+}
+
+.graphMessage {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-left: 4px;
+  font-size: 12px;
+}
+
+.remoteRefBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background-color: #491d8b;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 500;
+  border-radius: 10px;
+  padding: 1px 7px;
+  margin-left: 6px;
+  flex-shrink: 0;
+}
+
+.localRefBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background-color: #005fb8;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 500;
+  border-radius: 10px;
+  padding: 1px 6px;
+  margin-left: 6px;
+  flex-shrink: 0;
+}
+
+/* ── Empty Repo State ── */
+
+.emptyState {
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  color: var(--pm-fg-default);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.emptyText {
+  color: var(--pm-fg-subtle, #6e7781);
+}
+
+.primaryBtn {
+  background-color: var(--pm-accent, #005fb8);
+  color: #ffffff;
+  border: none;
+  border-radius: 2px;
+  padding: 6px 14px;
+  cursor: pointer;
+  width: 100%;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.primaryBtn:hover {
+  background-color: var(--pm-accent-hover, #0069cc);
+}
+
+.dropdownMenu {
+  position: absolute;
+  top: 30px;
+  right: 10px;
+  background-color: var(--pm-bg-editor, #ffffff);
+  border: 1px solid var(--pm-border-default, #e5e5e5);
+  border-radius: 4px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  padding: 4px 0;
+  z-index: 200;
+  min-width: 160px;
+  display: flex;
+  flex-direction: column;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--pm-fg-default);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  gap: 8px;
+  width: 100%;
+}
+
+.menuItem:hover {
+  background-color: var(--pm-bg-hover, #f3f3f3);
+}
+
+.menuDivider {
+  height: 1px;
+  background-color: var(--pm-border-default, #e5e5e5);
+  margin: 4px 0;
+}
+
+/* ── GitHub Integration Section ── */
+.githubSection {
+  border-top: 1px solid var(--pm-border-default, #e5e5e5);
+  flex-shrink: 0;
+}
+
+.sectionHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.authenticatedBadge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background-color: #dafbe1;
+  color: #1a7f37;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.authButton {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background-color: var(--pm-accent, #005fb8);
+  color: #ffffff;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.1s;
+}
+
+.authButton:hover {
+  background-color: var(--pm-accent-hover, #0069cc);
+}
+
+.githubContent {
+  display: flex;
+  flex-direction: column;
+  height: 300px;
+  overflow: hidden;
+}
+
+.githubTabs {
+  display: flex;
+  border-bottom: 1px solid var(--pm-border-default, #e5e5e5);
+  background-color: var(--pm-bg-panel-header, #f3f3f3);
+}
+
+.githubTab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--pm-fg-subtle, #6e7781);
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.githubTab:hover {
+  color: var(--pm-fg-default, #24292f);
+  background-color: var(--pm-bg-hover, #f3f3f3);
+}
+
+.githubTabActive {
+  color: var(--pm-fg-default, #24292f);
+  border-bottom-color: var(--pm-accent, #005fb8);
+  background-color: var(--pm-bg-panel, #ffffff);
+}
+
+.githubPanelContainer {
+  flex: 1;
+  overflow: hidden;
+  background-color: var(--pm-bg-panel, #ffffff);
+}
+
+.githubAuthPrompt {
+  padding: 16px;
+  text-align: center;
+  background-color: var(--pm-bg-panel, #ffffff);
+}
+
+.githubAuthPrompt p {
+  font-size: 12px;
+  color: var(--pm-fg-subtle, #6e7781);
+  margin: 0 0 12px 0;
+  line-height: 1.5;
+}

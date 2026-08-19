@@ -1,0 +1,226 @@
+/**
+ * TabBar.module.css — VS Code-style Tab Bar
+ * Structure: [tabList flex:1 overflow-x:auto] [editorActionsToolbar flex-shrink:0]
+ */
+
+/* ── Outer container: single flex row ── */
+.tabBarContainer {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  height: var(--pm-tab-height, 38px);
+  background-color: var(--pm-bg-tab-inactive);
+  border-bottom: 1px solid var(--pm-border-tab);
+  flex-shrink: 0;
+  user-select: none;
+  overflow: hidden;
+}
+
+/* ── Left: Scrollable tab list ── */
+.tabList {
+  display: flex;
+  align-items: flex-end;
+  height: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex: 1;
+  /* Takes all remaining space */
+  min-width: 0;
+  /* Allows shrinking below content size */
+  scrollbar-width: none;
+}
+
+.tabList::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Individual tab ── */
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: calc(var(--pm-tab-height, 38px) - 1px);
+  padding: 0 12px;
+  border-right: 1px solid var(--pm-border-tab);
+  background-color: var(--pm-bg-tab-inactive);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color var(--pm-transition-fast);
+  white-space: nowrap;
+  user-select: none;
+  font-size: 13px;
+}
+
+.tab:hover {
+  background-color: var(--pm-bg-tab-hover);
+}
+
+.tabActive {
+  background-color: var(--pm-bg-tab-active);
+  border-top: 2px solid var(--pm-border-focus);
+}
+
+.tabName {
+  font-size: 13px;
+  color: var(--pm-fg-default);
+}
+
+.tabActive .tabName {
+  color: var(--pm-fg-default);
+  font-weight: 500;
+}
+
+.tabIcon {
+  color: var(--pm-fg-muted);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.tabClose {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  border: none;
+  background: transparent;
+  color: var(--pm-fg-subtle);
+  cursor: pointer;
+  margin-left: 2px;
+  opacity: 0.6;
+  flex-shrink: 0;
+  transition: opacity 0.1s ease, background-color 0.1s ease;
+}
+
+.tab:hover .tabClose,
+.tabActive .tabClose {
+  opacity: 0.8;
+}
+
+.tab:hover .tabClose:hover,
+.tabActive .tabClose:hover {
+  opacity: 1;
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.tabDirtyIndicator {
+  font-size: 16px;
+  line-height: 1;
+  color: var(--pm-fg-default);
+  margin-left: 2px;
+}
+
+.tabPreview {
+  font-style: italic;
+}
+
+/* ── Right: Fixed Group Actions Toolbar ── */
+/* One instance per editor group, never duplicates */
+.editorActionsToolbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+  padding: 0 6px;
+  flex-shrink: 0;
+  /* Never gets squished by tabs */
+  border-left: 1px solid var(--pm-border-tab);
+  background-color: var(--pm-bg-tab-inactive);
+}
+
+/* ── Action buttons inside the toolbar ── */
+.actionButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--pm-fg-subtle);
+  cursor: pointer;
+  transition: background-color 0.1s ease, color 0.1s ease;
+}
+
+.actionButton:hover {
+  background-color: var(--pm-bg-sidebar-hover);
+  color: var(--pm-fg-default);
+}
+
+/* ── More Actions dropdown wrapper ── */
+.tabActionsWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* ── Dropdown menu ── */
+.moreDropdownMenu {
+  /* position & top/right set via inline style from React Portal */
+  background-color: var(--pm-bg-editor, #ffffff);
+  border: 1px solid var(--pm-border-default, #e5e5e5);
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  padding: 4px 0;
+  z-index: 9999;
+  /* Above everything */
+  min-width: 260px;
+  display: flex;
+  flex-direction: column;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  font-size: 13px;
+  color: var(--pm-fg-default);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.menuItem:hover {
+  background-color: var(--pm-accent, #005fb8);
+  color: #ffffff;
+}
+
+.menuItem:hover .menuShortcut,
+.menuItem:hover .menuCheck {
+  color: #ffffffcc;
+}
+
+.menuLabel {
+  flex: 1;
+  text-align: left;
+}
+
+.menuCheck {
+  width: 18px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--pm-fg-subtle, #666);
+}
+
+.menuShortcut {
+  font-size: 12px;
+  color: var(--pm-fg-subtle, #6e7781);
+  margin-left: auto;
+  font-family: var(--pm-font-ui);
+  white-space: nowrap;
+}
+
+.menuSeparator {
+  height: 1px;
+  background-color: var(--pm-border-default, #e5e5e5);
+  margin: 3px 0;
+}

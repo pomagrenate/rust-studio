@@ -1,0 +1,15 @@
+[build]
+target-dir = "${CMAKE_CURRENT_BINARY_DIR}/target"
+
+[target.x86_64-pc-windows-msvc]
+linker = "lld-link"
+
+[env]
+CC_${LLVM_TRIPLE} = "${CMAKE_C_COMPILER}"
+CXX_${LLVM_TRIPLE} = "${CMAKE_CXX_COMPILER}"
+CFLAGS_${LLVM_TRIPLE} = "${CMAKE_C_FLAGS}"
+CXXFLAGS_${LLVM_TRIPLE} = "${CMAKE_CXX_FLAGS}"
+
+LLDB_INCLUDE = "${LLDB_INCLUDE}"
+LLDB_DYLIB = "${CMAKE_BINARY_DIR}/lldb/bin/liblldb${DylibSuffix}"
+ADAPTER_SOURCE_DIR = "${CMAKE_SOURCE_DIR}/adapter"

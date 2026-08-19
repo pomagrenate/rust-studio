@@ -1,0 +1,153 @@
+/**
+ * typography.css — Centralized Typography & Font Management System
+ * Defines standardized CSS Custom Properties for consistent typography across Pomai Studio
+ */
+
+:root {
+    /* ── Font Families ── */
+    
+    /* Editor & Code Elements - Monospace with ligature support */
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, Monaco, 'Courier New', monospace;
+    
+    /* Interface, Menus & Dialogs - System UI font */
+    --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    
+    /* Headings & App Title - Brand font */
+    --font-brand: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    
+    /* ── Font Sizes (Scale) ── */
+    
+    /* Tiny: Status badges, minimap annotations, subtle tag indicators */
+    --font-size-2xs: 9px;
+    
+    /* Extra Small: Status bar items, shortcut badges, file paths, breadcrumbs, gutter line numbers */
+    --font-size-xs: 11px;
+    
+    /* Small: Standard UI text, sidebar trees, context menu labels, dropdown options */
+    --font-size-sm: 13px;
+    
+    /* Base: Default editor buffer font size, terminal text, modal body text */
+    --font-size-base: 14px;
+    
+    /* Medium: Dialog headers, tab bar titles, card titles */
+    --font-size-md: 15px;
+    
+    /* Large: Panel titles, Welcome launcher section headers */
+    --font-size-lg: 18px;
+    
+    /* Extra Large: Welcome screen banner title */
+    --font-size-xl: 24px;
+    
+    /* ── Line Heights ── */
+    
+    /* Tight: Badges, compact tags */
+    --line-height-tight: 1.2;
+    
+    /* UI: UI labels, tree nodes */
+    --line-height-ui: 1.4;
+    
+    /* Editor: Code buffer lines for readable AST spans (21px at 14px font) */
+    --line-height-editor: 1.5;
+    
+    /* ── Font Weights ── */
+    
+    --font-weight-regular: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+    
+    /* ── Editor-Specific Dynamic Variables (Updated via Settings) ── */
+    
+    /* These are set dynamically via JavaScript based on user settings */
+    --editor-font-size: var(--font-size-base);
+    --editor-font-family: var(--font-mono);
+    --editor-line-height: var(--line-height-editor);
+    --editor-font-ligatures: "liga" 1, "calt" 1;
+    
+    /* UI font size scaling */
+    --ui-font-size: var(--font-size-sm);
+    --ui-font-family: var(--font-ui);
+}
+
+/* ── Font Ligature Support for Monospace ── */
+.font-mono {
+    font-family: var(--font-mono);
+    font-feature-settings: var(--editor-font-ligatures);
+}
+
+.font-ui {
+    font-family: var(--font-ui);
+}
+
+.font-brand {
+    font-family: var(--font-brand);
+}
+
+/* ── Utility Classes for Common Typography Patterns ── */
+
+.text-2xs {
+    font-size: var(--font-size-2xs);
+    line-height: var(--line-height-tight);
+}
+
+.text-xs {
+    font-size: var(--font-size-xs);
+    line-height: var(--line-height-ui);
+}
+
+.text-sm {
+    font-size: var(--font-size-sm);
+    line-height: var(--line-height-ui);
+}
+
+.text-base {
+    font-size: var(--font-size-base);
+    line-height: var(--line-height-editor);
+}
+
+.text-md {
+    font-size: var(--font-size-md);
+    line-height: var(--line-height-ui);
+}
+
+.text-lg {
+    font-size: var(--font-size-lg);
+    line-height: var(--line-height-ui);
+}
+
+.text-xl {
+    font-size: var(--font-size-xl);
+    line-height: var(--line-height-ui);
+}
+
+/* ── Font Weight Utilities ── */
+
+.font-regular {
+    font-weight: var(--font-weight-regular);
+}
+
+.font-medium {
+    font-weight: var(--font-weight-medium);
+}
+
+.font-semibold {
+    font-weight: var(--font-weight-semibold);
+}
+
+.font-bold {
+    font-weight: var(--font-weight-bold);
+}
+
+/* ── Line Height Utilities ── */
+
+.leading-tight {
+    line-height: var(--line-height-tight);
+}
+
+.leading-ui {
+    line-height: var(--line-height-ui);
+}
+
+.leading-editor {
+    line-height: var(--line-height-editor);
+}

@@ -1,0 +1,21 @@
+
+(library
+ (public_name telemetry)
+ (wrapped false)
+  (libraries
+    collections
+    uri
+    yojson
+    logs
+    opentelemetry
+    opentelemetry-client-ocurl
+    opentelemetry-client-cohttp-eio
+    opentelemetry-logs
+    ambient-context-lwt
+    opentelemetry.ambient-context.eio
+  )
+  (preprocess (pps
+      ppx_deriving.show
+      ppx_deriving_yojson
+   ))
+)

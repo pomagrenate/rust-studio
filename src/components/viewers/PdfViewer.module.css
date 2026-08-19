@@ -1,0 +1,190 @@
+/* ── PdfViewer.module.css ── */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background: #1e1e1e;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* ── Toolbar ─────────────────────────────────────── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background: #252526;
+  border-bottom: 1px solid #333;
+  flex-shrink: 0;
+  min-height: 38px;
+}
+
+.toolbarBtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #cccccc;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.toolbarBtn:hover {
+  background: #3c3c3c;
+  color: #ffffff;
+}
+
+.toolbarBtn:disabled {
+  opacity: 0.35;
+  cursor: default;
+  pointer-events: none;
+}
+
+.toolbarBtn svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.divider {
+  width: 1px;
+  height: 18px;
+  background: #444;
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.pageInput {
+  width: 44px;
+  padding: 3px 6px;
+  background: #1a1a1a;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #cccccc;
+  font-size: 12px;
+  text-align: center;
+  outline: none;
+}
+
+.pageInput:focus {
+  border-color: #4ea6f7;
+}
+
+.pageLabel {
+  font-size: 12px;
+  color: #999;
+  white-space: nowrap;
+}
+
+.zoomLabel {
+  font-size: 12px;
+  color: #cccccc;
+  min-width: 40px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.infoBadge {
+  font-size: 11.5px;
+  color: #888;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 280px;
+}
+
+/* ── Viewport ─────────────────────────────────────── */
+.viewport {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24px 16px;
+  background: #141414;
+  cursor: grab;
+  position: relative;
+}
+
+.viewport:active {
+  cursor: grabbing;
+}
+
+/* ── The <iframe> / <object> card ───────────────────── */
+.pdfCard {
+  background: #fff;
+  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.6), 0 1px 6px rgba(0, 0, 0, 0.4);
+  border-radius: 2px;
+  overflow: hidden;
+  transform-origin: top center;
+  transition: transform 0.12s ease;
+  flex-shrink: 0;
+}
+
+.pdfFrame {
+  display: block;
+  border: none;
+  background: white;
+}
+
+/* ── Fallback (unsupported browser / Tauri webview) ── */
+.fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 48px 32px;
+  text-align: center;
+  color: #888;
+  flex: 1;
+}
+
+.fallbackIcon {
+  font-size: 64px;
+  opacity: 0.35;
+  line-height: 1;
+}
+
+.fallbackTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: #bbb;
+  margin: 0;
+}
+
+.fallbackSub {
+  font-size: 13px;
+  color: #666;
+  margin: 0;
+  max-width: 320px;
+  line-height: 1.55;
+}
+
+.fallbackBtn {
+  margin-top: 8px;
+  padding: 8px 18px;
+  border: 1px solid #4ea6f7;
+  border-radius: 5px;
+  background: transparent;
+  color: #4ea6f7;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.fallbackBtn:hover {
+  background: rgba(78, 166, 247, 0.12);
+}

@@ -1,0 +1,211 @@
+/**
+ * CompletionWidget.module.css — Production-grade completion widget styles
+ * Features: split layout, documentation pane, fuzzy match highlighting, theming
+ */
+
+.completionWidget {
+  position: fixed;
+  z-index: 10000;
+  background-color: var(--pm-bg-tooltip, #1e1e1e);
+  border: 1px solid var(--pm-border-default, #3c3c3c);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  font-family: var(--font-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+  font-size: var(--font-size-sm, 13px);
+  color: var(--pm-fg-default, #cccccc);
+  pointer-events: auto;
+  overflow: hidden;
+}
+
+.completionContainer {
+  display: flex;
+  min-width: 300px;
+  max-width: 600px;
+}
+
+.completionList {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 0;
+  min-width: 250px;
+  max-width: 400px;
+}
+
+.completionList::-webkit-scrollbar {
+  width: 8px;
+}
+
+.completionList::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.completionList::-webkit-scrollbar-thumb {
+  background: var(--pm-border-default, #3c3c3c);
+  border-radius: 4px;
+}
+
+.completionList::-webkit-scrollbar-thumb:hover {
+  background: var(--pm-fg-subtle, #808080);
+}
+
+.completionItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.completionItem:hover {
+  background-color: var(--pm-bg-line-hover, #2a2d2e);
+}
+
+.completionItemSelected {
+  background-color: var(--pm-bg-selection, #094771);
+}
+
+.completionIcon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pm-fg-subtle, #858585);
+}
+
+.completionItemSelected .completionIcon {
+  color: var(--pm-fg-default, #ffffff);
+}
+
+.completionLabel {
+  flex: 1;
+  font-weight: var(--font-weight-bold, 700);
+  color: var(--pm-fg-default, #cccccc);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.completionItemSelected .completionLabel {
+  color: var(--pm-fg-default, #ffffff);
+}
+
+.highlight {
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--pm-accent, #4fc1ff);
+}
+
+.completionDetail {
+  flex-shrink: 0;
+  color: var(--pm-fg-subtle, #858585);
+  font-size: var(--font-size-sm, 12px);
+  opacity: 0.8;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.docPane {
+  width: 300px;
+  min-width: 250px;
+  max-width: 400px;
+  padding: 12px;
+  border-left: 1px solid var(--pm-border-default, #3c3c3c);
+  overflow-y: auto;
+  overflow-x: hidden;
+  background-color: var(--pm-bg-tooltip, #1e1e1e);
+}
+
+.docPane.left {
+  border-left: none;
+  border-right: 1px solid var(--pm-border-default, #3c3c3c);
+}
+
+.docPane::-webkit-scrollbar {
+  width: 8px;
+}
+
+.docPane::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.docPane::-webkit-scrollbar-thumb {
+  background: var(--pm-border-default, #3c3c3c);
+  border-radius: 4px;
+}
+
+.docPane::-webkit-scrollbar-thumb:hover {
+  background: var(--pm-fg-subtle, #808080);
+}
+
+.docDetail {
+  font-family: var(--font-mono, "JetBrains Mono", Consolas, monospace);
+  font-size: var(--font-size-sm, 12px);
+  color: var(--pm-accent, #4fc1ff);
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--pm-border-default, #3c3c3c);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.docDocumentation {
+  font-size: var(--font-size-sm, 13px);
+  line-height: 1.5;
+  color: var(--pm-fg-default, #cccccc);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.docDocumentation code {
+  font-family: var(--font-mono, "JetBrains Mono", Consolas, monospace);
+  background-color: var(--pm-bg-line-hover, #2a2d2e);
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: var(--font-size-sm, 12px);
+}
+
+.docDocumentation p {
+  margin: 0 0 8px 0;
+}
+
+.docDocumentation p:last-child {
+  margin: 0;
+}
+
+/* Rust-specific styling */
+.visibilityBadge {
+  display: inline-block;
+  font-size: var(--font-size-2xs, 10px);
+  font-weight: var(--font-weight-semibold, 600);
+  padding: 1px 4px;
+  border-radius: 2px;
+  background-color: var(--pm-bg-line-hover, #2a2d2e);
+  color: var(--pm-fg-subtle, #858585);
+  margin-right: 6px;
+  text-transform: uppercase;
+}
+
+.macroIndicator {
+  color: var(--pm-accent, #4fc1ff);
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+.rustSignature {
+  font-family: var(--font-mono, "JetBrains Mono", Consolas, monospace);
+  font-size: 11px;
+  color: var(--pm-fg-subtle, #858585);
+  margin-top: 4px;
+}
+
+.crateOrigin {
+  font-size: 11px;
+  color: var(--pm-fg-subtle, #858585);
+  opacity: 0.7;
+  font-style: italic;
+  margin-top: 4px;
+}

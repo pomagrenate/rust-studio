@@ -1,0 +1,105 @@
+.templateCard {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--pm-bg-input, #ffffff);
+  border: 1.5px solid var(--pm-border-default, #e5e7eb);
+  border-radius: 8px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.templateCard:hover {
+  border-color: var(--pm-accent, #005fb8);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+.templateCardSelected {
+  border-color: var(--pm-accent, #005fb8) !important;
+  background-color: rgba(0, 95, 184, 0.04) !important;
+  box-shadow: 0 0 0 1px var(--pm-accent, #005fb8), 0 4px 16px rgba(0, 95, 184, 0.12) !important;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.iconWrapper {
+  width: 36px;
+  height: 36px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.iconBasic {
+  background-color: rgba(46, 160, 67, 0.12);
+  color: #1a7f37;
+}
+
+.iconWeb {
+  background-color: rgba(9, 105, 218, 0.12);
+  color: #0969da;
+}
+
+.iconDesktop {
+  background-color: rgba(130, 80, 223, 0.12);
+  color: #8250df;
+}
+
+.iconWasm {
+  background-color: rgba(229, 142, 38, 0.15);
+  color: #e58e26;
+}
+
+.badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 12px;
+  background-color: var(--pm-accent, #005fb8);
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.templateName {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--pm-fg-default, #1f2328);
+  margin-bottom: 4px;
+}
+
+.templateDesc {
+  font-size: 12px;
+  color: var(--pm-fg-subtle, #656d76);
+  line-height: 1.45;
+  margin-bottom: 12px;
+  flex: 1;
+}
+
+.tagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.tag {
+  font-size: 10.5px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background-color: var(--pm-bg-sidebar, #f6f8fa);
+  border: 1px solid var(--pm-border-default, #d0d7de);
+  color: var(--pm-fg-subtle, #57606a);
+}
