@@ -10,6 +10,8 @@
 [![Tauri](https://img.shields.io/badge/Tauri-2.0+-ff9900.svg)](https://tauri.app/)
 [![React](https://img.shields.io/badge/React-18+-61dafb.svg)](https://reactjs.org/)
 
+![Rust Studio Screenshot](src-tauri/icons/land.jfif)
+
 **Rust Studio** is a modern, lightweight Integrated Development Environment (IDE) built specifically for Rust development. Written in Rust using Tauri, it provides a fast, native experience with powerful features like Language Server Protocol (LSP) integration, Cargo build support, Git integration, and a customizable editor interface.
 
 ## Features
