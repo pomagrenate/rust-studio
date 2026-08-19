@@ -237,7 +237,9 @@ commandRegistry.registerCommand({
   },
   keybindings: [
     { key: 'Ctrl+C' }
-  ]
+  ],
+  title: 'Copy',
+  category: 'Clipboard'
 });
 
 commandRegistry.registerCommand({
@@ -249,7 +251,9 @@ commandRegistry.registerCommand({
   },
   keybindings: [
     { key: 'Ctrl+X' }
-  ]
+  ],
+  title: 'Cut',
+  category: 'Clipboard'
 });
 
 commandRegistry.registerCommand({
@@ -261,7 +265,9 @@ commandRegistry.registerCommand({
   },
   keybindings: [
     { key: 'Ctrl+V' }
-  ]
+  ],
+  title: 'Paste',
+  category: 'Clipboard'
 });
 
 commandRegistry.registerCommand({
@@ -271,5 +277,7 @@ commandRegistry.registerCommand({
       await pasteWithSmartIndent(args);
     }
   },
-  keybindings: []
+  keybindings: [],
+  title: 'Paste with Smart Indent',
+  category: 'Clipboard'
 });

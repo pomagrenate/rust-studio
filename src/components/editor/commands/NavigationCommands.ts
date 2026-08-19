@@ -184,7 +184,9 @@ commandRegistry.registerCommand({
     { key: 'Ctrl+Left', platform: 'windows' },
     { key: 'Ctrl+Left', platform: 'linux' },
     { key: 'Alt+Left', platform: 'mac' }
-  ]
+  ],
+  title: 'Move to Word Start',
+  category: 'Navigation'
 });
 
 commandRegistry.registerCommand({
@@ -199,7 +201,9 @@ commandRegistry.registerCommand({
     { key: 'Ctrl+Right', platform: 'windows' },
     { key: 'Ctrl+Right', platform: 'linux' },
     { key: 'Alt+Right', platform: 'mac' }
-  ]
+  ],
+  title: 'Move to Word End',
+  category: 'Navigation'
 });
 
 commandRegistry.registerCommand({
@@ -212,7 +216,9 @@ commandRegistry.registerCommand({
   },
   keybindings: [
     { key: 'Home' }
-  ]
+  ],
+  title: 'Move to Line Start',
+  category: 'Navigation'
 });
 
 commandRegistry.registerCommand({
@@ -225,7 +231,9 @@ commandRegistry.registerCommand({
   },
   keybindings: [
     { key: 'End' }
-  ]
+  ],
+  title: 'Move to Line End',
+  category: 'Navigation'
 });
 
 commandRegistry.registerCommand({
@@ -240,7 +248,9 @@ commandRegistry.registerCommand({
     { key: 'Ctrl+Home', platform: 'windows' },
     { key: 'Ctrl+Home', platform: 'linux' },
     { key: 'Cmd+Up', platform: 'mac' }
-  ]
+  ],
+  title: 'Move to Document Start',
+  category: 'Navigation'
 });
 
 commandRegistry.registerCommand({
@@ -255,7 +265,9 @@ commandRegistry.registerCommand({
     { key: 'Ctrl+End', platform: 'windows' },
     { key: 'Ctrl+End', platform: 'linux' },
     { key: 'Cmd+Down', platform: 'mac' }
-  ]
+  ],
+  title: 'Move to Document End',
+  category: 'Navigation'
 });
 
 commandRegistry.registerCommand({
@@ -268,7 +280,9 @@ commandRegistry.registerCommand({
   },
   keybindings: [
     { key: 'LeftArrow' }
-  ]
+  ],
+  title: 'Move Cursor Left',
+  category: 'Navigation'
 });
 
 commandRegistry.registerCommand({
@@ -281,7 +295,9 @@ commandRegistry.registerCommand({
   },
   keybindings: [
     { key: 'RightArrow' }
-  ]
+  ],
+  title: 'Move Cursor Right',
+  category: 'Navigation'
 });
 
 commandRegistry.registerCommand({
@@ -294,7 +310,9 @@ commandRegistry.registerCommand({
   },
   keybindings: [
     { key: 'UpArrow' }
-  ]
+  ],
+  title: 'Move Cursor Up',
+  category: 'Navigation'
 });
 
 commandRegistry.registerCommand({
@@ -307,5 +325,7 @@ commandRegistry.registerCommand({
   },
   keybindings: [
     { key: 'DownArrow' }
-  ]
+  ],
+  title: 'Move Cursor Down',
+  category: 'Navigation'
 });
