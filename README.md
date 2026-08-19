@@ -41,7 +41,7 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/rust-studio.git
+git clone https://github.com/pomagrenate/rust-studio.git
 cd rust-studio
 
 # Install dependencies
@@ -63,52 +63,9 @@ pnpm tauri dev
 3. Select your Rust project directory
 4. Start coding!
 
-### Keyboard Shortcuts
+## Contributing
 
-| Action | Windows/Linux | macOS |
-|--------|---------------|-------|
-| Save | `Ctrl+S` | `Cmd+S` |
-| Find | `Ctrl+F` | `Cmd+F` |
-| Replace | `Ctrl+H` | `Cmd+H` |
-| Go to Definition | `F12` | `F12` |
-| Toggle Terminal | `Ctrl+\`` | `Cmd+\`` |
-| Split Editor | `Ctrl+\` | `Cmd+\` |
-| Close Editor | `Ctrl+W` | `Cmd+W` |
-| Undo | `Ctrl+Z` | `Cmd+Z` |
-| Redo | `Ctrl+Y` / `Ctrl+Shift+Z` | `Cmd+Y` / `Cmd+Shift+Z` |
-
-## Development
-
-### Project Structure
-
-```
-rust-studio/
-├── src/                    # Frontend React application
-│   ├── components/         # React components
-│   ├── hooks/             # Custom React hooks
-│   ├── ipc/               # IPC communication layer
-│   └── styles/            # CSS stylesheets
-├── src-tauri/             # Tauri Rust backend
-│   ├── src/               # Rust source code
-│   └── Cargo.toml         # Rust dependencies
-└── package.json           # Node.js dependencies
-```
-
-### Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Code Style
-
-- **Rust**: Follow `rustfmt` formatting
-- **TypeScript/React**: Follow ESLint and Prettier rules
-- **Commit Messages**: Use conventional commit format
+We welcome contributions! Please see our [CONTRIBUTE.md](CONTRIBUTE.md) file for guidelines on how to contribute to Rust Studio.
 
 ## Roadmap
 
@@ -129,11 +86,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [React](https://reactjs.org/) - UI library
 - [Rust Analyzer](https://rust-analyzer.github.io/) - Rust language server
 - [CodeMirror](https://codemirror.net/) - Text editor component inspiration
-
-## Contact
-
-- **Issues**: [GitHub Issues](https://github.com/your-username/rust-studio/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-username/rust-studio/discussions)
 
 ---
 
