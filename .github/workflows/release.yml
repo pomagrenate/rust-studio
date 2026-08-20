@@ -1,0 +1,274 @@
+name: Build and Upload to OSS
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag version to build (e.g., v0.1.0)'
+        required: true
+        type: string
+
+env:
+  ALIBABA_OSS_BUCKET: ${{ secrets.ALIBABA_OSS_BUCKET || 'rust-studio-releases' }}
+  ALIBABA_OSS_ENDPOINT: ${{ secrets.ALIBABA_OSS_ENDPOINT || 'oss-cn-hongkong.aliyuncs.com' }}
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_name: rust-studio-setup
+            artifact_extension: .exe
+            bundle_format: nsis
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_name: rust-studio
+            artifact_extension: .msi
+            bundle_format: msi
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            artifact_name: rust-studio
+            artifact_extension: .dmg
+            bundle_format: dmg
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact_name: rust-studio
+            artifact_extension: .dmg
+            bundle_format: dmg
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            artifact_name: rust-studio
+            artifact_extension: .AppImage
+            bundle_format: appimage
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            artifact_name: rust-studio
+            artifact_extension: .deb
+            bundle_format: deb
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            libxdo-dev \
+            file
+
+      - name: Install macOS dependencies
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install create-dmg
+
+      - name: Build Tauri App
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tauriScript: npm run tauri
+          args: build --target ${{ matrix.target }}
+
+      - name: Locate and rename artifacts
+        shell: bash
+        run: |
+          # Find the built bundle
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            if [ "${{ matrix.bundle_format }}" = "nsis" ]; then
+              BUNDLE_PATH=$(find src-tauri/target/${{ matrix.target }}/release/bundle/nsis -name "*.exe" | head -n 1)
+            else
+              BUNDLE_PATH=$(find src-tauri/target/${{ matrix.target }}/release/bundle/msi -name "*.msi" | head -n 1)
+            fi
+          elif [ "${{ matrix.os }}" = "macos-latest" ]; then
+            BUNDLE_PATH=$(find src-tauri/target/${{ matrix.target }}/release/bundle/dmg -name "*.dmg" | head -n 1)
+          elif [ "${{ matrix.os }}" = "ubuntu-22.04" ]; then
+            if [ "${{ matrix.bundle_format }}" = "appimage" ]; then
+              BUNDLE_PATH=$(find src-tauri/target/${{ matrix.target }}/release/bundle/appimage -name "*.AppImage" | head -n 1)
+            else
+              BUNDLE_PATH=$(find src-tauri/target/${{ matrix.target }}/release/bundle/deb -name "*.deb" | head -n 1)
+            fi
+          fi
+          
+          if [ -z "$BUNDLE_PATH" ]; then
+            echo "Error: No bundle found for ${{ matrix.bundle_format }}"
+            exit 1
+          fi
+          
+          echo "BUNDLE_PATH=$BUNDLE_PATH" >> $GITHUB_ENV
+          echo "Found bundle: $BUNDLE_PATH"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-${{ matrix.os }}-${{ matrix.bundle_format }}-${{ matrix.target }}
+          path: ${{ env.BUNDLE_PATH }}
+          retention-days: 7
+          if-no-files-found: error
+
+  upload_oss:
+    name: Upload to Alibaba Cloud OSS
+    needs: build
+    runs-on: ubuntu-latest
+    if: success()
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: builds
+          pattern: tauri-*
+          merge-multiple: false
+
+      - name: Setup ossutil
+        run: |
+          wget https://gosspublic.alicdn.com/ossutil/1.7.18/ossutil64
+          chmod 755 ossutil64
+          sudo mv ossutil64 /usr/local/bin/ossutil
+
+      - name: Configure ossutil
+        run: |
+          ossutil config \
+            -e ${{ env.ALIBABA_OSS_ENDPOINT }} \
+            -i ${{ secrets.ALIBABA_KEY_ID }} \
+            -k ${{ secrets.ALIBABA_KEY_SECRET }} \
+            -L en \
+            -c /home/runner/.ossutilconfig
+
+      - name: Verify ossutil configuration
+        run: |
+          ossutil ls oss://${{ env.ALIBABA_OSS_BUCKET }}
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.tag }}"
+          else
+            VERSION="${{ github.ref_name }}"
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+
+      - name: Organize artifacts by platform
+        run: |
+          mkdir -p uploads
+          
+          # Windows artifacts
+          find builds -name "*.exe" -exec cp {} uploads/windows/ \; 2>/dev/null || mkdir -p uploads/windows
+          find builds -name "*.msi" -exec cp {} uploads/windows/ \; 2>/dev/null || true
+          
+          # macOS artifacts
+          find builds -name "*.dmg" -exec cp {} uploads/macos/ \; 2>/dev/null || mkdir -p uploads/macos
+          
+          # Linux artifacts
+          find builds -name "*.AppImage" -exec cp {} uploads/linux/ \; 2>/dev/null || mkdir -p uploads/linux
+          find builds -name "*.deb" -exec cp {} uploads/linux/ \; 2>/dev/null || true
+          
+          # List organized files
+          echo "Organized artifacts:"
+          find uploads -type f -exec ls -lh {} \;
+
+      - name: Upload to OSS with retry
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          BASE_PATH="releases/${VERSION}"
+          
+          echo "Uploading to: oss://${{ env.ALIBABA_OSS_BUCKET }}/${BASE_PATH}/"
+          
+          # Upload Windows artifacts
+          if [ -d "uploads/windows" ] && [ "$(ls -A uploads/windows)" ]; then
+            echo "Uploading Windows artifacts..."
+            ossutil cp -r uploads/windows/ oss://${{ env.ALIBABA_OSS_BUCKET }}/${BASE_PATH}/windows/ \
+              --update \
+              --retry 3 \
+              --checkpoint-dir /tmp/oss-checkpoint-windows || echo "Windows upload failed"
+          fi
+          
+          # Upload macOS artifacts
+          if [ -d "uploads/macos" ] && [ "$(ls -A uploads/macos)" ]; then
+            echo "Uploading macOS artifacts..."
+            ossutil cp -r uploads/macos/ oss://${{ env.ALIBABA_OSS_BUCKET }}/${BASE_PATH}/macos/ \
+              --update \
+              --retry 3 \
+              --checkpoint-dir /tmp/oss-checkpoint-macos || echo "macOS upload failed"
+          fi
+          
+          # Upload Linux artifacts
+          if [ -d "uploads/linux" ] && [ "$(ls -A uploads/linux)" ]; then
+            echo "Uploading Linux artifacts..."
+            ossutil cp -r uploads/linux/ oss://${{ env.ALIBABA_OSS_BUCKET }}/${BASE_PATH}/linux/ \
+              --update \
+              --retry 3 \
+              --checkpoint-dir /tmp/oss-checkpoint-linux || echo "Linux upload failed"
+          fi
+
+      - name: Verify uploads
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          echo "Verifying uploaded files:"
+          ossutil ls -r oss://${{ env.ALIBABA_OSS_BUCKET }}/releases/${VERSION}/
+
+      - name: Create latest symlink
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          
+          # Copy current version to latest
+          ossutil cp -r oss://${{ env.ALIBABA_OSS_BUCKET }}/releases/${VERSION}/ oss://${{ env.ALIBABA_OSS_BUCKET }}/releases/latest/ \
+            --update \
+            --force || echo "Failed to update latest symlink"
+
+      - name: Generate upload summary
+        if: always()
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          echo "## Upload Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${VERSION}" >> $GITHUB_STEP_SUMMARY
+          echo "**Bucket:** ${{ env.ALIBABA_OSS_BUCKET }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Endpoint:** ${{ env.ALIBABA_OSS_ENDPOINT }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Uploaded Files:**" >> $GITHUB_STEP_SUMMARY
+          ossutil ls -r oss://${{ env.ALIBABA_OSS_BUCKET }}/releases/${VERSION}/ >> $GITHUB_STEP_SUMMARY || echo "Failed to list files"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -rf builds uploads
