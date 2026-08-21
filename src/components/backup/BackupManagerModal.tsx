@@ -16,7 +16,6 @@ import {
   VscHistory as VscRestore,
   VscTrash,
   VscAdd,
-  VscCheck,
 } from "react-icons/vsc";
 import { useTheme } from "../../hooks/useTheme";
 import styles from "./BackupManagerModal.module.css";
