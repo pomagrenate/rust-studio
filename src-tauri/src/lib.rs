@@ -15,8 +15,9 @@ pub mod github;
 pub mod codewiki;
 pub mod backup;
 pub mod settings;
+pub mod rust_testgen;
 
-use commands::{buffer_commands, fs_commands, viewport_commands, terminal_commands, search_commands, timeline_commands, git_commands, cargo_commands, syntax_commands, lsp_commands, clippy_commands, codewiki_commands, backup_commands, settings_commands};
+use commands::{buffer_commands, fs_commands, viewport_commands, terminal_commands, search_commands, timeline_commands, git_commands, cargo_commands, syntax_commands, lsp_commands, clippy_commands, codewiki_commands, backup_commands, settings_commands, testgen_commands};
 use github::{api, auth};
 use debugger::{DebuggerState, debugger_embed::EmbeddedDebugger, start_debug_session, send_dap_request, stop_debug_session};
 use linter::scan_workspace_linter;
@@ -219,6 +220,10 @@ pub fn run() {
             // IDE Settings commands
             settings_commands::get_user_settings,
             settings_commands::save_user_settings,
+
+            // Rust AST Test Synthesizer commands
+            testgen_commands::generate_rust_tests,
+            testgen_commands::inject_rust_tests_to_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

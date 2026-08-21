@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { TabBar } from "./TabBar";
 import { EditorView } from "../editor/EditorView";
 import { CompletionItem } from "../editor/CompletionWidget";
@@ -61,7 +61,7 @@ const CSV_EXTENSIONS = ["csv", "tsv"];
 const MEDIA_EXTENSIONS = ["mp3", "wav", "ogg", "mp4", "webm", "mov"];
 const PDF_EXTENSIONS = ["pdf"];
 
-export function EditorPaneGroup({
+export const EditorPaneGroup = React.memo(function EditorPaneGroup({
   group,
   isActive,
   dirtyFiles,
@@ -92,6 +92,25 @@ export function EditorPaneGroup({
   const [activeLine, setActiveLine] = useState(0);
   const [activeCol, setActiveCol] = useState(0);
   const [is3WayOpen, setIs3WayOpen] = useState(false);
+
+  const handleEditorLinesChange = useCallback(
+    (newLines: string[], nLine: number, nCol: number) => {
+      if (!activeFile) return;
+      setActiveLine(nLine);
+      setActiveCol(nCol);
+      onLinesChange(activeFile, newLines, nLine, nCol);
+    },
+    [activeFile, onLinesChange]
+  );
+
+  const handleEditorToggleBreakpoint = useCallback(
+    (line: number) => {
+      if (activeFile && onToggleBreakpoint) {
+        onToggleBreakpoint(activeFile, line);
+      }
+    },
+    [activeFile, onToggleBreakpoint]
+  );
 
   // Discover merge conflicts in active file lines
   const conflicts = useMemo(() => {
@@ -142,11 +161,7 @@ export function EditorPaneGroup({
         <MarkdownPreview
           filePath={activeFile}
           lines={lines}
-          onLinesChange={(newLines, nLine, nCol) => {
-            setActiveLine(nLine);
-            setActiveCol(nCol);
-            onLinesChange(activeFile, newLines, nLine, nCol);
-          }}
+          onLinesChange={handleEditorLinesChange}
         />
       );
     }
@@ -157,11 +172,7 @@ export function EditorPaneGroup({
         <CsvTableViewer
           filePath={activeFile}
           lines={lines}
-          onLinesChange={(newLines, nLine, nCol) => {
-            setActiveLine(nLine);
-            setActiveCol(nCol);
-            onLinesChange(activeFile, newLines, nLine, nCol);
-          }}
+          onLinesChange={handleEditorLinesChange}
         />
       );
     }
@@ -191,12 +202,8 @@ export function EditorPaneGroup({
         onHover={onLspHover}
         onGotoDefinition={onLspGotoDefinition}
         onLspCompletion={onLspCompletion}
-        onLinesChange={(newLines, nLine, nCol) => {
-          setActiveLine(nLine);
-          setActiveCol(nCol);
-          onLinesChange(activeFile, newLines, nLine, nCol);
-        }}
-        onToggleBreakpoint={(line) => onToggleBreakpoint?.(activeFile, line)}
+        onLinesChange={handleEditorLinesChange}
+        onToggleBreakpoint={handleEditorToggleBreakpoint}
         aria-label={`Editor: ${activeFile}`}
         filePath={activeFile}
         enableRopeBuffer={false}
@@ -270,6 +277,7 @@ export function EditorPaneGroup({
       )}
     </div>
   );
-}
+});
 
 export default EditorPaneGroup;
+

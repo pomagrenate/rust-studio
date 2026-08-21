@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { VscFile, VscClose, VscCheck } from "react-icons/vsc";
 import styles from "./TabBar.module.css";
@@ -17,7 +17,62 @@ interface TabBarProps {
   onMoveTab?: (sourceGroupId: string, targetGroupId: string, file: string, newIndex: number) => void;
 }
 
-export function TabBar({
+interface TabItemProps {
+  file: string;
+  groupId: string;
+  isActive: boolean;
+  isPreview: boolean;
+  isDirty: boolean;
+  onSelectFile: (file: string) => void;
+  onCloseFile: (file: string) => void;
+}
+
+const TabItem = React.memo(function TabItem({
+  file,
+  groupId,
+  isActive,
+  isPreview,
+  isDirty,
+  onSelectFile,
+  onCloseFile,
+}: TabItemProps) {
+  const fileName = file.split("\\").pop()?.split("/").pop();
+  return (
+    <div
+      className={`${styles.tab} ${isActive ? styles.tabActive : ""}`}
+      role="tab"
+      aria-selected={isActive}
+      onClick={() => onSelectFile(file)}
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData("text/plain", JSON.stringify({
+          type: "editor-tab",
+          sourceGroupId: groupId,
+          file,
+        }));
+        e.dataTransfer.effectAllowed = "move";
+      }}
+    >
+      <VscFile className={styles.tabIcon} />
+      <span
+        className={styles.tabName}
+        style={{ fontStyle: isPreview ? "italic" : "normal" }}
+      >
+        {fileName}
+      </span>
+      {isDirty && <span className={styles.tabDirtyIndicator}>•</span>}
+      <button
+        className={styles.tabClose}
+        onClick={(e) => { e.stopPropagation(); onCloseFile(file); }}
+        aria-label="Close tab"
+      >
+        <VscClose />
+      </button>
+    </div>
+  );
+});
+
+export const TabBar = React.memo(function TabBar({
   groupId,
   openFiles,
   activeFile,
@@ -156,38 +211,16 @@ export function TabBar({
           }}
         >
           {openFiles.map((file) => (
-            <div
+            <TabItem
               key={file}
-              className={`${styles.tab} ${activeFile === file ? styles.tabActive : ""}`}
-              role="tab"
-              aria-selected={activeFile === file}
-              onClick={() => onSelectFile(file)}
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData("text/plain", JSON.stringify({
-                  type: "editor-tab",
-                  sourceGroupId: groupId,
-                  file,
-                }));
-                e.dataTransfer.effectAllowed = "move";
-              }}
-            >
-              <VscFile className={styles.tabIcon} />
-              <span
-                className={styles.tabName}
-                style={{ fontStyle: file === previewFile ? "italic" : "normal" }}
-              >
-                {file.split("\\").pop()?.split("/").pop()}
-              </span>
-              {dirtyFiles.has(file) && <span className={styles.tabDirtyIndicator}>•</span>}
-              <button
-                className={styles.tabClose}
-                onClick={(e) => { e.stopPropagation(); onCloseFile(file); }}
-                aria-label="Close tab"
-              >
-                <VscClose />
-              </button>
-            </div>
+              file={file}
+              groupId={groupId}
+              isActive={activeFile === file}
+              isPreview={file === previewFile}
+              isDirty={dirtyFiles.has(file)}
+              onSelectFile={onSelectFile}
+              onCloseFile={onCloseFile}
+            />
           ))}
         </div>
 
@@ -233,6 +266,6 @@ export function TabBar({
       {dropdownPortal}
     </>
   );
-}
+});
 
 export default TabBar;

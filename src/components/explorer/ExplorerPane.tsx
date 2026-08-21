@@ -47,7 +47,7 @@ export interface ExternalLibraryItem {
   is_stdlib: boolean;
 }
 
-export function ExplorerPane({ 
+export const ExplorerPane = React.memo(function ExplorerPane({ 
   workspaceRoots, 
   activeFile, 
   openFiles, 
@@ -455,7 +455,7 @@ export function ExplorerPane({
       </div>
     </div>
   );
-}
+});
 
 interface WorkspaceFolderSectionProps {
   rootPath: string;
@@ -472,7 +472,7 @@ interface WorkspaceFolderSectionProps {
   onFileCreated: (path: string) => void;
 }
 
-function WorkspaceFolderSection({ 
+const WorkspaceFolderSection = React.memo(function WorkspaceFolderSection({ 
   rootPath, 
   entries, 
   activeFile, 
@@ -624,6 +624,6 @@ function WorkspaceFolderSection({
       )}
     </div>
   );
-}
+});
 
 export default ExplorerPane;

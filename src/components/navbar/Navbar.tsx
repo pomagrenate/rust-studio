@@ -4,7 +4,7 @@
  * and integrates the Search Everywhere trigger.
  */
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   VscMenu,
   VscArrowLeft,
@@ -111,7 +111,7 @@ interface RecentlyOpened {
 type DropdownKind = "hamburger" | "workspace" | "git" | null;
 type HamburgerSubmenu = "file" | "edit" | "view" | "navigate" | "code" | "build" | "run" | "git" | "tools" | "help" | null;
 
-export function Navbar({
+export const Navbar = React.memo(function Navbar({
   workspaceRoot,
   activeBranch = "main",
   branches = ["main", "dev"],
@@ -980,6 +980,6 @@ export function Navbar({
     {isSettingsOpen && <SettingsPanel isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />}
     </>
   );
-}
+});
 
 export default Navbar;

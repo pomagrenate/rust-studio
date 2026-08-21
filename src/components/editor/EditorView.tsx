@@ -1054,17 +1054,6 @@ export function EditorView({
         />
       )}
 
-      {quickFixOpen && (
-        <QuickFixWidget
-          actions={actions}
-          position={quickFixPosition}
-          onApply={handleQuickFixApply}
-          onClose={() => {
-            setQuickFixOpen(false);
-            clearActions();
-          }}
-        />
-      )}
 
       <div
         ref={containerRef}

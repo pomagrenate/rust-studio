@@ -3,6 +3,7 @@
  * Shows file info, cursor position, EOL, encoding, and theme toggle.
  */
 
+import React from "react";
 import type { ThemeId } from "../../hooks/useTheme";
 import styles from "./StatusBar.module.css";
 
@@ -21,7 +22,7 @@ interface StatusBarProps {
   lspStatus?: { kind: string; percent?: number; message?: string };
 }
 
-export function StatusBar({
+export const StatusBar = React.memo(function StatusBar({
   filePath,
   lineCount = 0,
   activeLine = 0,
@@ -99,6 +100,6 @@ export function StatusBar({
       </div>
     </footer>
   );
-}
+});
 
 export default StatusBar;

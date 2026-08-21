@@ -5,6 +5,7 @@ import { ExplorerPane } from "../explorer/ExplorerPane";
 import { SearchEverywhereModal } from "../search/SearchEverywhereModal";
 import { CodeWikiModal } from "../codewiki/CodeWikiModal";
 import { BackupManagerModal } from "../backup/BackupManagerModal";
+import { RustTestGenModal } from "../testgen/RustTestGenModal";
 import { SourceControlPane } from "../scm/SourceControlPane";
 import { EditorPaneGroup, EditorGroup } from "./EditorPaneGroup";
 import { BottomPanel, TabName } from "../panel/BottomPanel";
@@ -84,6 +85,7 @@ export function EditorLayout({ initialWorkspace, onCloseWorkspace }: EditorLayou
   
   const [isScmOpen, setIsScmOpen] = useState(false);
   const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
+  const [isTestGenModalOpen, setIsTestGenModalOpen] = useState(false);
   const [isExplorerOpen, setIsExplorerOpen] = useState(true);
   const [_scmBadgeCount, setScmBadgeCount] = useState(0);
   const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
@@ -873,6 +875,8 @@ export function EditorLayout({ initialWorkspace, onCloseWorkspace }: EditorLayou
       runCargoBuildCommand("run", "dev");
     } else if (act === "cargo_test") {
       runCargoBuildCommand("test", "dev");
+    } else if (act === "generate_rust_tests") {
+      setIsTestGenModalOpen(true);
     } else if (act === "git_clone") {
       if (onCloseWorkspace) onCloseWorkspace();
     }
@@ -1054,6 +1058,10 @@ export function EditorLayout({ initialWorkspace, onCloseWorkspace }: EditorLayou
       else if (e.ctrlKey && e.key.toLowerCase() === 'f' && !e.shiftKey && !e.altKey) {
         e.preventDefault();
         window.dispatchEvent(new CustomEvent("pm:find"));
+      }
+      else if ((e.ctrlKey || e.metaKey) && e.altKey && e.key.toLowerCase() === 't') {
+        e.preventDefault();
+        setIsTestGenModalOpen(true);
       }
       else if (e.ctrlKey && e.key.toLowerCase() === 'h' && !e.shiftKey && !e.altKey) {
         e.preventDefault();
@@ -1532,6 +1540,16 @@ export function EditorLayout({ initialWorkspace, onCloseWorkspace }: EditorLayou
           isOpen={isBackupModalOpen}
           onClose={() => setIsBackupModalOpen(false)}
           workspacePath={workspaceRoots[0]}
+        />
+      )}
+
+      {/* Rust AST Test Synthesizer Modal */}
+      {isTestGenModalOpen && (
+        <RustTestGenModal
+          isOpen={isTestGenModalOpen}
+          onClose={() => setIsTestGenModalOpen(false)}
+          activeFilePath={activeFile}
+          onRunCargoTest={() => runCargoBuildCommand("test", "dev")}
         />
       )}
 

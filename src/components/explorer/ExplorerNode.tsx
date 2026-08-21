@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import type { DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { 
@@ -29,7 +29,7 @@ export interface ExplorerNodeProps {
   onFileClick: (path: string, isDoubleClick?: boolean, ctrlKey?: boolean) => void;
 }
 
-export function ExplorerNode({ 
+export const ExplorerNode = React.memo(function ExplorerNode({ 
   entry, 
   depth, 
   activeFile, 
@@ -139,34 +139,37 @@ export function ExplorerNode({
     return () => window.removeEventListener("pm:collapseAllNodes", handler);
   }, [entry, isDir]);
 
-  // Calculate diagnostic errors and warnings safely
-  const normPath = (entry.path || "").replace(/\\/g, "/").toLowerCase();
-  let errorCount = 0;
-  let warningCount = 0;
+  // Calculate diagnostic errors and warnings safely with useMemo
+  const { errorCount, warningCount } = useMemo(() => {
+    if (!entry?.path || !diagnostics?.files) return { errorCount: 0, warningCount: 0 };
+    
+    const normPath = entry.path.replace(/\\/g, "/").toLowerCase();
+    let errors = 0;
+    let warnings = 0;
 
-  if (diagnostics && diagnostics.files) {
     if (isDir) {
       for (const [filePath, summary] of Object.entries(diagnostics.files)) {
         if (!summary) continue;
         const normFile = filePath.replace(/\\/g, "/").toLowerCase();
         if (normFile.startsWith(normPath + "/") || normFile === normPath) {
-          errorCount += (summary.errors || 0);
-          warningCount += (summary.warnings || 0);
+          errors += (summary.errors || 0);
+          warnings += (summary.warnings || 0);
         }
       }
     } else {
-      // Find matching entry either by normalized path or exact
       for (const [filePath, summary] of Object.entries(diagnostics.files)) {
         if (!summary) continue;
         const normFile = filePath.replace(/\\/g, "/").toLowerCase();
         if (normFile === normPath || normFile.endsWith("/" + normPath) || normPath.endsWith("/" + normFile)) {
-          errorCount = summary.errors || 0;
-          warningCount = summary.warnings || 0;
+          errors = summary.errors || 0;
+          warnings = summary.warnings || 0;
           break;
         }
       }
     }
-  }
+
+    return { errorCount: errors, warningCount: warnings };
+  }, [entry?.path, isDir, diagnostics]);
 
   // Priority rule: Error strictly overrides Warning
   const hasError = errorCount > 0;
@@ -337,6 +340,7 @@ export function ExplorerNode({
       ))}
     </>
   );
-}
+});
 
 export default ExplorerNode;
+

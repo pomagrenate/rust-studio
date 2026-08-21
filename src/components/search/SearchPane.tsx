@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { 
   VscRefresh, 
@@ -48,7 +48,152 @@ interface SearchPaneProps {
   onOpenFolder?: () => void;
 }
 
-export function SearchPane({
+interface SearchMatchRowProps {
+  filePath: string;
+  match: SearchMatch;
+  isReplaceOpen: boolean;
+  onOpenFileMatch: (filePath: string, lineNumber: number, colNumber: number) => void;
+  onReplaceSingle?: (filePath: string, match: SearchMatch) => void;
+}
+
+const SearchMatchRow = React.memo(function SearchMatchRow({
+  filePath,
+  match,
+  isReplaceOpen,
+  onOpenFileMatch,
+  onReplaceSingle,
+}: SearchMatchRowProps) {
+  const snippet = useMemo(() => {
+    const text = match.line_text;
+    const start = match.match_start;
+    const end = match.match_end;
+
+    if (start < 0 || end > text.length || start > end) {
+      return <span>{text.slice(0, 150)}</span>;
+    }
+
+    const maxPrefix = 40;
+    const maxSuffix = 80;
+    const prefixStart = Math.max(0, start - maxPrefix);
+    const suffixEnd = Math.min(text.length, end + maxSuffix);
+
+    const prefixEllipsis = prefixStart > 0 ? "..." : "";
+    const suffixEllipsis = suffixEnd < text.length ? "..." : "";
+
+    const before = prefixEllipsis + text.slice(prefixStart, start);
+    const matched = text.slice(start, end);
+    const after = text.slice(end, suffixEnd) + suffixEllipsis;
+
+    return (
+      <span className={styles.lineText}>
+        <span>{before}</span>
+        <span className={styles.highlight}>{matched}</span>
+        <span>{after}</span>
+      </span>
+    );
+  }, [match]);
+
+  return (
+    <div
+      className={styles.matchRow}
+      onClick={() => onOpenFileMatch(filePath, match.line_number - 1, match.match_start)}
+      title={`Line ${match.line_number}: ${match.line_text}`}
+    >
+      <div className={styles.matchContent}>
+        <span className={styles.lineNumber}>{match.line_number}:</span>
+        {snippet}
+      </div>
+
+      {isReplaceOpen && onReplaceSingle && (
+        <div
+          className={styles.matchActions}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            className={styles.fileActionButton}
+            title="Replace Match"
+            onClick={() => onReplaceSingle(filePath, match)}
+          >
+            <VscReplace />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+});
+
+interface SearchFileResultItemProps {
+  fileResult: FileSearchResult;
+  isExpanded: boolean;
+  isReplaceOpen: boolean;
+  onToggleExpand: (filePath: string) => void;
+  onOpenFileMatch: (filePath: string, lineNumber: number, colNumber: number) => void;
+  onReplaceInFile?: (filePath: string, matches: SearchMatch[]) => void;
+  onReplaceSingle?: (filePath: string, match: SearchMatch) => void;
+}
+
+const SearchFileResultItem = React.memo(function SearchFileResultItem({
+  fileResult,
+  isExpanded,
+  isReplaceOpen,
+  onToggleExpand,
+  onOpenFileMatch,
+  onReplaceInFile,
+  onReplaceSingle,
+}: SearchFileResultItemProps) {
+  return (
+    <div>
+      <div
+        className={styles.fileNode}
+        onClick={() => onToggleExpand(fileResult.file_path)}
+      >
+        <div className={styles.fileNodeContent}>
+          {isExpanded ? <VscChevronDown /> : <VscChevronRight />}
+          <span className={styles.fileIcon}>
+            <VscFile color="#dcb67a" />
+          </span>
+          <span className={styles.fileName}>{fileResult.file_name}</span>
+          <span className={styles.filePath}>{fileResult.relative_path}</span>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          {isReplaceOpen && onReplaceInFile && (
+            <div
+              className={styles.fileActions}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                className={styles.fileActionButton}
+                title="Replace All in File"
+                onClick={() => onReplaceInFile(fileResult.file_path, fileResult.matches)}
+              >
+                <VscReplaceAll />
+              </button>
+            </div>
+          )}
+          <span className={styles.fileCountBadge}>{fileResult.matches.length}</span>
+        </div>
+      </div>
+
+      {isExpanded && (
+        <div className={styles.matchList}>
+          {fileResult.matches.map((match, idx) => (
+            <SearchMatchRow
+              key={`${match.line_number}-${match.match_start}-${idx}`}
+              filePath={fileResult.file_path}
+              match={match}
+              isReplaceOpen={isReplaceOpen}
+              onOpenFileMatch={onOpenFileMatch}
+              onReplaceSingle={onReplaceSingle}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+});
+
+export const SearchPane = React.memo(function SearchPane({
   workspaceRoots,
   openFiles,
   onOpenFileMatch,
@@ -135,8 +280,6 @@ export function SearchPane({
           setDurationMs(res.duration_ms || 0);
           setLimitHit(res.limit_hit || false);
 
-          // Performance: only auto-expand files if count is small (<= 5)
-          // If many files matched, expand only top 2 to keep React render ultra-fast
           if (res.results && res.results.length <= 5) {
             setExpandedFiles(new Set(res.results.map(r => r.file_path)));
           } else if (res.results && res.results.length > 5) {
@@ -195,16 +338,15 @@ export function SearchPane({
   }, [query, isCaseSensitive, isWholeWord, isRegex, includePattern, excludePattern, performSearch]);
 
   // Expand / collapse all toggle
-  const toggleCollapseAll = () => {
-    if (expandedFiles.size > 0) {
-      setExpandedFiles(new Set());
-    } else {
-      setExpandedFiles(new Set(results.map(r => r.file_path)));
-    }
-  };
+  const toggleCollapseAll = useCallback(() => {
+    setExpandedFiles(prev => {
+      if (prev.size > 0) return new Set();
+      return new Set(results.map(r => r.file_path));
+    });
+  }, [results]);
 
   // Toggle single file expanded
-  const toggleFileExpanded = (filePath: string) => {
+  const toggleFileExpanded = useCallback((filePath: string) => {
     setExpandedFiles(prev => {
       const next = new Set(prev);
       if (next.has(filePath)) {
@@ -214,10 +356,10 @@ export function SearchPane({
       }
       return next;
     });
-  };
+  }, []);
 
   // Replace single match
-  const handleReplaceSingle = async (filePath: string, match: SearchMatch) => {
+  const handleReplaceSingle = useCallback(async (filePath: string, match: SearchMatch) => {
     if (!window.__TAURI_INTERNALS__) return;
     try {
       await invoke("replace_in_files", {
@@ -235,10 +377,10 @@ export function SearchPane({
     } catch (e) {
       console.error("Replace single failed:", e);
     }
-  };
+  }, [replaceQuery, performSearch, query]);
 
   // Replace all in file
-  const handleReplaceInFile = async (filePath: string, fileMatches: SearchMatch[]) => {
+  const handleReplaceInFile = useCallback(async (filePath: string, fileMatches: SearchMatch[]) => {
     if (!window.__TAURI_INTERNALS__) return;
     try {
       const replacements = fileMatches.map(m => ({
@@ -253,10 +395,10 @@ export function SearchPane({
     } catch (e) {
       console.error("Replace in file failed:", e);
     }
-  };
+  }, [replaceQuery, performSearch, query]);
 
   // Replace all matches in all files
-  const handleReplaceAll = async () => {
+  const handleReplaceAll = useCallback(async () => {
     if (!window.__TAURI_INTERNALS__ || results.length === 0) return;
     try {
       const replacements: any[] = [];
@@ -276,10 +418,10 @@ export function SearchPane({
     } catch (e) {
       console.error("Replace all failed:", e);
     }
-  };
+  }, [results, replaceQuery, performSearch, query]);
 
   // Clear query and results
-  const handleClear = () => {
+  const handleClear = useCallback(() => {
     searchRequestIdRef.current++;
     setQuery("");
     setReplaceQuery("");
@@ -292,39 +434,7 @@ export function SearchPane({
     if (searchInputRef.current) {
       searchInputRef.current.focus();
     }
-  };
-
-  // Render highlighted match text snippet with length clipping for fast DOM layout
-  const renderHighlightedSnippet = (match: SearchMatch) => {
-    const text = match.line_text;
-    const start = match.match_start;
-    const end = match.match_end;
-
-    if (start < 0 || end > text.length || start > end) {
-      return <span>{text.slice(0, 150)}</span>;
-    }
-
-    // Clip long lines around the match to keep rendering snappy
-    const maxPrefix = 40;
-    const maxSuffix = 80;
-    const prefixStart = Math.max(0, start - maxPrefix);
-    const suffixEnd = Math.min(text.length, end + maxSuffix);
-
-    const prefixEllipsis = prefixStart > 0 ? "..." : "";
-    const suffixEllipsis = suffixEnd < text.length ? "..." : "";
-
-    const before = prefixEllipsis + text.slice(prefixStart, start);
-    const matched = text.slice(start, end);
-    const after = text.slice(end, suffixEnd) + suffixEllipsis;
-
-    return (
-      <span className={styles.lineText}>
-        <span>{before}</span>
-        <span className={styles.highlight}>{matched}</span>
-        <span>{after}</span>
-      </span>
-    );
-  };
+  }, []);
 
   return (
     <div className={styles.searchPane} aria-label="Search">
@@ -524,85 +634,18 @@ export function SearchPane({
 
       {/* Results Tree View */}
       <div className={styles.resultsArea}>
-        {results.map((fileResult) => {
-          const isExpanded = expandedFiles.has(fileResult.file_path);
-          return (
-            <div key={fileResult.file_path}>
-              {/* File Node Row */}
-              <div
-                className={styles.fileNode}
-                onClick={() => toggleFileExpanded(fileResult.file_path)}
-              >
-                <div className={styles.fileNodeContent}>
-                  {isExpanded ? <VscChevronDown /> : <VscChevronRight />}
-                  <span className={styles.fileIcon}>
-                    <VscFile color="#dcb67a" />
-                  </span>
-                  <span className={styles.fileName}>{fileResult.file_name}</span>
-                  <span className={styles.filePath}>{fileResult.relative_path}</span>
-                </div>
-
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  {isReplaceOpen && (
-                    <div
-                      className={styles.fileActions}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <button
-                        className={styles.fileActionButton}
-                        title="Replace All in File"
-                        onClick={() => handleReplaceInFile(fileResult.file_path, fileResult.matches)}
-                      >
-                        <VscReplaceAll />
-                      </button>
-                    </div>
-                  )}
-                  <span className={styles.fileCountBadge}>{fileResult.matches.length}</span>
-                </div>
-              </div>
-
-              {/* Match Line Rows */}
-              {isExpanded && (
-                <div className={styles.matchList}>
-                  {fileResult.matches.map((match, idx) => (
-                    <div
-                      key={`${match.line_number}-${match.match_start}-${idx}`}
-                      className={styles.matchRow}
-                      onClick={() =>
-                        onOpenFileMatch(
-                          fileResult.file_path,
-                          match.line_number - 1,
-                          match.match_start
-                        )
-                      }
-                      title={`Line ${match.line_number}: ${match.line_text}`}
-                    >
-                      <div className={styles.matchContent}>
-                        <span className={styles.lineNumber}>{match.line_number}:</span>
-                        {renderHighlightedSnippet(match)}
-                      </div>
-
-                      {isReplaceOpen && (
-                        <div
-                          className={styles.matchActions}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <button
-                            className={styles.fileActionButton}
-                            title="Replace Match"
-                            onClick={() => handleReplaceSingle(fileResult.file_path, match)}
-                          >
-                            <VscReplace />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {results.map((fileResult) => (
+          <SearchFileResultItem
+            key={fileResult.file_path}
+            fileResult={fileResult}
+            isExpanded={expandedFiles.has(fileResult.file_path)}
+            isReplaceOpen={isReplaceOpen}
+            onToggleExpand={toggleFileExpanded}
+            onOpenFileMatch={onOpenFileMatch}
+            onReplaceInFile={handleReplaceInFile}
+            onReplaceSingle={handleReplaceSingle}
+          />
+        ))}
 
         {/* Empty workspace state */}
         {workspaceRoots.length === 0 && !hasSearched && (
@@ -622,6 +665,7 @@ export function SearchPane({
       </div>
     </div>
   );
-}
+});
 
 export default SearchPane;
+

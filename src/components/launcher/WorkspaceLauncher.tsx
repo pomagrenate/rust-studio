@@ -53,6 +53,7 @@ function getProjectTag(path: string): string {
 }
 
 export function WorkspaceLauncher({ onOpenWorkspace, theme, onToggleTheme }: WorkspaceLauncherProps) {
+  const isLight = theme !== "dark";
   const [activeTab, setActiveTab] = useState<LauncherTab>("projects");
   const [recentWorkspaces, setRecentWorkspaces] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -480,9 +481,31 @@ export function WorkspaceLauncher({ onOpenWorkspace, theme, onToggleTheme }: Wor
             <div className={styles.learnHeader}>
               <span className={styles.learnTitle}>Learn & Keyboard Shortcuts</span>
               <span className={styles.learnSubtitle}>
-                Master Pomai Studio with keyboard shortcuts, CodeWiki architecture graphs, and local code backups.
+                Master Pomai Studio with Rust AST Test Generator, CodeWiki graphs, and local backups.
               </span>
             </div>
+
+            <div style={{
+              display: "flex",
+              gap: 16,
+              marginBottom: 20,
+              padding: "14px 18px",
+              borderRadius: 8,
+              backgroundColor: isLight ? "#f6f8fa" : "#252526",
+              border: isLight ? "1px solid #e1e4e8" : "1px solid #333333",
+              alignItems: "center"
+            }}>
+              <div style={{ color: "#dea584", fontSize: 24 }}>⚡</div>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 14, color: isLight ? "#24292f" : "#ffffff" }}>
+                  Pomai Rust-TestGen (AST Test Synthesizer)
+                </div>
+                <div style={{ fontSize: 12.5, color: isLight ? "#57606a" : "#cccccc", marginTop: 2 }}>
+                  Press <kbd style={{ padding: "2px 6px", borderRadius: 4, background: isLight ? "#eaeef2" : "#333333", fontSize: 11 }}>Ctrl+Alt+T</kbd> anywhere in a Rust file to parse AST and auto-generate 100% compile-ready unit tests, Tokio async stubs, and Proptest fuzzing blocks without AI.
+                </div>
+              </div>
+            </div>
+
             <KeybindingsSettings />
           </div>
         )}

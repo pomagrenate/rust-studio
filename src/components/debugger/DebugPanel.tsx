@@ -56,7 +56,7 @@ export interface DebugPanelProps {
   workspaceRoot?: string;
 }
 
-export function DebugPanel({ onClose, onNavigateToFile, onDebugStateChange, workspaceRoot }: DebugPanelProps) {
+export const DebugPanel = React.memo(function DebugPanel({ onClose, onNavigateToFile, onDebugStateChange, workspaceRoot }: DebugPanelProps) {
   const [activeTab, setActiveTab] = useState<"debugger" | "console">("debugger");
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -635,6 +635,6 @@ export function DebugPanel({ onClose, onNavigateToFile, onDebugStateChange, work
       </div>
     </div>
   );
-}
+});
 
 export default DebugPanel;
