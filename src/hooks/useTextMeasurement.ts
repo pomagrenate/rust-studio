@@ -21,10 +21,10 @@ interface TextMeasurementOptions {
 }
 
 const DEFAULT_OPTIONS: TextMeasurementOptions = {
-  fontFamily: '"JetBrains Mono", Consolas, monospace',
-  fontSize: 13.5,
+  fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, Monaco, Consolas, monospace",
+  fontSize: 14,
   fontWeight: 600,
-  charWidth: 8.1,
+  charWidth: 8.4,
 };
 
 /**

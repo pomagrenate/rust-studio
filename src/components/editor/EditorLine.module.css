@@ -8,8 +8,8 @@
   align-items: baseline;
   height: 21px;
   min-height: 21px;
-  font-family: var(--editor-font-family, "JetBrains Mono", Consolas, monospace);
-  font-size: var(--editor-font-size, 13.5px);
+  font-family: var(--editor-font-family, 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, Monaco, Consolas, monospace);
+  font-size: var(--editor-font-size, 14px);
   line-height: var(--editor-line-height, 21px);
   color: #1f2328;
   background-color: transparent;

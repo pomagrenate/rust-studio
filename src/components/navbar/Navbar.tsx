@@ -507,12 +507,20 @@ export const Navbar = React.memo(function Navbar({
           {/* Start / Run (Green Play) with Dropdown */}
           <div className={styles.runDropdownWrapper}>
             <button
-              className={`${styles.iconBtn} ${showRunDropdown ? styles.iconBtnActive : ""}`}
-              title="Run Project (Shift+F10 / Cargo Run)"
-              onClick={() => setShowRunDropdown(!showRunDropdown)}
+              className={styles.iconBtn}
+              title="Run Project (Shift+F10 / Cargo Run / Dev Server)"
+              onClick={() => onStartRun?.()}
               aria-label="Start Run"
             >
               <VscPlay size={16} color="#388a34" />
+            </button>
+            <button
+              className={`${styles.runChevronBtn} ${showRunDropdown ? styles.iconBtnActive : ""}`}
+              title="Run Options"
+              onClick={() => setShowRunDropdown(!showRunDropdown)}
+              aria-label="Run Options"
+            >
+              <VscChevronDown size={12} />
             </button>
             
             {showRunDropdown && (

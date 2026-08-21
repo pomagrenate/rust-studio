@@ -210,10 +210,10 @@ export function EditorView({
   }, [executionLine, viewportHeight]);
 
   const { measureText } = useTextMeasurement({
-    fontFamily: '"JetBrains Mono", Consolas, monospace',
-    fontSize: 13.5,
+    fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, Monaco, Consolas, monospace",
+    fontSize: 14,
     fontWeight: 600,
-    charWidth: 8.1,
+    charWidth: 8.4,
   });
 
   // Integrate rope buffer when enabled
@@ -880,6 +880,52 @@ export function EditorView({
       nLine += 1;
       nCol = 0;
       e.preventDefault();
+    } else if (e.key === "Tab") {
+      e.preventDefault();
+      const tabSpaces = "    ";
+      const viewModel = viewModelRef.current;
+      
+      if (viewModel && viewModel.hasSelection()) {
+        const selection = viewModel.getSelection();
+        const startL = Math.min(selection.start.line, selection.end.line);
+        const endL = Math.max(selection.start.line, selection.end.line);
+
+        for (let l = startL; l <= endL; l++) {
+          const lText = newLines[l] || "";
+          if (e.shiftKey) {
+            if (lText.startsWith(tabSpaces)) {
+              newLines[l] = lText.slice(4);
+            } else if (lText.startsWith("\t")) {
+              newLines[l] = lText.slice(1);
+            } else {
+              let cnt = 0;
+              while (cnt < 4 && lText[cnt] === " ") cnt++;
+              if (cnt > 0) newLines[l] = lText.slice(cnt);
+            }
+          } else {
+            newLines[l] = tabSpaces + lText;
+          }
+        }
+        nCol = e.shiftKey ? Math.max(0, nCol - 4) : nCol + 4;
+      } else {
+        if (e.shiftKey) {
+          const lText = newLines[nLine] || "";
+          if (lText.slice(0, nCol).endsWith(tabSpaces)) {
+            newLines[nLine] = lText.slice(0, nCol - 4) + lText.slice(nCol);
+            nCol = Math.max(0, nCol - 4);
+          } else if (lText.slice(0, nCol).endsWith("\t")) {
+            newLines[nLine] = lText.slice(0, nCol - 1) + lText.slice(nCol);
+            nCol = Math.max(0, nCol - 1);
+          } else if (lText.startsWith(tabSpaces)) {
+            newLines[nLine] = lText.slice(4);
+            nCol = Math.max(0, nCol - 4);
+          }
+        } else {
+          const line = newLines[nLine] || "";
+          newLines[nLine] = line.slice(0, nCol) + tabSpaces + line.slice(nCol);
+          nCol += 4;
+        }
+      }
     } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
       const line = newLines[nLine];
       newLines[nLine] = line.slice(0, nCol) + e.key + line.slice(nCol);
@@ -975,7 +1021,7 @@ export function EditorView({
         col = effectiveLines[clickedLine].length;
       } else {
         const x = e.clientX - rect.left - GUTTER_TOTAL_OFFSET;
-        col = Math.max(0, Math.round(x / 8.1));
+        col = Math.max(0, Math.round(x / 8.4));
       }
     }
 
