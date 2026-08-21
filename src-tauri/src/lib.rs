@@ -16,6 +16,7 @@ pub mod codewiki;
 pub mod backup;
 pub mod settings;
 pub mod rust_testgen;
+pub mod utils;
 
 use commands::{buffer_commands, fs_commands, viewport_commands, terminal_commands, search_commands, timeline_commands, git_commands, cargo_commands, syntax_commands, lsp_commands, clippy_commands, codewiki_commands, backup_commands, settings_commands, testgen_commands};
 use github::{api, auth};

@@ -165,8 +165,10 @@ pub fn format_rust_file(
     let doc = doc_arc.read();
     let content: std::borrow::Cow<str> = doc.buffer.slice(0, doc.buffer.len_chars());
     
+    use crate::utils::CommandExtHideWindow;
     // Use rustfmt to format the content
     let mut output = std::process::Command::new("rustfmt")
+        .hide_window()
         .arg("--emit")
         .arg("stdout")
         .stdin(std::process::Stdio::piped())

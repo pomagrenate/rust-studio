@@ -64,7 +64,9 @@ impl DefinitionResolver {
 
     /// Detect the Rust sysroot using rustc
     fn detect_sysroot() -> Result<PathBuf, Box<dyn std::error::Error>> {
+        use crate::utils::CommandExtHideWindow;
         let output = std::process::Command::new("rustc")
+            .hide_window()
             .args(["--print", "sysroot"])
             .output()?;
         
@@ -104,7 +106,9 @@ impl DefinitionResolver {
 
     /// Attempt to install rust-src component
     pub async fn install_rust_src(&self) -> Result<String, Box<dyn std::error::Error>> {
+        use crate::utils::CommandExtHideWindow;
         let output = tokio::process::Command::new("rustup")
+            .hide_window()
             .args(["component", "add", "rust-src"])
             .output()
             .await?;

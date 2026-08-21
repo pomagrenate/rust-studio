@@ -10,6 +10,7 @@ use tokio::sync::Mutex as TokioMutex;
 
 use crate::cargo::{CargoProcessManager, CargoCommand, CodeSuggestion, apply_compiler_suggestion};
 use crate::buffer::{RopeBuffer, TextBuffer};
+use crate::utils::CommandExtHideWindow;
 
 // ── Managed State ─────────────────────────────────────────────────────────
 
@@ -322,6 +323,7 @@ pub async fn cargo_check_diagnostics(project_path: String) -> Result<Vec<CargoDi
         }
 
         let output = Command::new("cargo")
+            .hide_window()
             .args(&["check", "--message-format=json", "--all-targets"])
             .current_dir(root)
             .output()
@@ -348,6 +350,7 @@ pub async fn cargo_check_workspace_diagnostics(
         }
 
         let output = Command::new("cargo")
+            .hide_window()
             .args(&["check", "--message-format=json", "--all-targets"])
             .current_dir(root)
             .output()
@@ -418,6 +421,7 @@ pub async fn cargo_run_command(
 
         let start = Instant::now();
         let mut cmd = Command::new("cargo");
+        cmd.hide_window();
 
         match action.as_str() {
             "run" => {
@@ -547,10 +551,12 @@ pub async fn cargo_format(project_path: String, file_path: Option<String>) -> Re
         let root = Path::new(&project_path);
         let mut cmd = if let Some(fp) = file_path {
             let mut c = Command::new("rustfmt");
+            c.hide_window();
             c.arg(&fp);
             c
         } else {
             let mut c = Command::new("cargo");
+            c.hide_window();
             c.arg("fmt");
             c.current_dir(root);
             c
@@ -573,6 +579,7 @@ pub async fn cargo_create_project(parent_dir: String, name: String, is_lib: bool
         }
 
         let mut cmd = Command::new("cargo");
+        cmd.hide_window();
         cmd.arg("new");
         if is_lib {
             cmd.arg("--lib");
@@ -607,6 +614,7 @@ pub async fn git_clone_project(target_parent_dir: String, repo_url: String) -> R
             .unwrap_or("cloned-repo");
 
         let mut cmd = Command::new("git");
+        cmd.hide_window();
         cmd.args(&["clone", &repo_url]);
         cmd.current_dir(parent);
 
@@ -638,6 +646,7 @@ pub async fn cargo_scaffold_project(
             let cmd_str = cmd_raw.replace("{name}", &name);
             let mut shell_cmd = if cfg!(target_os = "windows") {
                 let mut c = Command::new("powershell");
+                c.hide_window();
                 c.args(&["-NoProfile", "-Command", &cmd_str]);
                 c
             } else {
@@ -828,6 +837,7 @@ pub async fn cargo_get_external_libraries(project_path: String) -> Result<Vec<Ex
                 }
             }
         }
+        cargo_cmd.hide_window();
 
         let output = cargo_cmd
             .args(["metadata", "--format-version", "1"])
@@ -876,6 +886,7 @@ pub async fn cargo_get_external_libraries(project_path: String) -> Result<Vec<Ex
                 }
             }
         }
+        rustc_cmd.hide_window();
 
         if let Ok(sysroot_out) = rustc_cmd.args(["--print", "sysroot"]).output() {
             if sysroot_out.status.success() {

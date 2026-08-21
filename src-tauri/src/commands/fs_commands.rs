@@ -169,8 +169,10 @@ pub async fn create_cargo_crate(path: String, name: String) -> Result<(), String
         fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
     
+    use crate::utils::CommandExtHideWindow;
     // Run cargo new command
     let output = Command::new("cargo")
+        .hide_window()
         .args(["new", &name])
         .current_dir(Path::new(&path).parent().unwrap_or(Path::new(".")))
         .output()

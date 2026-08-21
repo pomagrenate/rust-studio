@@ -184,7 +184,9 @@ impl CargoProcessManager {
         workspace_root: &PathBuf,
         command: CargoCommand,
     ) -> Result<Child, String> {
+        use crate::utils::CommandExtHideWindow;
         Command::new("cargo")
+            .hide_window()
             .current_dir(workspace_root)
             .args(command.args())
             .stdout(std::process::Stdio::piped())

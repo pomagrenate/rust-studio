@@ -60,7 +60,9 @@ impl LspHost {
         ra_binary: PathBuf,
         workspace_root: PathBuf,
     ) -> Result<(Self, mpsc::Receiver<Value>)> {
+        use crate::utils::CommandExtHideWindow;
         let mut child: Child = Command::new(&ra_binary)
+            .hide_window()
             .current_dir(&workspace_root)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())

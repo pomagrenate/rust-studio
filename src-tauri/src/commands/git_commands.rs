@@ -3,6 +3,7 @@ use std::process::Command;
 use std::fs;
 use serde::{Deserialize, Serialize};
 use crate::github::error::GitCommandResult;
+use crate::utils::CommandExtHideWindow;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct GitFileChange {
@@ -53,7 +54,7 @@ pub async fn git_status(repo_path: String) -> Result<GitStatusResult, String> {
         }
 
         // Run git status --porcelain=v1 -b -u
-        let output = Command::new("git")
+        let output = Command::new("git").hide_window()
             .args(&["status", "--porcelain=v1", "-b", "-u"])
             .current_dir(path)
             .output();
@@ -178,7 +179,7 @@ pub async fn git_get_graph(repo_path: String, limit: Option<usize>) -> Result<Ve
         }
 
         let max_count = limit.unwrap_or(50).to_string();
-        let output = Command::new("git")
+        let output = Command::new("git").hide_window()
             .args(&[
                 "log",
                 "--all",
@@ -267,7 +268,7 @@ pub async fn git_get_graph(repo_path: String, limit: Option<usize>) -> Result<Ve
 #[tauri::command]
 pub async fn git_stage_file(repo_path: String, file_path: String) -> Result<(), String> {
     tokio::task::spawn_blocking(move || {
-        let output = Command::new("git")
+        let output = Command::new("git").hide_window()
             .args(&["add", "--", &file_path])
             .current_dir(repo_path)
             .output()
@@ -283,7 +284,7 @@ pub async fn git_stage_file(repo_path: String, file_path: String) -> Result<(), 
 #[tauri::command]
 pub async fn git_unstage_file(repo_path: String, file_path: String) -> Result<(), String> {
     tokio::task::spawn_blocking(move || {
-        let output = Command::new("git")
+        let output = Command::new("git").hide_window()
             .args(&["restore", "--staged", "--", &file_path])
             .current_dir(&repo_path)
             .output();
@@ -294,7 +295,7 @@ pub async fn git_unstage_file(repo_path: String, file_path: String) -> Result<()
             }
         }
 
-        let fallback = Command::new("git")
+        let fallback = Command::new("git").hide_window()
             .args(&["reset", "HEAD", "--", &file_path])
             .current_dir(repo_path)
             .output()
@@ -310,7 +311,7 @@ pub async fn git_unstage_file(repo_path: String, file_path: String) -> Result<()
 #[tauri::command]
 pub async fn git_stage_all(repo_path: String) -> Result<(), String> {
     tokio::task::spawn_blocking(move || {
-        let output = Command::new("git")
+        let output = Command::new("git").hide_window()
             .args(&["add", "-A"])
             .current_dir(repo_path)
             .output()
@@ -326,7 +327,7 @@ pub async fn git_stage_all(repo_path: String) -> Result<(), String> {
 #[tauri::command]
 pub async fn git_unstage_all(repo_path: String) -> Result<(), String> {
     tokio::task::spawn_blocking(move || {
-        let output = Command::new("git")
+        let output = Command::new("git").hide_window()
             .args(&["restore", "--staged", "."])
             .current_dir(&repo_path)
             .output();
@@ -337,7 +338,7 @@ pub async fn git_unstage_all(repo_path: String) -> Result<(), String> {
             }
         }
 
-        let fallback = Command::new("git")
+        let fallback = Command::new("git").hide_window()
             .args(&["reset"])
             .current_dir(repo_path)
             .output()
@@ -353,7 +354,7 @@ pub async fn git_unstage_all(repo_path: String) -> Result<(), String> {
 #[tauri::command]
 pub async fn git_discard_file(repo_path: String, file_path: String) -> Result<(), String> {
     tokio::task::spawn_blocking(move || {
-        let output = Command::new("git")
+        let output = Command::new("git").hide_window()
             .args(&["checkout", "--", &file_path])
             .current_dir(&repo_path)
             .output();
@@ -364,7 +365,7 @@ pub async fn git_discard_file(repo_path: String, file_path: String) -> Result<()
             }
         }
 
-        let clean = Command::new("git")
+        let clean = Command::new("git").hide_window()
             .args(&["clean", "-fd", "--", &file_path])
             .current_dir(repo_path)
             .output()
@@ -380,12 +381,12 @@ pub async fn git_discard_file(repo_path: String, file_path: String) -> Result<()
 #[tauri::command]
 pub async fn git_discard_all(repo_path: String) -> Result<(), String> {
     tokio::task::spawn_blocking(move || {
-        let _ = Command::new("git")
+        let _ = Command::new("git").hide_window()
             .args(&["checkout", "--", "."])
             .current_dir(&repo_path)
             .output();
 
-        let clean = Command::new("git")
+        let clean = Command::new("git").hide_window()
             .args(&["clean", "-fd"])
             .current_dir(repo_path)
             .output()
@@ -401,7 +402,7 @@ pub async fn git_discard_all(repo_path: String) -> Result<(), String> {
 #[tauri::command]
 pub async fn git_commit(repo_path: String, message: String) -> Result<String, String> {
     tokio::task::spawn_blocking(move || {
-        let output = Command::new("git")
+        let output = Command::new("git").hide_window()
             .args(&["commit", "-m", &message])
             .current_dir(repo_path)
             .output()
@@ -417,7 +418,7 @@ pub async fn git_commit(repo_path: String, message: String) -> Result<String, St
 #[tauri::command]
 pub async fn git_push(repo_path: String) -> Result<GitCommandResult, String> {
     tokio::task::spawn_blocking(move || {
-        let output = Command::new("git")
+        let output = Command::new("git").hide_window()
             .args(&["push"])
             .current_dir(repo_path)
             .output()
@@ -430,7 +431,7 @@ pub async fn git_push(repo_path: String) -> Result<GitCommandResult, String> {
 #[tauri::command]
 pub async fn git_pull(repo_path: String) -> Result<GitCommandResult, String> {
     tokio::task::spawn_blocking(move || {
-        let output = Command::new("git")
+        let output = Command::new("git").hide_window()
             .args(&["pull"])
             .current_dir(repo_path)
             .output()
@@ -443,7 +444,7 @@ pub async fn git_pull(repo_path: String) -> Result<GitCommandResult, String> {
 #[tauri::command]
 pub async fn git_fetch(repo_path: String) -> Result<GitCommandResult, String> {
     tokio::task::spawn_blocking(move || {
-        let output = Command::new("git")
+        let output = Command::new("git").hide_window()
             .args(&["fetch"])
             .current_dir(repo_path)
             .output()
@@ -456,7 +457,7 @@ pub async fn git_fetch(repo_path: String) -> Result<GitCommandResult, String> {
 #[tauri::command]
 pub async fn git_init(repo_path: String) -> Result<(), String> {
     tokio::task::spawn_blocking(move || {
-        let output = Command::new("git")
+        let output = Command::new("git").hide_window()
             .args(&["init"])
             .current_dir(repo_path)
             .output()
@@ -472,7 +473,7 @@ pub async fn git_init(repo_path: String) -> Result<(), String> {
 #[tauri::command]
 pub async fn git_get_branches(repo_path: String) -> Result<Vec<String>, String> {
     tokio::task::spawn_blocking(move || {
-        let output = Command::new("git")
+        let output = Command::new("git").hide_window()
             .args(&["branch", "--list"])
             .current_dir(repo_path)
             .output()
@@ -493,7 +494,7 @@ pub async fn git_get_branches(repo_path: String) -> Result<Vec<String>, String> 
 #[tauri::command]
 pub async fn git_checkout(repo_path: String, branch: String) -> Result<(), String> {
     tokio::task::spawn_blocking(move || {
-        let output = Command::new("git")
+        let output = Command::new("git").hide_window()
             .args(&["checkout", &branch])
             .current_dir(repo_path)
             .output()
@@ -509,7 +510,7 @@ pub async fn git_checkout(repo_path: String, branch: String) -> Result<(), Strin
 #[tauri::command]
 pub async fn git_get_conflicts(repo_path: String) -> Result<Vec<String>, String> {
     tokio::task::spawn_blocking(move || {
-        let output = Command::new("git")
+        let output = Command::new("git").hide_window()
             .args(&["diff", "--name-only", "--diff-filter=U"])
             .current_dir(&repo_path)
             .output()
@@ -532,7 +533,7 @@ pub async fn git_get_conflicts(repo_path: String) -> Result<Vec<String>, String>
 #[tauri::command]
 pub async fn git_create_branch(repo_path: String, branch_name: String) -> Result<(), String> {
     tokio::task::spawn_blocking(move || {
-        let output = Command::new("git")
+        let output = Command::new("git").hide_window()
             .args(&["branch", &branch_name])
             .current_dir(repo_path)
             .output()
@@ -563,7 +564,7 @@ pub async fn git_resolve_conflict_file(
             .map_err(|e| format!("Failed to write resolved file: {e}"))?;
 
         // Stage file with git add
-        let output = Command::new("git")
+        let output = Command::new("git").hide_window()
             .args(&["add", &full_path.to_string_lossy()])
             .current_dir(&repo_path)
             .output()

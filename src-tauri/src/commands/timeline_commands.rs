@@ -28,8 +28,10 @@ pub async fn get_file_timeline(file_path: String) -> Result<Vec<TimelineEntry>, 
             _ => return Ok(entries),
         };
 
+        use crate::utils::CommandExtHideWindow;
         // Execute git log for the specified file
         let output = Command::new("git")
+            .hide_window()
             .args(&["log", "--follow", "--format=%H|%h|%an|%ar|%s", "-n", "30", "--"])
             .arg(path)
             .current_dir(parent_dir)
