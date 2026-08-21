@@ -30,7 +30,9 @@ pub enum SourceKind {
 #[derive(Clone)]
 struct VirtualFileCache {
     content: String,
+    #[allow(dead_code)]
     language_id: String,
+    #[allow(dead_code)]
     last_accessed: std::time::Instant,
 }
 

@@ -4,9 +4,9 @@ use serde::Serialize;
 
 #[derive(Serialize)]
 pub struct FsEntry {
-    name: String,
-    path: String,
-    kind: String,
+    pub name: String,
+    pub path: String,
+    pub kind: String,
 }
 
 #[tauri::command]
@@ -197,4 +197,94 @@ fn main() {
 "#;
     
     fs::write(&path, template).map_err(|e| e.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[tokio::test]
+    async fn test_fs_create_read_save_delete() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("sub/test.txt").to_string_lossy().to_string();
+
+        // 1. Create file (with missing parent directory)
+        create_file(file_path.clone()).await.unwrap();
+        assert!(Path::new(&file_path).exists());
+
+        // 2. Save content
+        save_file(file_path.clone(), "Hello Pomai Studio!".to_string()).await.unwrap();
+
+        // 3. Read content
+        let content = read_file(file_path.clone()).await.unwrap();
+        assert_eq!(content, "Hello Pomai Studio!");
+
+        // 4. Delete file
+        delete_path(file_path.clone()).await.unwrap();
+        assert!(!Path::new(&file_path).exists());
+    }
+
+    #[tokio::test]
+    async fn test_list_dir_sorting() {
+        let dir = tempdir().unwrap();
+        let root = dir.path();
+
+        // Create files & directories
+        fs::create_dir_all(root.join("b_dir")).unwrap();
+        fs::create_dir_all(root.join("a_dir")).unwrap();
+        fs::write(root.join("z_file.txt"), "z").unwrap();
+        fs::write(root.join("a_file.txt"), "a").unwrap();
+
+        let entries = list_dir(root.to_string_lossy().to_string()).await.unwrap();
+        assert_eq!(entries.len(), 4);
+
+        // Directories first (a_dir, b_dir), then files (a_file.txt, z_file.txt)
+        assert_eq!(entries[0].name, "a_dir");
+        assert_eq!(entries[0].kind, "directory");
+        assert_eq!(entries[1].name, "b_dir");
+        assert_eq!(entries[1].kind, "directory");
+        assert_eq!(entries[2].name, "a_file.txt");
+        assert_eq!(entries[2].kind, "file");
+        assert_eq!(entries[3].name, "z_file.txt");
+        assert_eq!(entries[3].kind, "file");
+    }
+
+    #[tokio::test]
+    async fn test_copy_dir_all_and_rename() {
+        let dir = tempdir().unwrap();
+        let src_dir = dir.path().join("src_folder");
+        let dest_dir = dir.path().join("dest_folder");
+
+        fs::create_dir_all(src_dir.join("nested")).unwrap();
+        fs::write(src_dir.join("nested/file.txt"), "nested content").unwrap();
+
+        // Copy directory tree
+        copy_path(src_dir.to_string_lossy().to_string(), dest_dir.to_string_lossy().to_string()).await.unwrap();
+        assert!(dest_dir.join("nested/file.txt").exists());
+
+        // Rename directory
+        let moved_dir = dir.path().join("moved_folder");
+        move_path(dest_dir.to_string_lossy().to_string(), moved_dir.to_string_lossy().to_string()).await.unwrap();
+        assert!(!dest_dir.exists());
+        assert!(moved_dir.join("nested/file.txt").exists());
+    }
+
+    #[tokio::test]
+    async fn test_rust_boilerplate_generators() {
+        let dir = tempdir().unwrap();
+        let rust_file = dir.path().join("lib.rs").to_string_lossy().to_string();
+        let mod_dir = dir.path().join("submod").to_string_lossy().to_string();
+        let scratch_file = dir.path().join("scratch.rs").to_string_lossy().to_string();
+
+        create_rust_file(rust_file.clone()).await.unwrap();
+        assert!(read_file(rust_file).await.unwrap().contains("pub fn init()"));
+
+        create_rust_module(mod_dir.clone()).await.unwrap();
+        let mod_rs = Path::new(&mod_dir).join("mod.rs").to_string_lossy().to_string();
+        assert!(read_file(mod_rs).await.unwrap().contains("//! Module declaration"));
+
+        create_scratch_file(scratch_file.clone()).await.unwrap();
+        assert!(read_file(scratch_file).await.unwrap().contains("Scratch Buffer"));
+    }
 }

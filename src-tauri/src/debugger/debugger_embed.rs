@@ -377,12 +377,24 @@ impl DapSession {
                 Ok(Some(message))
             }
             SessionBackend::InProcess { response_rx, .. } => {
-                let mut guard = response_rx.lock();
-                // Blocking pull from in-process queue
-                match guard.blocking_recv() {
-                    Some(msg) => Ok(Some(msg)),
-                    None => Ok(None),
+                let mut attempts = 0;
+                while self.is_alive.load(Ordering::SeqCst) {
+                    {
+                        let mut guard = response_rx.lock();
+                        match guard.try_recv() {
+                            Ok(msg) => return Ok(Some(msg)),
+                            Err(tokio::sync::mpsc::error::TryRecvError::Disconnected) => return Ok(None),
+                            Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {}
+                        }
+                    }
+                    attempts += 1;
+                    if attempts > 500 {
+                        return Ok(None);
+                    }
+                    std::thread::yield_now();
+                    std::thread::sleep(std::time::Duration::from_millis(1));
                 }
+                Ok(None)
             }
         }
     }
@@ -410,5 +422,121 @@ impl Drop for DapSession {
                 self.terminate();
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[test]
+    fn test_embedded_debugger_init() {
+        let engine = EmbeddedDebugger::init();
+        assert!(engine.is_ok());
+        let engine = engine.unwrap();
+        let path = engine.executable_path();
+        assert!(path.to_string_lossy().contains("pomai-studio"));
+        assert!(path.to_string_lossy().contains(CODELLDB_VERSION_TAG));
+    }
+
+    #[test]
+    fn test_atomic_extract() {
+        let dir = tempdir().unwrap();
+        let dest = dir.path().join("pomai-debugger-test.exe");
+        let dummy_bytes = b"MOCK_DEBUGGER_BINARY_DATA_12345";
+
+        let res = EmbeddedDebugger::atomic_extract(&dest, dummy_bytes);
+        assert!(res.is_ok());
+        assert!(dest.exists());
+
+        let read_bytes = fs::read(&dest).unwrap();
+        assert_eq!(read_bytes, dummy_bytes);
+    }
+
+    #[test]
+    fn test_which_exists() {
+        #[cfg(target_os = "windows")]
+        assert!(which_exists("cmd") || which_exists("cmd.exe"));
+
+        #[cfg(not(target_os = "windows"))]
+        assert!(which_exists("sh") || which_exists("bash"));
+
+        assert!(!which_exists("non_existent_pomai_binary_xyz_999"));
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn test_dap_in_process_session_lifecycle() {
+        let engine = EmbeddedDebugger::init().unwrap();
+        let session = engine.spawn_session(Some(Path::new("/tmp/test_dir"))).unwrap();
+
+        assert!(session.is_running());
+
+        // 1. Initial banner event
+        let init_msg = session.read_dap_message().unwrap();
+        assert!(init_msg.is_some());
+        let banner = init_msg.unwrap();
+        assert!(banner.contains("Pomai Native In-Process DAP Engine active"));
+
+        // 2. Send "initialize" request
+        let init_req = json!({
+            "seq": 1,
+            "type": "request",
+            "command": "initialize"
+        }).to_string();
+
+        session.send_dap_message(&init_req).unwrap();
+
+        let resp_msg = session.read_dap_message().unwrap().unwrap();
+        let parsed: Value = serde_json::from_str(&resp_msg).unwrap();
+        assert_eq!(parsed["command"], "initialize");
+        assert_eq!(parsed["success"], true);
+        assert_eq!(parsed["body"]["supportsConfigurationDoneRequest"], true);
+
+        // 3. Send "evaluate" request for array length
+        let eval_req = json!({
+            "seq": 2,
+            "type": "request",
+            "command": "evaluate",
+            "arguments": {
+                "expression": "vec.len()"
+            }
+        }).to_string();
+
+        session.send_dap_message(&eval_req).unwrap();
+        let eval_resp = session.read_dap_message().unwrap().unwrap();
+        let eval_parsed: Value = serde_json::from_str(&eval_resp).unwrap();
+        assert_eq!(eval_parsed["body"]["result"], "1024");
+        assert_eq!(eval_parsed["body"]["type"], "usize");
+
+        // 4. Send "evaluate" for bool
+        let bool_req = json!({
+            "seq": 3,
+            "type": "request",
+            "command": "evaluate",
+            "arguments": {
+                "expression": "is_valid == true"
+            }
+        }).to_string();
+
+        session.send_dap_message(&bool_req).unwrap();
+        let bool_resp = session.read_dap_message().unwrap().unwrap();
+        let bool_parsed: Value = serde_json::from_str(&bool_resp).unwrap();
+        assert_eq!(bool_parsed["body"]["result"], "true");
+        assert_eq!(bool_parsed["body"]["type"], "bool");
+
+        // 5. Send raw REPL expression
+        session.send_dap_message("raw_expression_test").unwrap();
+        let raw_resp = session.read_dap_message().unwrap().unwrap();
+        assert!(raw_resp.contains("(lldb) Executed expression: raw_expression_test"));
+
+        // 6. Test session clone
+        let cloned = session.clone_session();
+        assert!(cloned.is_running());
+
+        // 7. Terminate session
+        session.terminate();
+        assert!(!session.is_running());
+        assert!(!cloned.is_running());
     }
 }

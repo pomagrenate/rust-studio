@@ -17,15 +17,26 @@ export interface CommandRegistration {
   command: Command;
   keybindings?: Keybinding[];
   when?: string; // Context expression
+  title?: string; // Human-readable title
+  category?: string; // Category for grouping
+}
+
+export interface CommandInfo {
+  id: string;
+  title?: string;
+  category?: string;
+  keybindings: Keybinding[];
 }
 
 class CommandRegistry {
   private commands: Map<string, Command> = new Map();
   private keybindings: Map<string, string> = new Map(); // key -> commandId
+  private registrations: Map<string, CommandRegistration> = new Map(); // Store full registration data
 
   registerCommand(registration: CommandRegistration): void {
     const { command, keybindings } = registration;
     this.commands.set(command.id, command);
+    this.registrations.set(command.id, registration);
 
     if (keybindings) {
       keybindings.forEach((kb) => {
@@ -54,6 +65,19 @@ class CommandRegistry {
       return this.commands.get(commandId);
     }
     return undefined;
+  }
+
+  getAllCommands(): CommandInfo[] {
+    const commands: CommandInfo[] = [];
+    this.registrations.forEach((registration, id) => {
+      commands.push({
+        id,
+        title: registration.title,
+        category: registration.category,
+        keybindings: registration.keybindings || []
+      });
+    });
+    return commands;
   }
 
   private normalizeKey(key: string, platform?: string): string {

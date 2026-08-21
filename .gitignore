@@ -19,7 +19,7 @@ Cargo.lock
 *.pdb
 
 # Tauri
-src-tauri/target
+src-tauri/target*
 src-tauri/Cargo.lock
 
 # Editor directories and files

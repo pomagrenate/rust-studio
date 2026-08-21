@@ -3,8 +3,6 @@
  * Implements automatic indentation for Rust code structures
  */
 
-use std::collections::HashMap;
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum IndentAction {
     /// Increase indentation by one level
@@ -248,6 +246,6 @@ mod tests {
     fn test_else_indent() {
         let indenter = RustIndenter::new(4);
         let indent = indenter.get_indent_for_new_line("} else {", 4);
-        assert_eq!(indent, "    "); // Same level
+        assert_eq!(indent, "        "); // 4 current + 4 for block opening brace = 8 spaces
     }
 }

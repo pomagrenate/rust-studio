@@ -245,3 +245,23 @@ impl CargoProcessManager {
         active.as_ref().map(|p| (p.command, p.workspace_root.clone()))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_cargo_command_args() {
+        assert_eq!(CargoCommand::Check.as_str(), "check");
+        assert_eq!(CargoCommand::Check.args(), vec!["check", "--message-format=json"]);
+
+        assert_eq!(CargoCommand::Clippy.as_str(), "clippy");
+        assert_eq!(CargoCommand::Clippy.args(), vec!["clippy", "--message-format=json", "--", "-D", "warnings"]);
+
+        assert_eq!(CargoCommand::Build.as_str(), "build");
+        assert_eq!(CargoCommand::Build.args(), vec!["build", "--message-format=json"]);
+
+        assert_eq!(CargoCommand::Test.as_str(), "test");
+        assert_eq!(CargoCommand::Test.args(), vec!["test", "--message-format=json", "--no-run"]);
+    }
+}

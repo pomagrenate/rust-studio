@@ -12,8 +12,11 @@ pub mod linter;
 pub mod lsp;
 pub mod cargo;
 pub mod github;
+pub mod codewiki;
+pub mod backup;
+pub mod settings;
 
-use commands::{buffer_commands, fs_commands, viewport_commands, terminal_commands, search_commands, timeline_commands, git_commands, cargo_commands, syntax_commands, lsp_commands, clippy_commands};
+use commands::{buffer_commands, fs_commands, viewport_commands, terminal_commands, search_commands, timeline_commands, git_commands, cargo_commands, syntax_commands, lsp_commands, clippy_commands, codewiki_commands, backup_commands, settings_commands};
 use github::{api, auth};
 use debugger::{DebuggerState, debugger_embed::EmbeddedDebugger, start_debug_session, send_dap_request, stop_debug_session};
 use linter::scan_workspace_linter;
@@ -38,6 +41,8 @@ pub fn run() {
         active_session: Arc::new(Mutex::new(None)),
     });
 
+    let code_wiki_state: crate::codewiki::graph::CodeGraphState = Arc::new(parking_lot::RwLock::new(crate::codewiki::graph::CodeGraph::new()));
+
     tauri::Builder::default()
         .manage(Arc::new(Mutex::new(terminal_commands::TerminalState {
             sessions: std::collections::HashMap::new(),
@@ -46,6 +51,7 @@ pub fn run() {
         .manage(syntax_state)
         .manage(lsp_commands::LspState::new())
         .manage(Arc::new(cargo_commands::CargoProcessState::new()))
+        .manage(code_wiki_state)
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
@@ -148,6 +154,7 @@ pub fn run() {
             git_commands::git_init,
             git_commands::git_get_branches,
             git_commands::git_checkout,
+            git_commands::git_create_branch,
             git_commands::git_get_conflicts,
             git_commands::git_resolve_conflict_file,
 
@@ -188,12 +195,30 @@ pub fn run() {
             api::github_list_issues,
             api::github_create_issue,
             api::github_get_repo_info,
+            api::github_list_user_repos,
 
             // GitHub Authentication commands
             auth::store_github_token,
             auth::get_github_token,
             auth::clear_github_token,
             auth::validate_token_format,
+
+            // CodeWiki commands
+            codewiki_commands::build_code_wiki_index,
+            codewiki_commands::get_code_wiki_page,
+            codewiki_commands::get_code_wiki_graph,
+            codewiki_commands::search_code_wiki_symbols,
+            codewiki_commands::get_code_wiki_blast_radius,
+
+            // Local Code Backup commands
+            backup_commands::create_code_backup,
+            backup_commands::list_code_backups,
+            backup_commands::restore_code_backup,
+            backup_commands::delete_code_backup,
+
+            // IDE Settings commands
+            settings_commands::get_user_settings,
+            settings_commands::save_user_settings,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

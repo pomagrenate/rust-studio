@@ -3,8 +3,10 @@
  * Allows users to configure editor and UI fonts, sizes, and other typography settings
  */
 
+import { useState } from "react";
 import { VscClose, VscCheck } from "react-icons/vsc";
 import { useFontScaling } from "../../hooks/useFontScaling";
+import { KeybindingsSettings } from "./KeybindingsSettings";
 import styles from "./SettingsPanel.module.css";
 
 interface SettingsPanelProps {
@@ -12,8 +14,11 @@ interface SettingsPanelProps {
     onClose: () => void;
 }
 
+type SettingsTab = 'fonts' | 'keybindings';
+
 export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
     const { settings, updateSettings } = useFontScaling();
+    const [activeTab, setActiveTab] = useState<SettingsTab>('fonts');
 
     const handleReset = () => {
         updateSettings({
@@ -38,10 +43,28 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                     </button>
                 </div>
 
+                {/* Tab Navigation */}
+                <div className={styles.tabs}>
+                    <button
+                        className={`${styles.tab} ${activeTab === 'fonts' ? styles.tabActive : ''}`}
+                        onClick={() => setActiveTab('fonts')}
+                    >
+                        Fonts
+                    </button>
+                    <button
+                        className={`${styles.tab} ${activeTab === 'keybindings' ? styles.tabActive : ''}`}
+                        onClick={() => setActiveTab('keybindings')}
+                    >
+                        Keybindings
+                    </button>
+                </div>
+
                 <div className={styles.content}>
-                    {/* Editor Font Settings */}
-                    <section className={styles.section}>
-                        <h3 className={styles.sectionTitle}>Editor Font</h3>
+                    {activeTab === 'fonts' ? (
+                        <>
+                            {/* Editor Font Settings */}
+                            <section className={styles.section}>
+                                <h3 className={styles.sectionTitle}>Editor Font</h3>
                         
                         <div className={styles.settingRow}>
                             <label className={styles.label}>
@@ -202,6 +225,10 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                             </div>
                         </div>
                     </section>
+                        </>
+                    ) : (
+                        <KeybindingsSettings />
+                    )}
                 </div>
 
                 <div className={styles.footer}>

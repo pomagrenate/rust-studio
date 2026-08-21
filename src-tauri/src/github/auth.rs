@@ -54,7 +54,7 @@ pub fn clear_github_token() -> Result<(), String> {
 
 /// Validate token format (basic check for GitHub PAT)
 #[tauri::command]
-pub fn validate_token_format(token: String) -> Result<(), String> {
+pub fn validate_token_format(token: &str) -> Result<(), String> {
     let token = token.trim();
     
     // GitHub Classic PAT: starts with ghp_

@@ -530,6 +530,22 @@ pub async fn git_get_conflicts(repo_path: String) -> Result<Vec<String>, String>
 }
 
 #[tauri::command]
+pub async fn git_create_branch(repo_path: String, branch_name: String) -> Result<(), String> {
+    tokio::task::spawn_blocking(move || {
+        let output = Command::new("git")
+            .args(&["branch", &branch_name])
+            .current_dir(repo_path)
+            .output()
+            .map_err(|e| e.to_string())?;
+
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).to_string());
+        }
+        Ok(())
+    }).await.map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
 pub async fn git_resolve_conflict_file(
     repo_path: String,
     file_path: String,

@@ -330,3 +330,153 @@ fn parse_code_suggestion(
 
     Ok(None)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+    use std::path::PathBuf;
+
+    #[test]
+    fn test_parse_compiler_message_error() {
+        let workspace = PathBuf::from("E:/GithubProjects/pomai-studio");
+        let msg_json = json!({
+            "reason": "compiler-message",
+            "package_id": "pomai-studio 0.1.0",
+            "target": { "kind": ["lib"], "name": "pomai-studio" },
+            "message": {
+                "code": { "code": "E0308", "explanation": "mismatched types" },
+                "level": "error",
+                "message": "mismatched types: expected `i32`, found `&str`",
+                "rendered": "error[E0308]: mismatched types\n  --> src/main.rs:12:15\n",
+                "spans": [
+                    {
+                        "file_name": "src/main.rs",
+                        "line_start": 12,
+                        "line_end": 12,
+                        "column_start": 15,
+                        "column_end": 22,
+                        "is_primary": true,
+                        "label": "expected `i32`, found `&str`"
+                    }
+                ],
+                "children": [
+                    {
+                        "level": "note",
+                        "message": "expected type `i32` because of return type",
+                        "spans": [
+                            {
+                                "file_name": "src/main.rs",
+                                "line_start": 5,
+                                "line_end": 5,
+                                "column_start": 20,
+                                "column_end": 23
+                            }
+                        ]
+                    }
+                ]
+            }
+        });
+
+        let compiler_msg = msg_json.get("message").unwrap();
+        let diags = parse_compiler_message(compiler_msg, &workspace).expect("Parsing failed");
+
+        assert_eq!(diags.len(), 1);
+        let diag = &diags[0];
+        assert_eq!(diag.code.as_deref(), Some("E0308"));
+        assert_eq!(diag.message, "mismatched types: expected `i32`, found `&str`");
+        assert!(matches!(diag.severity, DiagnosticSeverity::Error));
+
+        // 0-indexed verification (line 12 -> 11, col 15 -> 14)
+        assert_eq!(diag.range.start_line, 11);
+        assert_eq!(diag.range.start_character, 14);
+        assert_eq!(diag.range.end_line, 11);
+        assert_eq!(diag.range.end_character, 21);
+
+        // Related info
+        assert_eq!(diag.related.len(), 1);
+        assert_eq!(diag.related[0].range.start_line, 4);
+        assert_eq!(diag.related[0].message, "expected type `i32` because of return type");
+    }
+
+    #[test]
+    fn test_parse_compiler_message_warning_and_suggestion() {
+        let workspace = PathBuf::from("E:/GithubProjects/pomai-studio");
+        let msg_json = json!({
+            "code": { "code": "unused_variables" },
+            "level": "warning",
+            "message": "unused variable: `x`",
+            "rendered": "warning: unused variable: `x`",
+            "spans": [
+                {
+                    "file_name": "src/lib.rs",
+                    "line_start": 42,
+                    "line_end": 42,
+                    "column_start": 9,
+                    "column_end": 10,
+                    "is_primary": true
+                }
+            ],
+            "children": [
+                {
+                    "level": "help",
+                    "message": "if this is intentional, prefix it with an underscore: `_x`",
+                    "suggestion": {
+                        "applicability": "MachineApplicable",
+                        "replacement": "_x",
+                        "spans": [
+                            {
+                                "file_name": "src/lib.rs",
+                                "line_start": 42,
+                                "line_end": 42,
+                                "column_start": 9,
+                                "column_end": 10
+                            }
+                        ]
+                    }
+                }
+            ]
+        });
+
+        let diags = parse_compiler_message(&msg_json, &workspace).unwrap();
+        assert_eq!(diags.len(), 1);
+        let diag = &diags[0];
+        assert!(matches!(diag.severity, DiagnosticSeverity::Warning));
+        assert_eq!(diag.suggestions.len(), 1);
+        let sug = &diag.suggestions[0];
+        assert_eq!(sug.replacement, "_x");
+        assert_eq!(sug.applicability, "MachineApplicable");
+        assert_eq!(sug.range.start_line, 41);
+        assert_eq!(sug.range.start_character, 8);
+    }
+
+    #[test]
+    fn test_external_span_filtering() {
+        let workspace = PathBuf::from("E:/GithubProjects/pomai-studio");
+        let external_json = json!({
+            "level": "error",
+            "message": "error in std dependency",
+            "spans": [
+                {
+                    "file_name": "/rustc/abc1234/library/core/src/option.rs",
+                    "line_start": 100,
+                    "line_end": 100,
+                    "column_start": 5,
+                    "column_end": 10,
+                    "is_primary": false
+                }
+            ]
+        });
+
+        let diags = parse_compiler_message(&external_json, &workspace).unwrap();
+        assert_eq!(diags.len(), 0);
+    }
+
+    #[test]
+    fn test_malformed_json_resilience() {
+        let workspace = PathBuf::from("E:/GithubProjects/pomai-studio");
+        let empty_json = json!({});
+        let diags = parse_compiler_message(&empty_json, &workspace).unwrap();
+        assert_eq!(diags.len(), 0);
+    }
+}

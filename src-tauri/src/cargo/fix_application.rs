@@ -66,3 +66,109 @@ pub fn filter_machine_applicable(suggestions: &[CodeSuggestion]) -> Vec<CodeSugg
         .cloned()
         .collect()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::buffer::RopeBuffer;
+
+    #[test]
+    fn test_is_machine_applicable_and_filter() {
+        let sug1 = CodeSuggestion {
+            range: DiagnosticRange { start_line: 0, start_character: 0, end_line: 0, end_character: 1 },
+            replacement: "_a".into(),
+            applicability: "MachineApplicable".into(),
+        };
+        let sug2 = CodeSuggestion {
+            range: DiagnosticRange { start_line: 1, start_character: 0, end_line: 1, end_character: 1 },
+            replacement: "b".into(),
+            applicability: "MaybeIncorrect".into(),
+        };
+        let sug3 = CodeSuggestion {
+            range: DiagnosticRange { start_line: 2, start_character: 0, end_line: 2, end_character: 1 },
+            replacement: "c".into(),
+            applicability: "HasPlaceholders".into(),
+        };
+
+        assert!(is_machine_applicable(&sug1));
+        assert!(!is_machine_applicable(&sug2));
+        assert!(!is_machine_applicable(&sug3));
+
+        let all = vec![sug1, sug2, sug3];
+        let filtered = filter_machine_applicable(&all);
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].replacement, "_a");
+    }
+
+    #[test]
+    fn test_apply_compiler_suggestion_replacement() {
+        let mut buffer = RopeBuffer::from_str("fn main() {\n    let x = 10;\n}");
+        let suggestion = CodeSuggestion {
+            range: DiagnosticRange {
+                start_line: 1,
+                start_character: 8,
+                end_line: 1,
+                end_character: 9,
+            },
+            replacement: "_x".to_string(),
+            applicability: "MachineApplicable".to_string(),
+        };
+
+        apply_compiler_suggestion(&mut buffer, &suggestion).unwrap();
+        assert_eq!(buffer.to_string(), "fn main() {\n    let _x = 10;\n}");
+    }
+
+    #[test]
+    fn test_apply_compiler_suggestion_insertion() {
+        let mut buffer = RopeBuffer::from_str("fn main() {\n    let mut x = 10;\n}");
+        let suggestion = CodeSuggestion {
+            range: DiagnosticRange {
+                start_line: 1,
+                start_character: 19,
+                end_line: 1,
+                end_character: 19,
+            },
+            replacement: "; // unused".to_string(),
+            applicability: "MachineApplicable".to_string(),
+        };
+
+        apply_compiler_suggestion(&mut buffer, &suggestion).unwrap();
+        assert_eq!(buffer.to_string(), "fn main() {\n    let mut x = 10;; // unused\n}");
+    }
+
+    #[test]
+    fn test_apply_compiler_suggestion_deletion() {
+        let mut buffer = RopeBuffer::from_str("fn main() {\n    let mut x = 10;\n}");
+        let suggestion = CodeSuggestion {
+            range: DiagnosticRange {
+                start_line: 1,
+                start_character: 8,
+                end_line: 1,
+                end_character: 12,
+            },
+            replacement: "".to_string(),
+            applicability: "MachineApplicable".to_string(),
+        };
+
+        apply_compiler_suggestion(&mut buffer, &suggestion).unwrap();
+        assert_eq!(buffer.to_string(), "fn main() {\n    let x = 10;\n}");
+    }
+
+    #[test]
+    fn test_apply_compiler_suggestion_multiline() {
+        let mut buffer = RopeBuffer::from_str("fn main() {\n    println!(\"hello\");\n    println!(\"world\");\n}");
+        let suggestion = CodeSuggestion {
+            range: DiagnosticRange {
+                start_line: 1,
+                start_character: 4,
+                end_line: 2,
+                end_character: 22,
+            },
+            replacement: "// cleared lines".to_string(),
+            applicability: "MachineApplicable".to_string(),
+        };
+
+        apply_compiler_suggestion(&mut buffer, &suggestion).unwrap();
+        assert_eq!(buffer.to_string(), "fn main() {\n    // cleared lines\n}");
+    }
+}

@@ -3,6 +3,8 @@ pub mod cache_engine;
 pub mod lsp_host;
 pub mod diagnostic_manager;
 pub mod definition_resolver;
+#[cfg(test)]
+mod tests;
 
 pub use types::*;
 pub use cache_engine::CacheEngine;

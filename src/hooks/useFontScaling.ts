@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
+import { invoke } from "@tauri-apps/api/core";
 
 const STORAGE_KEY = "pm-font-settings";
 
@@ -54,10 +55,39 @@ function applySettings(settings: FontSettings): void {
 export function useFontScaling() {
     const [settings, setSettings] = useState<FontSettings>(loadSettings);
 
-    // Apply settings on mount and when they change
+    // Initial load from backend disk storage
+    useEffect(() => {
+        invoke<any>("get_user_settings")
+            .then((res) => {
+                if (res) {
+                    setSettings((prev) => ({
+                        ...prev,
+                        editorFontSize: res.editor_font_size ?? prev.editorFontSize,
+                        editorFontFamily: res.editor_font_family ?? prev.editorFontFamily,
+                        editorLineHeight: res.editor_line_height ?? prev.editorLineHeight,
+                        editorFontLigatures: res.editor_font_ligatures ?? prev.editorFontLigatures,
+                        uiFontSize: res.ui_font_size ?? prev.uiFontSize,
+                        uiFontFamily: res.ui_font_family ?? prev.uiFontFamily,
+                    }));
+                }
+            })
+            .catch(() => {});
+    }, []);
+
+    // Apply settings on mount and sync to disk & localStorage
     useEffect(() => {
         applySettings(settings);
         saveSettings(settings);
+        invoke("save_user_settings", {
+            settings: {
+                editor_font_size: settings.editorFontSize,
+                editor_font_family: settings.editorFontFamily,
+                editor_line_height: settings.editorLineHeight,
+                editor_font_ligatures: settings.editorFontLigatures,
+                ui_font_size: settings.uiFontSize,
+                ui_font_family: settings.uiFontFamily,
+            },
+        }).catch(() => {});
     }, [settings]);
 
     // Font scaling functions

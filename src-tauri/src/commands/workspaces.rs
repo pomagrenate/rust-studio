@@ -99,3 +99,42 @@ pub fn save_workspace_as(path: String, folders: Vec<String>) -> Result<(), Strin
     
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[test]
+    fn test_save_workspace_as() {
+        let dir = tempdir().unwrap();
+        let ws_path = dir.path().join("my_workspace.code-workspace").to_string_lossy().to_string();
+
+        let folders = vec![
+            "E:/GithubProjects/pomai-studio".to_string(),
+            "E:/GithubProjects/cheesepath".to_string(),
+        ];
+
+        save_workspace_as(ws_path.clone(), folders.clone()).unwrap();
+
+        let content = fs::read_to_string(&ws_path).unwrap();
+        let workspace: PomaiWorkspace = serde_json::from_str(&content).unwrap();
+
+        assert_eq!(workspace.folders.len(), 2);
+        assert_eq!(workspace.folders[0].path, folders[0]);
+        assert_eq!(workspace.folders[1].path, folders[1]);
+    }
+
+    #[test]
+    fn test_recently_opened_struct_mutations() {
+        let mut recent = RecentlyOpened::default();
+        assert!(recent.workspaces.is_empty());
+        assert!(recent.files.is_empty());
+
+        recent.workspaces.push("folder1".to_string());
+        recent.files.push("file1.rs".to_string());
+
+        assert_eq!(recent.workspaces.len(), 1);
+        assert_eq!(recent.files.len(), 1);
+    }
+}

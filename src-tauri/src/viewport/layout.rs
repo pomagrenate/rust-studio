@@ -224,8 +224,8 @@ mod tests {
         let vp = ViewportManager::new(1000, 20.0, 400.0);
         let data = vp.get_viewport_data();
         assert_eq!(data.start_line, 0);
-        assert_eq!(data.end_line, 20); // 400px / 20px = 20 lines
-        assert_eq!(data.lines.len(), 21);
+        assert_eq!(data.end_line, 19); // 400px / 20px = 20 lines (0..=19)
+        assert_eq!(data.lines.len(), 20);
         assert_eq!(data.lines[0].top, 0.0);
         assert_eq!(data.lines[1].top, 20.0);
     }
@@ -236,7 +236,7 @@ mod tests {
         vp.scroll_top = 200.0; // scrolled down 200px = 10 lines
         let data = vp.get_viewport_data();
         assert_eq!(data.start_line, 10);
-        assert_eq!(data.end_line, 30);
+        assert_eq!(data.end_line, 29);
     }
 
     #[test]
@@ -261,5 +261,27 @@ mod tests {
         assert_eq!(vp.total_height(), 2000.0);
         vp.on_lines_changed(200);
         assert_eq!(vp.total_height(), 4000.0);
+    }
+
+    #[test]
+    fn test_empty_document_viewport() {
+        let vp = ViewportManager::new(0, 20.0, 400.0);
+        let data = vp.get_viewport_data();
+        assert_eq!(data.start_line, 0);
+        assert_eq!(data.end_line, 0);
+        assert!(data.lines.is_empty());
+        assert_eq!(data.total_height, 0.0);
+    }
+
+    #[test]
+    fn test_viewport_padding_and_line_top() {
+        let mut vp = ViewportManager::new(50, 20.0, 400.0);
+        vp.padding_top = 10.0;
+        vp.padding_bottom = 15.0;
+
+        assert_eq!(vp.total_height(), 1025.0); // (50 * 20) + 10 + 15
+        assert_eq!(vp.line_top(0), 10.0);
+        assert_eq!(vp.line_top(1), 30.0);
+        assert_eq!(vp.line_at_y(5.0), 0);
     }
 }

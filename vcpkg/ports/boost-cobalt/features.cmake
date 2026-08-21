@@ -1,6 +1,0 @@
-vcpkg_check_features(
-  OUT_FEATURE_OPTIONS
-    FEATURE_OPTIONS
-  FEATURES
-    "ssl" BOOST_COBALT_ENABLE_IO_SSL
-)

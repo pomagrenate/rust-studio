@@ -40,6 +40,37 @@
     background-color: var(--pm-bg-subtle, #f6f8fa);
 }
 
+.tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--pm-border-default, #d0d7de);
+    background-color: var(--pm-bg-subtle, #f6f8fa);
+}
+
+.tab {
+    padding: 12px 20px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--pm-fg-muted, #656d76);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-family: var(--font-ui);
+}
+
+.tab:hover {
+    color: var(--pm-fg-default, #24292f);
+    background-color: var(--pm-bg-hover, #eaeef2);
+}
+
+.tabActive {
+    color: var(--pm-accent, #0969da);
+    border-bottom-color: var(--pm-accent, #0969da);
+    font-weight: var(--font-weight-semibold);
+}
+
 .title {
     margin: 0;
     font-size: var(--font-size-md);

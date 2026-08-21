@@ -53,11 +53,14 @@ pub struct FileReplacement {
 }
 
 fn is_binary_file(file: &mut File) -> bool {
+    use std::io::{Seek, SeekFrom};
     let mut buffer = [0u8; 512];
-    match file.read(&mut buffer) {
+    let is_bin = match file.read(&mut buffer) {
         Ok(n) => buffer[..n].contains(&0),
         Err(_) => true,
-    }
+    };
+    let _ = file.seek(SeekFrom::Start(0));
+    is_bin
 }
 
 fn matches_filter(path_str: &str, file_name: &str, patterns: &[String]) -> bool {
@@ -72,11 +75,14 @@ fn matches_filter(path_str: &str, file_name: &str, patterns: &[String]) -> bool 
             if file_name.ends_with(&format!(".{}", ext)) {
                 return true;
             }
+            continue;
         } else if let Some(ext) = p.strip_prefix('.') {
             if file_name.ends_with(&format!(".{}", ext)) {
                 return true;
             }
+            continue;
         }
+
         // Substring / glob match
         let clean_p = p.trim_matches('*');
         if !clean_p.is_empty() && (path_str.contains(clean_p) || file_name.contains(clean_p)) {
@@ -192,16 +198,15 @@ pub async fn search_in_files(options: SearchOptions) -> Result<SearchResponse, S
                 let path = entry.path();
                 let file_name = entry.file_name().to_string_lossy();
                 let lower_name = file_name.to_lowercase();
-                let path_str = path.to_string_lossy();
-                let lower_path = path_str.to_lowercase();
+                let rel_path = path.strip_prefix(root_path).unwrap_or(path).to_string_lossy().to_lowercase();
 
                 // Exclude check
-                if matches_filter(&lower_path, &lower_name, &exclude_patterns) {
+                if matches_filter(&rel_path, &lower_name, &exclude_patterns) {
                     continue;
                 }
 
                 // Include check (if specified)
-                if !include_patterns.is_empty() && !matches_filter(&lower_path, &lower_name, &include_patterns) {
+                if !include_patterns.is_empty() && !matches_filter(&rel_path, &lower_name, &include_patterns) {
                     continue;
                 }
 
@@ -259,7 +264,7 @@ pub async fn search_in_files(options: SearchOptions) -> Result<SearchResponse, S
                         .into_owned();
 
                     results.push(FileSearchResult {
-                        file_path: path_str.into_owned(),
+                        file_path: path.to_string_lossy().into_owned(),
                         relative_path: rel_path,
                         file_name: file_name.into_owned(),
                         matches: file_matches,
@@ -570,5 +575,106 @@ pub async fn get_type_hierarchy(
             duration_ms: start.elapsed().as_millis() as u64,
         })
     }).await.map_err(|e| e.to_string())?
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[tokio::test]
+    async fn test_search_in_files_plain_and_regex() {
+        let dir = tempdir().unwrap();
+        let root = dir.path();
+
+        let file1 = root.join("main.rs");
+        let file2 = root.join("lib.rs");
+        let file3 = root.join("ignore.txt");
+
+        fs::write(&file1, "fn main() {\n    println!(\"Hello World\");\n}").unwrap();
+        fs::write(&file2, "pub fn hello_world() {\n    let world = 42;\n}").unwrap();
+        fs::write(&file3, "hello world").unwrap();
+
+        // 1. Search for "world" case-insensitive
+        let opts = SearchOptions {
+            query: "world".to_string(),
+            roots: vec![root.to_string_lossy().to_string()],
+            is_case_sensitive: false,
+            is_whole_word: false,
+            is_regex: false,
+            include_pattern: Some("*.rs".to_string()),
+            exclude_pattern: None,
+            max_results: None,
+        };
+
+        let response = search_in_files(opts).await.unwrap();
+        assert_eq!(response.total_files, 2);
+        assert_eq!(response.total_matches, 3);
+
+        // 2. Regex search for "fn\\s+hello"
+        let regex_opts = SearchOptions {
+            query: r"fn\s+hello".to_string(),
+            roots: vec![root.to_string_lossy().to_string()],
+            is_case_sensitive: true,
+            is_whole_word: false,
+            is_regex: true,
+            include_pattern: None,
+            exclude_pattern: None,
+            max_results: None,
+        };
+
+        let regex_res = search_in_files(regex_opts).await.unwrap();
+        assert_eq!(regex_res.total_files, 1);
+        assert_eq!(regex_res.total_matches, 1);
+        assert_eq!(regex_res.results[0].file_name, "lib.rs");
+    }
+
+    #[tokio::test]
+    async fn test_replace_in_files_batch() {
+        let dir = tempdir().unwrap();
+        let file1 = dir.path().join("code.rs");
+
+        fs::write(&file1, "fn test() {\n    let foo = 1;\n    let foo = 2;\n}").unwrap();
+
+        let replacements = vec![
+            FileReplacement {
+                file_path: file1.to_string_lossy().to_string(),
+                line_number: 2,
+                match_start: 8,
+                match_end: 11,
+                replacement: "bar".to_string(),
+            },
+            FileReplacement {
+                file_path: file1.to_string_lossy().to_string(),
+                line_number: 3,
+                match_start: 8,
+                match_end: 11,
+                replacement: "baz".to_string(),
+            },
+        ];
+
+        let count = replace_in_files(replacements).await.unwrap();
+        assert_eq!(count, 2);
+
+        let new_content = fs::read_to_string(&file1).unwrap();
+        assert_eq!(new_content, "fn test() {\n    let bar = 1;\n    let baz = 2;\n}");
+    }
+
+    #[tokio::test]
+    async fn test_call_hierarchy_incoming() {
+        let dir = tempdir().unwrap();
+        let main_rs = dir.path().join("main.rs");
+
+        fs::write(&main_rs, "fn compute() {}\n\nfn caller_one() {\n    compute();\n}\n").unwrap();
+
+        let response = get_call_hierarchy(
+            dir.path().to_string_lossy().to_string(),
+            "compute".to_string(),
+            "incoming".to_string(),
+        ).await.unwrap();
+
+        assert_eq!(response.nodes.len(), 1);
+        assert_eq!(response.nodes[0].name, "caller_one");
+    }
 }
 

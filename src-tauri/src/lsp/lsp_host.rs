@@ -24,7 +24,7 @@ use tokio::process::{Child, ChildStdin, Command};
 use tokio::sync::{mpsc, oneshot};
 use tokio_util::sync::CancellationToken;
 
-use crate::lsp::types::{LspCapabilities, LspStatus, CodeAction, TextEdit, WorkspaceEdit, DocumentChange, LspRange, LspPosition};
+use crate::lsp::types::{LspCapabilities, LspStatus, CodeAction, LspRange, LspPosition};
 
 /// An in-flight LSP request waiting for a response.
 type PendingRequests = Arc<Mutex<HashMap<u64, oneshot::Sender<Value>>>>;
