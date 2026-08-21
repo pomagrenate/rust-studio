@@ -41,6 +41,14 @@
     "externalBin": [
       "binaries/pomai-debugger",
       "binaries/pomai-linter"
-    ]
+    ],
+    "windows": {
+      "nsis": {
+        "installMode": "both",
+        "installerIcon": "icons/icon.ico",
+        "headerImage": "icons/Square150x150Logo.png",
+        "sidebarImage": "icons/Square310x310Logo.png"
+      }
+    }
   }
 }
