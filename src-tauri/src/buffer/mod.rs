@@ -9,6 +9,9 @@ pub mod edit;
 pub mod rope_buffer;
 pub mod edit_stack;
 
+#[cfg(test)]
+mod tests;
+
 pub use edit::{Position, EditRange, TextEdit, EditResult};
 pub use rope_buffer::RopeBuffer;
 pub use edit_stack::EditStack;

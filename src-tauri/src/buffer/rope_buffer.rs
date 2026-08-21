@@ -62,6 +62,7 @@ impl RopeBuffer {
 
     /// Compute the line delta introduced by inserting or removing `text`
     /// starting at a given char index.
+    #[allow(dead_code)]
     fn count_newlines(text: &str) -> i64 {
         text.chars().filter(|&c| c == '\n').count() as i64
     }
@@ -70,6 +71,12 @@ impl RopeBuffer {
 impl Default for RopeBuffer {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl std::fmt::Display for RopeBuffer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.rope)
     }
 }
 
@@ -330,21 +337,70 @@ mod tests {
     }
 
     #[test]
-    fn test_lines_content() {
-        let buf = RopeBuffer::from_str("one\ntwo\nthree\nfour");
-        let lines = buf.lines_content(1, 3);
-        assert_eq!(lines, vec!["two", "three"]);
+    fn test_crlf_windows_newlines() {
+        let buf = RopeBuffer::from_str("line1\r\nline2\r\nline3");
+        assert_eq!(buf.len_lines(), 3);
+        assert_eq!(buf.line_content(0), "line1\r");
+        assert_eq!(buf.line_content(1), "line2\r");
+        assert_eq!(buf.line_content(2), "line3");
     }
 
     #[test]
-    fn test_insert_into_large_doc_is_fast() {
-        // Insert into the middle of a 100k-line document.
-        // Should complete in microseconds (O(log N)), not milliseconds (O(N)).
-        let text = "hello world\n".repeat(100_000);
-        let mut buf = RopeBuffer::from_str(&text);
-        let mid = buf.line_to_char(50_000);
-        buf.insert(mid, "INSERTED LINE\n");
-        assert_eq!(buf.len_lines(), 100_002);
-        assert_eq!(buf.line_content(50_000), "INSERTED LINE");
+    fn test_unicode_utf8_multibyte_characters() {
+        let mut buf = RopeBuffer::from_str("🦀 Rust Editor\n🚀 Fast & Secure\n日本語テキスト");
+        assert_eq!(buf.len_lines(), 3);
+
+        // Verify char length is counted in Unicode scalars, not bytes
+        let line0_len = buf.line_len(0);
+        assert_eq!(line0_len, 13); // 🦀 (1) + ' ' (1) + "Rust Editor" (11) = 13 chars
+
+        // Insert text into UTF-8 multi-byte string
+        let edit = TextEdit::insert(0, 2, "Powerful ");
+        buf.apply_edit(&edit);
+        assert_eq!(buf.line_content(0), "🦀 Powerful Rust Editor");
+
+        // Delete multi-byte text
+        let del_edit = TextEdit::delete(EditRange {
+            start: Position { line: 2, column: 0 },
+            end: Position { line: 2, column: 3 }, // removes "日本語"
+        });
+        buf.apply_edit(&del_edit);
+        assert_eq!(buf.line_content(2), "テキスト");
+    }
+
+    #[test]
+    fn test_apply_edit_multi_line_replacement() {
+        let mut buf = RopeBuffer::from_str("line 1\nline 2\nline 3\nline 4");
+        // Replace "line 2\nline 3" with "NEW LINE A\nNEW LINE B\nNEW LINE C"
+        let edit = TextEdit {
+            range: EditRange {
+                start: Position { line: 1, column: 0 },
+                end: Position { line: 3, column: 0 },
+            },
+            new_text: "NEW A\nNEW B\nNEW C\n".to_string(),
+        };
+
+        let result = buf.apply_edit(&edit);
+        assert_eq!(result.line_delta, 1); // +3 lines inserted, -2 lines deleted = +1
+        assert_eq!(buf.line_content(0), "line 1");
+        assert_eq!(buf.line_content(1), "NEW A");
+        assert_eq!(buf.line_content(2), "NEW B");
+        assert_eq!(buf.line_content(3), "NEW C");
+        assert_eq!(buf.line_content(4), "line 4");
+    }
+
+    #[test]
+    fn test_zero_length_delete_is_noop() {
+        let mut buf = RopeBuffer::from_str("hello world");
+        buf.delete(5, 0);
+        assert_eq!(buf.slice(0, buf.len_chars()), "hello world");
+    }
+
+    #[test]
+    fn test_slice_out_of_bounds_clamping() {
+        let buf = RopeBuffer::from_str("short");
+        assert_eq!(buf.slice(0, 5), "short");
+        let lines = buf.lines_content(0, 100);
+        assert_eq!(lines, vec!["short"]);
     }
 }

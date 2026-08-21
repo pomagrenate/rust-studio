@@ -63,7 +63,7 @@ impl TextEdit {
 
 /// Result returned after applying an edit. Carries enough information for
 /// the undo stack and to notify the frontend of what changed.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EditResult {
     /// The version number of the document AFTER this edit.
     pub new_version: u64,
@@ -72,4 +72,72 @@ pub struct EditResult {
     pub affected_range: EditRange,
     /// Number of lines added (positive) or removed (negative) by this edit.
     pub line_delta: i64,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_position_equality_and_ordering() {
+        let pos1 = Position { line: 0, column: 5 };
+        let pos2 = Position { line: 0, column: 5 };
+        let pos3 = Position { line: 1, column: 0 };
+
+        assert_eq!(pos1, pos2);
+        assert_ne!(pos1, pos3);
+    }
+
+    #[test]
+    fn test_edit_range_point() {
+        let range = EditRange::point(2, 8);
+        assert_eq!(range.start, Position { line: 2, column: 8 });
+        assert_eq!(range.end, Position { line: 2, column: 8 });
+        assert!(range.is_empty());
+    }
+
+    #[test]
+    fn test_edit_range_non_empty() {
+        let range = EditRange {
+            start: Position { line: 1, column: 0 },
+            end: Position { line: 1, column: 5 },
+        };
+        assert!(!range.is_empty());
+    }
+
+    #[test]
+    fn test_text_edit_helpers() {
+        let insert_edit = TextEdit::insert(4, 2, "const x = 10;");
+        assert!(insert_edit.range.is_empty());
+        assert_eq!(insert_edit.range.start, Position { line: 4, column: 2 });
+        assert_eq!(insert_edit.new_text, "const x = 10;");
+
+        let del_range = EditRange {
+            start: Position { line: 0, column: 0 },
+            end: Position { line: 0, column: 5 },
+        };
+        let delete_edit = TextEdit::delete(del_range);
+        assert_eq!(delete_edit.range, del_range);
+        assert!(delete_edit.new_text.is_empty());
+    }
+
+    #[test]
+    fn test_serde_json_roundtrip() {
+        let edit = TextEdit::insert(1, 2, "hello world");
+        let json = serde_json::to_string(&edit).expect("Serialization failed");
+        let deserialized: TextEdit = serde_json::from_str(&json).expect("Deserialization failed");
+
+        assert_eq!(edit.range, deserialized.range);
+        assert_eq!(edit.new_text, deserialized.new_text);
+
+        let result = EditResult {
+            new_version: 42,
+            affected_range: EditRange::point(1, 13),
+            line_delta: 2,
+        };
+        let res_json = serde_json::to_string(&result).expect("Result serialization failed");
+        let deserialized_res: EditResult = serde_json::from_str(&res_json).expect("Result deserialization failed");
+
+        assert_eq!(result, deserialized_res);
+    }
 }

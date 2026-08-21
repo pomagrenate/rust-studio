@@ -13,3 +13,10 @@ pub mod cargo_commands;
 pub mod syntax_commands;
 pub mod lsp_commands;
 pub mod clippy_commands;
+pub mod codewiki_commands;
+pub mod backup_commands;
+pub mod settings_commands;
+
+#[cfg(test)]
+pub mod tests;
+

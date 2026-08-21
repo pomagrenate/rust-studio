@@ -252,22 +252,58 @@ pub async fn github_create_issue(repo_path: String, params: CreateIssueParams) -
 /// Get repository information from GitHub
 #[tauri::command]
 pub async fn github_get_repo_info(repo_path: String) -> Result<GitHubRepoInfo, String> {
-    let repo_info = get_github_repo_info(&repo_path)
+    let mut repo_info = get_github_repo_info(&repo_path)
         .map_err(|e| e.to_string())?;
     
-    // Validate that the repo exists on GitHub
+    // Optionally validate against GitHub API if token is configured
+    if let Ok(client) = get_github_client().await {
+        let owner = repo_info.owner.clone();
+        let repo = repo_info.repo.clone();
+        if client.repos(&owner, &repo).get().await.is_err() {
+            repo_info.is_github = false;
+        }
+    }
+    
+    Ok(repo_info)
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct UserRepoItem {
+    pub name: String,
+    pub full_name: String,
+    pub clone_url: String,
+    pub is_private: bool,
+    pub description: Option<String>,
+}
+
+/// List GitHub repositories for the authenticated user
+#[tauri::command]
+pub async fn github_list_user_repos() -> Result<Vec<UserRepoItem>, String> {
     let client = get_github_client()
         .await
         .map_err(|e| e.to_string())?;
     
-    let owner = repo_info.owner.clone();
-    let repo = repo_info.repo.clone();
-    
-    client
-        .repos(&owner, &repo)
-        .get()
+    let items: Vec<serde_json::Value> = client
+        .get("/user/repos?sort=updated&per_page=50", None::<&()>)
         .await
         .map_err(|e| e.to_string())?;
     
-    Ok(repo_info)
+    let mut repos = Vec::new();
+    for item in items {
+        let name = item.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string();
+        let full_name = item.get("full_name").and_then(|v| v.as_str()).unwrap_or("").to_string();
+        let clone_url = item.get("clone_url").and_then(|v| v.as_str()).unwrap_or("").to_string();
+        let is_private = item.get("private").and_then(|v| v.as_bool()).unwrap_or(false);
+        let description = item.get("description").and_then(|v| v.as_str()).map(|s| s.to_string());
+        
+        repos.push(UserRepoItem {
+            name,
+            full_name,
+            clone_url,
+            is_private,
+            description,
+        });
+    }
+    
+    Ok(repos)
 }

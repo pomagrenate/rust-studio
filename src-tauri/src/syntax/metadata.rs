@@ -36,6 +36,7 @@ pub enum FontStyle {
 
 /// A frontend-friendly TokenKind mapped to the ColorMap foreground ID.
 /// (Corresponds to TokenKind in TS)
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum TokenKind {
     Plain = 0,
@@ -73,5 +74,22 @@ impl TokenMetadata {
     #[inline]
     pub fn pack_simple(kind: TokenKind) -> u32 {
         Self::pack(0, StandardTokenType::Other, FontStyle::None as u32, kind as u32, 0)
+    }
+
+    #[inline]
+    pub fn unpack_kind(metadata: u32) -> TokenKind {
+        let fg = (metadata & FOREGROUND_MASK) >> FOREGROUND_OFFSET;
+        match fg {
+            1 => TokenKind::Keyword,
+            2 => TokenKind::String,
+            3 => TokenKind::Number,
+            4 => TokenKind::Comment,
+            5 => TokenKind::Function,
+            6 => TokenKind::Type,
+            7 => TokenKind::Variable,
+            8 => TokenKind::Operator,
+            9 => TokenKind::Punctuation,
+            _ => TokenKind::Plain,
+        }
     }
 }

@@ -1,6 +1,8 @@
 //! debugger/mod.rs — Tauri Commands and state management for CodeLLDB.
 
 pub mod debugger_embed;
+#[cfg(test)]
+mod tests;
 
 use debugger_embed::{EmbeddedDebugger, DapSession};
 use parking_lot::Mutex;

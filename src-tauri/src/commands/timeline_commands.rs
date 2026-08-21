@@ -58,3 +58,34 @@ pub async fn get_file_timeline(file_path: String) -> Result<Vec<TimelineEntry>, 
         Ok(entries)
     }).await.map_err(|e| e.to_string())?
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_get_file_timeline_nonexistent() {
+        let entries = get_file_timeline("E:/nonexistent_file_path_123.rs".to_string()).await.unwrap();
+        assert!(entries.is_empty());
+    }
+
+    #[test]
+    fn test_timeline_entry_serde() {
+        let entry = TimelineEntry {
+            id: "abc123hash".to_string(),
+            label: "fix: update syntax highlighting".to_string(),
+            description: Some("abc123h".to_string()),
+            detail: Some("Developer • 2 hours ago".to_string()),
+            timestamp: "2 hours ago".to_string(),
+            source: "git".to_string(),
+            icon: "git-commit".to_string(),
+        };
+
+        let json = serde_json::to_string(&entry).unwrap();
+        let deserialized: TimelineEntry = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.id, entry.id);
+        assert_eq!(deserialized.label, entry.label);
+        assert_eq!(deserialized.source, "git");
+    }
+}

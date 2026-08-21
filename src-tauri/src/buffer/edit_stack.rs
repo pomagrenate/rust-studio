@@ -169,21 +169,24 @@ mod tests {
         let edit = TextEdit::insert(0, 0, "hello");
         let result = EditResult {
             new_version: 1,
-            affected_range: EditRange::point(0, 5),
+            affected_range: EditRange {
+                start: Position { line: 0, column: 0 },
+                end: Position { line: 0, column: 5 },
+            },
             line_delta: 0,
         };
 
         stack.push_edit(edit, result, None);
 
         // Undo
-        let (inverse_edit, cursor_pos) = stack.pop_undo().unwrap();
+        let (inverse_edit, _cursor_pos) = stack.pop_undo().unwrap();
         assert_eq!(inverse_edit.range.start.line, 0);
         assert_eq!(inverse_edit.range.start.column, 0);
         assert!(!stack.can_undo());
         assert!(stack.can_redo());
 
         // Redo
-        let (redo_edit, redo_result) = stack.pop_redo().unwrap();
+        let (_redo_edit, redo_result) = stack.pop_redo().unwrap();
         assert!(stack.can_undo());
         assert!(!stack.can_redo());
         assert_eq!(redo_result.new_version, 1);
@@ -209,20 +212,61 @@ mod tests {
     }
 
     #[test]
-    fn test_clear() {
+    fn test_cursor_position_restoration() {
         let mut stack = EditStack::new();
-        let edit = TextEdit::insert(0, 0, "hello");
+        let edit = TextEdit::insert(1, 4, "code");
         let result = EditResult {
             new_version: 1,
-            affected_range: EditRange::point(0, 5),
+            affected_range: EditRange::point(1, 8),
             line_delta: 0,
         };
+        let cursor_before = Position { line: 1, column: 4 };
 
-        stack.push_edit(edit, result, None);
-        stack.clear();
+        stack.push_edit(edit, result, Some(cursor_before));
+        let (_, restored_cursor) = stack.pop_undo().expect("Undo entry should exist");
+        assert_eq!(restored_cursor, cursor_before);
+    }
 
-        assert!(!stack.can_undo());
+    #[test]
+    fn test_redo_stack_invalidation_on_new_edit() {
+        let mut stack = EditStack::new();
+        let edit1 = TextEdit::insert(0, 0, "first");
+        let res1 = EditResult { new_version: 1, affected_range: EditRange::point(0, 5), line_delta: 0 };
+        stack.push_edit(edit1, res1, None);
+
+        // Undo edit 1
+        stack.pop_undo();
+        assert!(stack.can_redo());
+
+        // Push new edit 2
+        let edit2 = TextEdit::insert(0, 0, "second");
+        let res2 = EditResult { new_version: 2, affected_range: EditRange::point(0, 6), line_delta: 0 };
+        stack.push_edit(edit2, res2, None);
+
+        // Redo should now be invalidated
         assert!(!stack.can_redo());
-        assert_eq!(stack.current_version(), 0);
+        assert!(stack.can_undo());
+        assert_eq!(stack.current_version(), 2);
+    }
+
+    #[test]
+    fn test_multiple_undo_redo_steps() {
+        let mut stack = EditStack::new();
+        for i in 1..=4 {
+            let edit = TextEdit::insert(0, 0, &format!("v{}", i));
+            let res = EditResult { new_version: i, affected_range: EditRange::point(0, 2), line_delta: 0 };
+            stack.push_edit(edit, res, None);
+        }
+
+        // Undo 2 times
+        let _ = stack.pop_undo();
+        let _ = stack.pop_undo();
+        assert!(stack.can_undo());
+        assert!(stack.can_redo());
+
+        // Redo 1 time
+        let (_, redo_res) = stack.pop_redo().expect("Redo should succeed");
+        assert_eq!(redo_res.new_version, 3);
+        assert_eq!(stack.current_version(), 3);
     }
 }

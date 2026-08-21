@@ -1,129 +1,83 @@
-# Contributor Covenant Code of Conduct
+# 🤝 Rust Studio Community Code of Conduct
 
-## Our Pledge
+<!-- SEO Meta Information -->
+<!-- Project: Rust Studio IDE (Native, Zero-AI, Hackable Rust Development Environment) -->
+<!-- Standard: Contributor Covenant v2.0 -->
 
-We as members, contributors, and leaders pledge to make participation in our
-community a harassment-free experience for everyone, regardless of age, body
-size, visible or invisible disability, ethnicity, sex characteristics, gender
-identity and expression, level of experience, education, socio-economic status,
-nationality, personal appearance, race, religion, or sexual identity
-and orientation.
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.0-4baaaa.svg?style=flat-square)](https://www.contributor-covenant.org/version/2/0/code_of_conduct.html)
+[![Rust Community](https://img.shields.io/badge/Rust-Community%20Values-DEA584.svg?style=flat-square&logo=rust)](https://www.rust-lang.org/policies/code-of-conduct)
 
-We pledge to act and interact in ways that contribute to an open, welcoming,
-diverse, inclusive, and healthy community.
+As creators, maintainers, and contributors of the **Rust Studio** project, we are dedicated to building a welcoming, safe, and productive open-source environment. We believe in respectful collaboration, high engineering standards, and inclusive dialogue for everyone, regardless of background or experience level.
 
-## Our Standards
+---
 
-Examples of behavior that contributes to a positive environment for our
-community include:
+## 🌟 Our Pledge
 
-* Demonstrating empathy and kindness toward other people
-* Being respectful of differing opinions, viewpoints, and experiences
-* Giving and gracefully accepting constructive feedback
-* Accepting responsibility and apologizing to those affected by our mistakes,
-  and learning from the experience
-* Focusing on what is best not just for us as individuals, but for the
-  overall community
+We as members, contributors, and leaders pledge to make participation in our community a harassment-free experience for everyone, regardless of:
+- Age, body size, visible or invisible disability
+- Ethnicity, race, nationality, or socio-economic status
+- Sex characteristics, gender identity and expression, or sexual orientation
+- Level of technical experience, education, or personal background
+- Religion or personal beliefs
 
-Examples of unacceptable behavior include:
+We pledge to act and interact in ways that contribute to an open, welcoming, diverse, inclusive, and healthy community.
 
-* The use of sexualized language or imagery, and sexual attention or
-  advances of any kind
-* Trolling, insulting or derogatory comments, and personal or political attacks
-* Public or private harassment
-* Publishing others' private information, such as a physical or email
-  address, without their explicit permission
-* Other conduct which could reasonably be considered inappropriate in a
-  professional setting
+---
 
-## Enforcement Responsibilities
+## 🛡️ Community Standards
 
-Community leaders are responsible for clarifying and enforcing our standards of
-acceptable behavior and will take appropriate and fair corrective action in
-response to any behavior that they deem inappropriate, threatening, offensive,
-or harmful.
+### Behaviors that contribute to a positive environment:
+- **Empathy & Kindness:** Demonstrating empathy, patience, and professional respect toward peers.
+- **Constructive Engagement:** Giving and gracefully receiving architectural and technical feedback during code reviews.
+- **Respectful Discourse:** Respecting differing engineering opinions, system architectures, and technical perspectives.
+- **Accountability:** Accepting responsibility, apologizing constructively when mistakes occur, and learning from the experience.
+- **Community-First Focus:** Focusing on what is best not just for individual contributors, but for the overall health of the Rust Studio ecosystem.
 
-Community leaders have the right and responsibility to remove, edit, or reject
-comments, commits, code, wiki edits, issues, and other contributions that are
-not aligned to this Code of Conduct, and will communicate reasons for moderation
-decisions when appropriate.
+### Unacceptable behaviors include:
+- The use of sexualized language or imagery, and unwelcome sexual attention or advances of any kind.
+- Trolling, insulting, derogatory commentary, and personal or political attacks.
+- Public or private harassment in issue threads, discussion boards, or pull requests.
+- Doxxing or publishing others' private information (such as physical or electronic addresses) without explicit permission.
+- Disruptive behavior or other conduct reasonably considered inappropriate in a professional open-source software project.
 
-## Scope
+---
 
-This Code of Conduct applies within all community spaces, and also applies when
-an individual is officially representing the community in public spaces.
-Examples of representing our community include using an official e-mail address,
-posting via an official social media account, or acting as an appointed
-representative at an online or offline event.
+## ⚖️ Enforcement Responsibilities & Scope
 
-## Enforcement
+### Responsibilities
+Community leaders and project maintainers are responsible for clarifying and enforcing our standards of acceptable behavior. They hold the right and responsibility to edit, remove, or reject comments, commits, code, documentation edits, issues, and pull requests that fail to align with this Code of Conduct.
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the community leaders responsible for enforcement at
-[INSERT CONTACT METHOD].
-All complaints will be reviewed and investigated promptly and fairly.
+### Scope
+This Code of Conduct applies within all project spaces (GitHub Issues, Discussions, Pull Requests, Discord/Matrix channels), and applies when an individual is officially representing the community in public spaces.
 
-All community leaders are obligated to respect the privacy and security of the
-reporter of any incident.
+---
 
-## Enforcement Guidelines
+## 🚨 Reporting & Enforcement Guidelines
 
-Community leaders will follow these Community Impact Guidelines in determining
-the consequences for any action they deem in violation of this Code of Conduct:
+If you experience or witness unacceptable behavior, please report it directly to the Rust Studio maintenance team at:
 
-### 1. Correction
+📧 **`contact@pomagrenate.dev`** *(or open a private confidential ticket)*
 
-**Community Impact**: Use of inappropriate language or other behavior deemed
-unprofessional or unwelcome in the community.
+All complaints will be reviewed and investigated promptly, impartially, and with strict confidentiality.
 
-**Consequence**: A private, written warning from community leaders, providing
-clarity around the nature of the violation and an explanation of why the
-behavior was inappropriate. A public apology may be requested.
+### Enforcement Ladder (Community Impact Guidelines)
 
-### 2. Warning
+Community maintainers will determine fair consequences following these tiered guidelines:
 
-**Community Impact**: A violation through a single incident or series
-of actions.
+| Level | Community Impact | Action / Consequence |
+| :--- | :--- | :--- |
+| **1. Correction** | Use of inappropriate language or unprofessional behavior. | A private, written warning with an explanation of why the conduct was inappropriate. A public apology may be requested. |
+| **2. Warning** | A single significant violation or a pattern of repeated minor violations. | A formal warning with temporary restrictions on community interactions across project spaces. |
+| **3. Temporary Ban** | A serious violation of standards, including sustained harassment. | A temporary ban from all repository interaction, discussions, and review privileges for a specified period. |
+| **4. Permanent Ban** | Demonstrating a sustained pattern of violation, severe harassment, or malicious targeting of contributors. | A permanent ban from all public repositories, organization spaces, and community channels. |
 
-**Consequence**: A warning with consequences for continued behavior. No
-interaction with the people involved, including unsolicited interaction with
-those enforcing the Code of Conduct, for a specified period of time. This
-includes avoiding interactions in community spaces as well as external channels
-(like social media). Violating these terms may lead to a temporary or
-permanent ban.
+---
 
-### 3. Temporary Ban
+## 📜 Attribution
 
-**Community Impact**: A serious violation of community standards, including
-sustained inappropriate behavior.
+This Code of Conduct is adapted from the [Contributor Covenant][homepage], version 2.0, available at [https://www.contributor-covenant.org/version/2/0/code_of_conduct.html][v2.0].
 
-**Consequence**: A temporary ban from any sort of interaction or public
-communication with the community for a specified period of time. No public or
-private interaction with the people involved, including unsolicited interaction
-with those enforcing the Code of Conduct, is allowed during this period.
-Violating these terms may lead to a permanent ban.
-
-### 4. Permanent Ban
-
-**Community Impact**: Demonstrating a pattern of violation of community
-standards, including sustained inappropriate behavior,  harassment of an
-individual, or aggression toward or disparagement of classes of individuals.
-
-**Consequence**: A permanent ban from any sort of public interaction within
-the community.
-
-## Attribution
-
-This Code of Conduct is adapted from the [Contributor Covenant][homepage],
-version 2.0, available at
-[https://www.contributor-covenant.org/version/2/0/code_of_conduct.html][v2.0].
-
-Community Impact Guidelines were inspired by
-[Mozilla's code of conduct enforcement ladder][Mozilla CoC].
-
-For answers to common questions about this code of conduct, see the FAQ at
-[https://www.contributor-covenant.org/faq][FAQ]. Translations are available
-at [https://www.contributor-covenant.org/translations][translations].
+Community Impact Guidelines were inspired by [Mozilla's code of conduct enforcement ladder][Mozilla CoC].
 
 [homepage]: https://www.contributor-covenant.org
 [v2.0]: https://www.contributor-covenant.org/version/2/0/code_of_conduct.html

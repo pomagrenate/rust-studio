@@ -54,8 +54,8 @@ impl RustCommenter {
             }
         } else {
             // Multi-line - check if already has block comment
-            let first_line = result[start_line].trim();
-            let last_line = result[end_line].trim();
+            let first_line = result[start_line].trim().to_string();
+            let last_line = result[end_line].trim().to_string();
             
             if first_line.starts_with("/*") && last_line.ends_with("*/") {
                 // Remove block comment
@@ -69,8 +69,8 @@ impl RustCommenter {
                 let first_indent = result[start_line].chars().take_while(|c| c.is_whitespace()).collect::<String>();
                 let last_indent = result[end_line].chars().take_while(|c| c.is_whitespace()).collect::<String>();
                 
-                result[start_line] = format!("{}/* {}", first_indent, result[start_line].trim());
-                result[end_line] = format!("{} */{}", last_indent, result[end_line].trim());
+                result[start_line] = format!("{}/* {}", first_indent, first_line);
+                result[end_line] = format!("{} */{}", last_indent, last_line);
             }
         }
         

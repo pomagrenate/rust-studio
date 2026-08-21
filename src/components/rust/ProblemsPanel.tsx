@@ -284,14 +284,29 @@ export function ProblemsPanel({
     });
   }, [linterReport, severityFilter, searchQuery]);
 
+  const resolveFilePath = (filePath: string): string => {
+    if (!filePath) return "";
+    const normalized = filePath.replace(/\\/g, "/");
+    if (/^[a-zA-Z]:/.test(normalized) || normalized.startsWith("/")) {
+      return normalized;
+    }
+    if (workspaceRoot) {
+      const rootNormalized = workspaceRoot.replace(/\\/g, "/").replace(/\/$/, "");
+      const cleanRelative = normalized.replace(/^\.\//, "").replace(/^\//, "");
+      return `${rootNormalized}/${cleanRelative}`;
+    }
+    return normalized;
+  };
+
   const handleProblemClick = (filePath: string, line: number, col: number) => {
+    const fullPath = resolveFilePath(filePath);
     // First open the file if it's not already open
     if (onOpenFile) {
-      onOpenFile(filePath);
+      onOpenFile(fullPath);
     }
     // Then navigate to the specific line/column
     if (onNavigateToProblem) {
-      onNavigateToProblem(filePath, line, col);
+      onNavigateToProblem(fullPath, line, col);
     }
   };
 

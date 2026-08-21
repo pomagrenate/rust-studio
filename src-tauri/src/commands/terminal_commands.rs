@@ -65,6 +65,7 @@ fn find_git_bash() -> Option<String> {
     None
 }
 
+#[allow(dead_code)]
 fn get_wsl_distros() -> Vec<String> {
     #[cfg(target_os = "windows")]
     {

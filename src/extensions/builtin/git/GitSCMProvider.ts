@@ -239,6 +239,28 @@ export class GitRepository implements ISCMRepository {
     await invoke("git_init", { repoPath: this.rootUri });
     await this.refresh();
   }
+
+  async getBranches(): Promise<string[]> {
+    if (window.__TAURI_INTERNALS__) {
+      return await invoke<string[]>("git_get_branches", { repoPath: this.rootUri });
+    }
+    // Fallback for non-Tauri web preview
+    return ["main", "dev", "feature/test"];
+  }
+
+  async checkoutBranch(branchName: string): Promise<void> {
+    if (window.__TAURI_INTERNALS__) {
+      await invoke("git_checkout", { repoPath: this.rootUri, branch: branchName });
+      await this.refresh();
+    }
+  }
+
+  async createBranch(branchName: string): Promise<void> {
+    if (window.__TAURI_INTERNALS__) {
+      await invoke("git_create_branch", { repoPath: this.rootUri, branchName });
+      await this.refresh();
+    }
+  }
 }
 
 export class GitSCMProvider implements ISCMProvider {

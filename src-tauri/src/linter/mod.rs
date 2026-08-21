@@ -160,6 +160,11 @@ pub async fn run_linter_scan(
     }
 
     // ── In-Process Static Analysis Engine (Zero external dependency fallback) ──
+    Ok(run_in_process_scan(workspace_path))
+}
+
+pub fn run_in_process_scan(workspace_path: &Path) -> LinterReport {
+    let start_time = Instant::now();
     let mut findings = Vec::new();
     let mut scanned_count = 0;
 
@@ -235,13 +240,13 @@ pub async fn run_linter_scan(
         }
     }
 
-    Ok(LinterReport {
+    LinterReport {
         success: true,
         findings,
         scanned_files_count: scanned_count.max(1),
         scan_duration_ms: start_time.elapsed().as_millis() as u64,
         engine: "Pomai Static Analysis Core".to_string(),
-    })
+    }
 }
 
 #[tauri::command]
@@ -256,3 +261,6 @@ pub async fn scan_workspace_linter(
     }
     run_linter_scan(&app, &p, rules_config.as_deref()).await
 }
+
+#[cfg(test)]
+mod tests;

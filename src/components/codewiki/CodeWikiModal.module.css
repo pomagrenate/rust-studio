@@ -1,0 +1,645 @@
+/* CodeWikiModal.module.css — Supports Light Theme and Dynamic Interactive Graph */
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(5px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Light Theme Container (Default / Controlled by Theme State) */
+.modalLight {
+  width: 92vw;
+  max-width: 1280px;
+  height: 88vh;
+  background-color: #ffffff;
+  border: 1px solid #d0d7de;
+  border-radius: 10px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  color: #24292f;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  overflow: hidden;
+}
+
+/* Dark Theme Variant */
+.modalDark {
+  width: 92vw;
+  max-width: 1280px;
+  height: 88vh;
+  background-color: #1e1e1e;
+  border: 1px solid #333333;
+  border-radius: 10px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  color: #cccccc;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  overflow: hidden;
+}
+
+/* Header */
+.headerLight {
+  height: 52px;
+  padding: 0 20px;
+  background-color: #f6f8fa;
+  border-bottom: 1px solid #d0d7de;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.headerDark {
+  height: 52px;
+  padding: 0 20px;
+  background-color: #252526;
+  border-bottom: 1px solid #333333;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.headerIcon {
+  color: #0969da;
+  display: flex;
+  align-items: center;
+}
+
+.titleLight {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2328;
+  margin: 0;
+}
+
+.titleDark {
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0;
+}
+
+.actionBtnLight {
+  background-color: #f3f4f6;
+  color: #24292f;
+  border: 1px solid #d0d7de;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s;
+}
+
+.actionBtnLight:hover {
+  background-color: #0969da;
+  color: #ffffff;
+  border-color: #0969da;
+}
+
+.actionBtnDark {
+  background-color: #3c3c3c;
+  color: #cccccc;
+  border: none;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s;
+}
+
+.actionBtnDark:hover {
+  background-color: #0078d4;
+  color: #ffffff;
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  color: #57606a;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  border-radius: 6px;
+}
+
+.closeBtn:hover {
+  color: #1f2328;
+  background-color: #eaeef2;
+}
+
+/* Tabs */
+.tabsLight {
+  height: 40px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #d0d7de;
+  display: flex;
+  padding: 0 16px;
+  gap: 8px;
+}
+
+.tabsDark {
+  height: 40px;
+  background-color: #2d2d2d;
+  border-bottom: 1px solid #333333;
+  display: flex;
+  padding: 0 16px;
+  gap: 8px;
+}
+
+.tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #57606a;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 0 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s;
+}
+
+.tab:hover {
+  color: #0969da;
+}
+
+.tabActiveLight {
+  color: #0969da;
+  border-bottom-color: #0969da;
+  font-weight: 600;
+}
+
+.tabActiveDark {
+  color: #0078d4;
+  border-bottom-color: #0078d4;
+  font-weight: 600;
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* Sidebar */
+.sidebarLight {
+  width: 330px;
+  background-color: #f6f8fa;
+  border-right: 1px solid #d0d7de;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebarDark {
+  width: 330px;
+  background-color: #252526;
+  border-right: 1px solid #333333;
+  display: flex;
+  flex-direction: column;
+}
+
+.searchBoxLight {
+  padding: 12px;
+  border-bottom: 1px solid #d0d7de;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #ffffff;
+}
+
+.searchBoxDark {
+  padding: 12px;
+  border-bottom: 1px solid #333333;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #1e1e1e;
+}
+
+.searchInputLight {
+  flex: 1;
+  background: none;
+  border: none;
+  color: #1f2328;
+  font-size: 13px;
+  outline: none;
+}
+
+.searchInputDark {
+  flex: 1;
+  background: none;
+  border: none;
+  color: #ffffff;
+  font-size: 13px;
+  outline: none;
+}
+
+.symbolList {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.symbolItemLight {
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f2f5;
+  transition: background-color 0.12s;
+}
+
+.symbolItemLight:hover {
+  background-color: #eaeef2;
+}
+
+.symbolItemActiveLight {
+  background-color: #ddf4ff;
+  border-left: 4px solid #0969da;
+}
+
+.symbolItemDark {
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  border-bottom: 1px solid #2a2a2a;
+  transition: background-color 0.12s;
+}
+
+.symbolItemDark:hover {
+  background-color: #2a2d2e;
+}
+
+.symbolItemActiveDark {
+  background-color: #37373d;
+  border-left: 4px solid #0078d4;
+}
+
+/* Badges */
+.symbolKindBadge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.kindStruct { background-color: #8250df; color: #ffffff; }
+.kindFunction { background-color: #0969da; color: #ffffff; }
+.kindTrait { background-color: #1a7f37; color: #ffffff; }
+.kindFile { background-color: #cf222e; color: #ffffff; }
+.kindEnum { background-color: #bf3989; color: #ffffff; }
+
+.symbolNameLight {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f2328;
+}
+
+.symbolNameDark {
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+/* Main Content */
+.wikiContentLight {
+  flex: 1;
+  padding: 28px;
+  overflow-y: auto;
+  background-color: #ffffff;
+  color: #24292f;
+}
+
+.wikiContentDark {
+  flex: 1;
+  padding: 28px;
+  overflow-y: auto;
+  background-color: #1e1e1e;
+  color: #cccccc;
+}
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #0969da;
+  margin-bottom: 14px;
+  font-weight: 500;
+}
+
+.symbolHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.symbolTitleLight {
+  font-size: 26px;
+  font-weight: 700;
+  color: #1f2328;
+  margin: 0;
+}
+
+.symbolTitleDark {
+  font-size: 26px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.signatureBoxLight {
+  background-color: #f6f8fa;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  padding: 14px 18px;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 13px;
+  color: #0550ae;
+  margin-bottom: 24px;
+  white-space: pre-wrap;
+}
+
+.signatureBoxDark {
+  background-color: #141414;
+  border: 1px solid #333333;
+  border-radius: 6px;
+  padding: 14px 18px;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 13px;
+  color: #4ec9b0;
+  margin-bottom: 24px;
+  white-space: pre-wrap;
+}
+
+.docstringBoxLight {
+  background-color: #ddf4ff;
+  border-left: 4px solid #0969da;
+  padding: 14px 18px;
+  border-radius: 0 6px 6px 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #1f2328;
+  margin-bottom: 24px;
+}
+
+.docstringBoxDark {
+  background-color: #252526;
+  border-left: 4px solid #0078d4;
+  padding: 14px 18px;
+  border-radius: 0 6px 6px 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #cccccc;
+  margin-bottom: 24px;
+}
+
+.sectionTitleLight {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2328;
+  margin-top: 28px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid #d0d7de;
+  padding-bottom: 8px;
+}
+
+.sectionTitleDark {
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+  margin-top: 28px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid #333333;
+  padding-bottom: 8px;
+}
+
+.tableLight {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 28px;
+  font-size: 13px;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.tableLight th {
+  text-align: left;
+  background-color: #f6f8fa;
+  padding: 10px 14px;
+  color: #57606a;
+  border-bottom: 1px solid #d0d7de;
+  font-weight: 600;
+}
+
+.tableLight td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.tableRowLight:hover {
+  background-color: #f3f4f6;
+}
+
+.tableDark {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 28px;
+  font-size: 13px;
+}
+
+.tableDark th {
+  text-align: left;
+  background-color: #252526;
+  padding: 10px 14px;
+  color: #aaaaaa;
+  border-bottom: 1px solid #333333;
+}
+
+.tableDark td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.tableRowDark:hover {
+  background-color: #252526;
+}
+
+.linkText {
+  color: #0969da;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.linkText:hover {
+  text-decoration: underline;
+}
+
+/* Tab 2: Graph Canvas with Pan, Drag, Zoom */
+.graphCanvasContainer {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+}
+
+.graphCanvasLight {
+  background-color: #f8f9fa;
+  background-image: radial-gradient(#d0d7de 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.graphCanvasDark {
+  background-color: #121212;
+  background-image: radial-gradient(#2d2d2d 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.zoomOverlay {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #d0d7de;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  z-index: 10;
+}
+
+.zoomOverlayDark {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: rgba(30, 30, 30, 0.9);
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #333333;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  z-index: 10;
+}
+
+.zoomBtn {
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.zoomBtn:hover {
+  background-color: #0969da;
+  color: #ffffff;
+}
+
+.svgGraph {
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+.svgGraphGrabbing {
+  cursor: grabbing !important;
+}
+
+/* Tab 3: Blast Radius */
+.blastContainer {
+  padding: 28px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  margin-bottom: 28px;
+}
+
+.statCardLight {
+  background-color: #f6f8fa;
+  border: 1px solid #d0d7de;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+}
+
+.statCardDark {
+  background-color: #252526;
+  border: 1px solid #333333;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+}
+
+.statValue {
+  font-size: 32px;
+  font-weight: 800;
+  color: #0969da;
+}
+
+.statLabel {
+  font-size: 13px;
+  color: #57606a;
+  margin-top: 6px;
+  font-weight: 500;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #8c959f;
+  font-size: 14px;
+}

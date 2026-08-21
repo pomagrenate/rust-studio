@@ -57,6 +57,9 @@ export interface ISCMRepository {
   commit(message: string): Promise<void>;
   sync(): Promise<void>;
   initRepo(): Promise<void>;
+  getBranches(): Promise<string[]>;
+  checkoutBranch(branchName: string): Promise<void>;
+  createBranch(branchName: string): Promise<void>;
 }
 
 export interface ISCMProvider {

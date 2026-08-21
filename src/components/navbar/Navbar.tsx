@@ -4,7 +4,7 @@
  * and integrates the Search Everywhere trigger.
  */
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   VscMenu,
   VscArrowLeft,
@@ -26,7 +26,9 @@ import {
   VscWarning,
   VscTerminal,
   VscBeaker,
-  VscReferences
+  VscReferences,
+  VscBook,
+  VscArchive
 } from "react-icons/vsc";
 import { FaHammer } from "react-icons/fa";
 import { invoke } from "@tauri-apps/api/core";
@@ -95,6 +97,10 @@ export interface NavbarProps {
   scmBadgeCount?: number;
   isBuilding?: boolean;
   onCancelBuild?: () => void;
+  isCodeWikiOpen?: boolean;
+  onToggleCodeWiki?: () => void;
+  isBackupModalOpen?: boolean;
+  onToggleBackupModal?: () => void;
 }
 
 interface RecentlyOpened {
@@ -165,6 +171,10 @@ export function Navbar({
   scmBadgeCount = 0,
   isBuilding = false,
   onCancelBuild,
+  isCodeWikiOpen,
+  onToggleCodeWiki,
+  isBackupModalOpen,
+  onToggleBackupModal,
 }: NavbarProps) {
   const [activeDropdown, setActiveDropdown] = useState<DropdownKind>(null);
   const [activeSubmenu, setActiveSubmenu] = useState<HamburgerSubmenu>(null);
@@ -172,6 +182,103 @@ export function Navbar({
   const [recentItems, setRecentItems] = useState<RecentlyOpened>({ workspaces: [], files: [] });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const navRef = useRef<HTMLDivElement>(null);
+
+  // Real Git branch state driven by Rust invoke
+  const [localActiveBranch, setLocalActiveBranch] = useState<string>(activeBranch);
+  const [localBranches, setLocalBranches] = useState<string[]>(branches);
+
+  // Sync state if props update
+  useEffect(() => {
+    if (activeBranch) setLocalActiveBranch(activeBranch);
+  }, [activeBranch]);
+
+  useEffect(() => {
+    if (branches && branches.length > 0) setLocalBranches(branches);
+  }, [branches]);
+
+  // Fetch branch information directly from Rust src-tauri/src/github & src-tauri/src/commands/git_commands
+  const refreshGitBranchInfo = useCallback(async () => {
+    if (!workspaceRoot || !window.__TAURI_INTERNALS__) return;
+
+    try {
+      const fetchedBranches = await invoke<string[]>("git_get_branches", { repoPath: workspaceRoot });
+      if (fetchedBranches && fetchedBranches.length > 0) {
+        setLocalBranches(fetchedBranches);
+      }
+    } catch (err) {
+      console.error("Failed to fetch git branches from Rust:", err);
+    }
+
+    try {
+      const statusRes = await invoke<{ branch?: string }>("git_status", { repoPath: workspaceRoot });
+      if (statusRes && statusRes.branch) {
+        setLocalActiveBranch(statusRes.branch);
+      }
+    } catch (_err) {
+      try {
+        const repoInfo = await invoke<{ current_branch?: string }>("github_get_repo_info", { repoPath: workspaceRoot });
+        if (repoInfo && repoInfo.current_branch) {
+          setLocalActiveBranch(repoInfo.current_branch);
+        }
+      } catch (e) {
+        console.error("Failed to fetch repo info from Rust src-tauri/src/github:", e);
+      }
+    }
+  }, [workspaceRoot]);
+
+  useEffect(() => {
+    refreshGitBranchInfo();
+  }, [refreshGitBranchInfo]);
+
+  useEffect(() => {
+    if (activeDropdown === "git") {
+      refreshGitBranchInfo();
+    }
+  }, [activeDropdown, refreshGitBranchInfo]);
+
+  const handleSelectBranchItem = async (b: string) => {
+    setActiveDropdown(null);
+    setActiveSubmenu(null);
+
+    if (window.__TAURI_INTERNALS__ && workspaceRoot) {
+      try {
+        await invoke("git_checkout", { repoPath: workspaceRoot, branch: b });
+        setLocalActiveBranch(b);
+        await refreshGitBranchInfo();
+      } catch (err) {
+        console.error("Failed to checkout branch via Rust:", err);
+      }
+    } else {
+      setLocalActiveBranch(b);
+    }
+
+    onSelectBranch?.(b);
+  };
+
+  const handleNewBranchItem = async () => {
+    setActiveDropdown(null);
+    setActiveSubmenu(null);
+
+    const branchName = prompt("Enter new branch name:");
+    if (branchName && branchName.trim()) {
+      const trimmed = branchName.trim();
+      if (window.__TAURI_INTERNALS__ && workspaceRoot) {
+        try {
+          await invoke("git_create_branch", { repoPath: workspaceRoot, branchName: trimmed });
+          await invoke("git_checkout", { repoPath: workspaceRoot, branch: trimmed });
+          setLocalActiveBranch(trimmed);
+          await refreshGitBranchInfo();
+        } catch (err) {
+          console.error("Failed to create new branch via Rust:", err);
+        }
+      } else {
+        setLocalActiveBranch(trimmed);
+        setLocalBranches(prev => [...prev.filter(x => x !== trimmed), trimmed]);
+      }
+
+      onNewBranch?.();
+    }
+  };
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -305,10 +412,10 @@ export function Navbar({
             setActiveDropdown(activeDropdown === "git" ? null : "git");
             setActiveSubmenu(null);
           }}
-          title={`Git Branch: ${activeBranch}`}
+          title={`Git Branch: ${localActiveBranch}`}
         >
           <VscGitPullRequest size={17} color="#3574f0" />
-          <span>{activeBranch || "Git"}</span>
+          <span>{localActiveBranch || "Git"}</span>
           <VscChevronDown className={styles.pillChevron} />
         </button>
       </div>
@@ -475,6 +582,26 @@ export function Navbar({
           <VscSparkle size={18} color="#0078d4" />
         </button>
 
+        {/* CodeWiki Icon Button */}
+        <button
+          className={`${styles.iconBtn} ${isCodeWikiOpen ? styles.iconBtnActive : ""}`}
+          title="CodeWiki / Offline Architecture Graph & Documentation"
+          onClick={onToggleCodeWiki}
+          aria-label="Toggle CodeWiki"
+        >
+          <VscBook size={18} color="#0078d4" />
+        </button>
+
+        {/* Local Code Backup Icon Button */}
+        <button
+          className={`${styles.iconBtn} ${isBackupModalOpen ? styles.iconBtnActive : ""}`}
+          title="Code Backup Manager / Local Workspace Snapshots"
+          onClick={onToggleBackupModal}
+          aria-label="Toggle Code Backup Manager"
+        >
+          <VscArchive size={18} color="#0078d4" />
+        </button>
+
         {/* Search Everywhere Icon Button */}
         <button
           className={styles.iconBtn}
@@ -586,27 +713,21 @@ export function Navbar({
       {activeDropdown === "git" && (
         <div className={`${styles.dropdownMenu} ${styles.gitDropdown}`}>
           <div className={styles.dropdownSectionTitle}>Branches</div>
-          {branches.map((b) => (
+          {localBranches.map((b) => (
             <div
               key={b}
               className={styles.menuItem}
-              onClick={() => {
-                closeDropdowns();
-                onSelectBranch?.(b);
-              }}
+              onClick={() => handleSelectBranchItem(b)}
             >
               <div className={styles.menuItemIcon}><VscGitPullRequest /></div>
-              <span className={styles.menuItemText}>{b} {b === activeBranch && "✓"}</span>
+              <span className={styles.menuItemText}>{b} {b === localActiveBranch && "✓"}</span>
             </div>
           ))}
 
           <div className={styles.dropdownDivider} />
           <div
             className={styles.menuItem}
-            onClick={() => {
-              closeDropdowns();
-              onNewBranch?.();
-            }}
+            onClick={handleNewBranchItem}
           >
             <div className={styles.menuItemIcon}><VscAdd /></div>
             <span className={styles.menuItemText}>New Branch...</span>

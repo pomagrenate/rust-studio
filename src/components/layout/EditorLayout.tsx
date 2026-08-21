@@ -3,6 +3,8 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import { Navbar } from "../navbar/Navbar";
 import { ExplorerPane } from "../explorer/ExplorerPane";
 import { SearchEverywhereModal } from "../search/SearchEverywhereModal";
+import { CodeWikiModal } from "../codewiki/CodeWikiModal";
+import { BackupManagerModal } from "../backup/BackupManagerModal";
 import { SourceControlPane } from "../scm/SourceControlPane";
 import { EditorPaneGroup, EditorGroup } from "./EditorPaneGroup";
 import { BottomPanel, TabName } from "../panel/BottomPanel";
@@ -18,6 +20,8 @@ import { HierarchyPanel } from "../hierarchy/HierarchyPanel";
 import { useLsp } from "../../hooks/useLsp";
 import { useCargoDiagnostics } from "../../hooks/useCargoDiagnostics";
 import { useClippy } from "../../hooks/useClippy";
+import { extensionRegistry } from "../../extensions/extensionRegistry";
+import { ISCMRepository } from "../../extensions/types";
 import styles from "./EditorLayout.module.css";
 
 export interface EditorLayoutProps {
@@ -41,6 +45,7 @@ export function EditorLayout({ initialWorkspace, onCloseWorkspace }: EditorLayou
   const [activeBottomTool, setActiveBottomTool] = useState<'terminal' | 'build' | 'problems' | 'debug' | 'tests' | 'hierarchy' | null>(null);
   const [terminalTab, setTerminalTab] = useState<TabName>("Terminal");
   const [isSearchEverywhereOpen, setIsSearchEverywhereOpen] = useState(false);
+  const [isCodeWikiOpen, setIsCodeWikiOpen] = useState(false);
   const [isSearchDockedRight, setIsSearchDockedRight] = useState(false);
   const [searchSidebarWidth, setSearchSidebarWidth] = useState(380);
   const [isResizingSearchSidebar, setIsResizingSearchSidebar] = useState(false);
@@ -78,6 +83,7 @@ export function EditorLayout({ initialWorkspace, onCloseWorkspace }: EditorLayou
   const [dirtyFiles, setDirtyFiles] = useState<Set<string>>(new Set());
   
   const [isScmOpen, setIsScmOpen] = useState(false);
+  const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
   const [isExplorerOpen, setIsExplorerOpen] = useState(true);
   const [_scmBadgeCount, setScmBadgeCount] = useState(0);
   const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
@@ -85,6 +91,11 @@ export function EditorLayout({ initialWorkspace, onCloseWorkspace }: EditorLayou
     return saved ? Math.max(160, Math.min(800, Number(saved))) : 260;
   });
   const [isResizingSidebar, setIsResizingSidebar] = useState(false);
+
+  // Git repository state for branch management
+  const [gitRepo, setGitRepo] = useState<ISCMRepository | null>(null);
+  const [gitBranches, setGitBranches] = useState<string[]>([]);
+  const [gitCurrentBranch, setGitCurrentBranch] = useState<string>("main");
 
   const activeGroup = useMemo(() => {
     return editorGroups.find(g => g.id === activeGroupId) || editorGroups[0] || null;
@@ -189,6 +200,52 @@ export function EditorLayout({ initialWorkspace, onCloseWorkspace }: EditorLayou
     const equal = 100 / count;
     setGroupWidths(new Array(count).fill(equal));
   }, [editorGroups.length]);
+
+  // Initialize Git repository and fetch branches
+  useEffect(() => {
+    let unsubscribe: (() => void) | null = null;
+    let isCancelled = false;
+
+    async function initGitRepo() {
+      if (!workspaceRoots[0]) {
+        setGitRepo(null);
+        setGitBranches([]);
+        setGitCurrentBranch("main");
+        return;
+      }
+
+      try {
+        const repo = await extensionRegistry.getRepositoryForWorkspace(workspaceRoots[0]);
+        if (isCancelled) return;
+
+        setGitRepo(repo);
+        if (repo) {
+          // Subscribe to repository state changes
+          unsubscribe = repo.subscribe((state) => {
+            setGitCurrentBranch(state.branch || "main");
+          });
+
+          // Fetch branches
+          const branches = await repo.getBranches();
+          if (!isCancelled) {
+            setGitBranches(branches);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to initialize Git repository:", err);
+        setGitRepo(null);
+        setGitBranches([]);
+        setGitCurrentBranch("main");
+      }
+    }
+
+    initGitRepo();
+
+    return () => {
+      isCancelled = true;
+      if (unsubscribe) unsubscribe();
+    };
+  }, [workspaceRoots]);
 
   const handleGroupResizeStart = (e: React.MouseEvent, groupIndex: number) => {
     e.preventDefault();
@@ -330,7 +387,16 @@ export function EditorLayout({ initialWorkspace, onCloseWorkspace }: EditorLayou
     setActiveBottomTool('problems');
   }, [workspaceRoots, applyClippyWorkspaceFix, fileContents, loadFileContentIfNeeded, setActiveBottomTool]);
 
-  const handleOpenFileInActiveGroup = useCallback(async (path: string, isPermanent = false, targetGroupId = activeGroupId) => {
+  const handleOpenFileInActiveGroup = useCallback(async (rawPath: string, isPermanent = false, targetGroupId = activeGroupId) => {
+    if (!rawPath) return;
+
+    let path = rawPath.replace(/\\/g, "/");
+    if (workspaceRoots[0] && !/^[a-zA-Z]:/.test(path) && !path.startsWith("/")) {
+      const cleanRoot = workspaceRoots[0].replace(/\\/g, "/").replace(/\/$/, "");
+      const cleanRel = path.replace(/^\.\//, "").replace(/^\//, "");
+      path = `${cleanRoot}/${cleanRel}`;
+    }
+
     setEditorGroups(prev => {
       return prev.map(group => {
         if (group.id !== targetGroupId) return group;
@@ -377,7 +443,7 @@ export function EditorLayout({ initialWorkspace, onCloseWorkspace }: EditorLayou
     
     // Also load for editor display
     loadFileContentIfNeeded(path);
-  }, [activeGroupId, dirtyFiles, loadFileContentIfNeeded, lspOpenDoc]);
+  }, [activeGroupId, dirtyFiles, loadFileContentIfNeeded, lspOpenDoc, workspaceRoots]);
 
   const {
     isBuilding,
@@ -901,6 +967,53 @@ export function EditorLayout({ initialWorkspace, onCloseWorkspace }: EditorLayou
     }
   }, [activeFileIndex, currentOpenFiles, activeGroupId, loadFileContentIfNeeded]);
 
+  // Branch management handlers
+  const handleSelectBranch = useCallback(async (branchName: string) => {
+    if (gitRepo) {
+      try {
+        await gitRepo.checkoutBranch(branchName);
+        const branches = await gitRepo.getBranches();
+        setGitBranches(branches);
+      } catch (err) {
+        console.error("Failed to checkout branch:", err);
+      }
+    } else if (window.__TAURI_INTERNALS__ && workspaceRoots[0]) {
+      try {
+        const { invoke } = await import("@tauri-apps/api/core");
+        await invoke("git_checkout", { repoPath: workspaceRoots[0], branch: branchName });
+        setGitCurrentBranch(branchName);
+        const branches = await invoke<string[]>("git_get_branches", { repoPath: workspaceRoots[0] });
+        if (branches) setGitBranches(branches);
+      } catch (err) {
+        console.error("Failed to checkout branch:", err);
+      }
+    }
+  }, [gitRepo, workspaceRoots]);
+
+  const handleCreateBranch = useCallback(async (branchName: string) => {
+    if (gitRepo) {
+      try {
+        await gitRepo.createBranch(branchName);
+        await gitRepo.checkoutBranch(branchName);
+        const branches = await gitRepo.getBranches();
+        setGitBranches(branches);
+      } catch (err) {
+        console.error("Failed to create branch:", err);
+      }
+    } else if (window.__TAURI_INTERNALS__ && workspaceRoots[0]) {
+      try {
+        const { invoke } = await import("@tauri-apps/api/core");
+        await invoke("git_create_branch", { repoPath: workspaceRoots[0], branchName });
+        await invoke("git_checkout", { repoPath: workspaceRoots[0], branch: branchName });
+        setGitCurrentBranch(branchName);
+        const branches = await invoke<string[]>("git_get_branches", { repoPath: workspaceRoots[0] });
+        if (branches) setGitBranches(branches);
+      } catch (err) {
+        console.error("Failed to create branch:", err);
+      }
+    }
+  }, [gitRepo, workspaceRoots]);
+
   useEffect(() => {
     let chordKTimeout: ReturnType<typeof setTimeout> | null = null;
     let isChordKActive = false;
@@ -1023,7 +1136,15 @@ export function EditorLayout({ initialWorkspace, onCloseWorkspace }: EditorLayou
       <div className={styles.navbarWrapper}>
         <Navbar 
           workspaceRoot={workspaceRoots[0]}
-          activeBranch="main"
+          activeBranch={gitCurrentBranch}
+          branches={gitBranches}
+          onSelectBranch={handleSelectBranch}
+          onNewBranch={async () => {
+            const branchName = prompt("Enter new branch name:");
+            if (branchName && branchName.trim()) {
+              await handleCreateBranch(branchName.trim());
+            }
+          }}
           canNavigateBack={canNavigateBack}
           canNavigateForward={canNavigateForward}
           onNavigateBack={handleNavigateBack}
@@ -1037,6 +1158,10 @@ export function EditorLayout({ initialWorkspace, onCloseWorkspace }: EditorLayou
           onCargoClippy={() => workspaceRoots[0] && runClippy(workspaceRoots[0])}
           onClippyAutoFix={handleClippyAutoFix}
           onOpenSearchEverywhere={() => setIsSearchEverywhereOpen(true)}
+          isCodeWikiOpen={isCodeWikiOpen}
+          onToggleCodeWiki={() => setIsCodeWikiOpen(prev => !prev)}
+          isBackupModalOpen={isBackupModalOpen}
+          onToggleBackupModal={() => setIsBackupModalOpen(prev => !prev)}
           onNewFile={handleNewFile}
           onNewPhysicalFile={handleNewPhysicalFile}
           onNewWindow={handleNewWindow}
@@ -1219,6 +1344,9 @@ export function EditorLayout({ initialWorkspace, onCloseWorkspace }: EditorLayou
                 workspaceDiagnostics={workspaceDiagnostics}
                 diagnostics={cargoDiagnostics}
                 lspDiagnostics={lspDiagnosticsMap}
+                onOpenFile={(filePath) => {
+                  handleOpenFileInActiveGroup(filePath, true);
+                }}
                 onNavigateToProblem={(filePath, _line, _col) => {
                   handleOpenFileInActiveGroup(filePath, true);
                 }}
@@ -1386,6 +1514,24 @@ export function EditorLayout({ initialWorkspace, onCloseWorkspace }: EditorLayou
             handleOpenFileInActiveGroup(path, true);
           }}
           onExecuteAction={handleExecuteAction}
+        />
+      )}
+
+      {/* CodeWiki Architecture Knowledge Base Modal */}
+      {isCodeWikiOpen && (
+        <CodeWikiModal
+          isOpen={isCodeWikiOpen}
+          onClose={() => setIsCodeWikiOpen(false)}
+          workspacePath={workspaceRoots[0]}
+        />
+      )}
+
+      {/* Local Production-Ready Code Backup Manager Modal */}
+      {isBackupModalOpen && (
+        <BackupManagerModal
+          isOpen={isBackupModalOpen}
+          onClose={() => setIsBackupModalOpen(false)}
+          workspacePath={workspaceRoots[0]}
         />
       )}
 
