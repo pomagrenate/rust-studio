@@ -59,7 +59,7 @@ export async function applySingleFindingFix(
       onReloadFile?.(fullPath);
       onOpenFile?.(fullPath);
 
-      setFixStatusMap?.((prev) => ({ ...prev, [findingKey]: "✓ Applied fix to file!" }));
+      setFixStatusMap?.((prev) => ({ ...prev, [findingKey]: "Applied fix to file successfully" }));
     }
   } catch (err: any) {
     setFixStatusMap?.((prev) => ({ ...prev, [findingKey]: `Error: ${err.message || String(err)}` }));
@@ -120,7 +120,7 @@ export async function applyLspWorkspaceEdit(
       onOpenFile?.(fullPath);
     }
 
-    setFixStatusMap?.((prev) => ({ ...prev, [rowKey]: "✓ Applied rust-analyzer Code Action!" }));
+    setFixStatusMap?.((prev) => ({ ...prev, [rowKey]: "Applied rust-analyzer Code Action successfully" }));
   } catch (err: any) {
     setFixStatusMap?.((prev) => ({ ...prev, [rowKey]: `Error: ${err.message || String(err)}` }));
   }
@@ -204,7 +204,7 @@ export async function applyProjectErrorFix(
       onReloadFile?.(fullPath);
       onOpenFile?.(fullPath);
 
-      setFixStatusMap?.((prev) => ({ ...prev, [rowKey]: "✓ Applied fix to file!" }));
+      setFixStatusMap?.((prev) => ({ ...prev, [rowKey]: "Applied fix to file successfully" }));
     }
   } catch (err: any) {
     setFixStatusMap?.((prev) => ({ ...prev, [rowKey]: `Error: ${err.message || String(err)}` }));

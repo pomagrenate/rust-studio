@@ -129,6 +129,7 @@ pub fn run() {
             search_commands::replace_in_files,
             search_commands::get_call_hierarchy,
             search_commands::get_type_hierarchy,
+            search_commands::search_ast_grep,
 
             // Terminal commands
             terminal_commands::list_terminal_profiles,

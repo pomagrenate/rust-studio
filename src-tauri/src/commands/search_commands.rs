@@ -577,6 +577,177 @@ pub async fn get_type_hierarchy(
     }).await.map_err(|e| e.to_string())?
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct AstGrepMatch {
+    pub line_number: usize,
+    pub line_text: String,
+    pub match_start: usize,
+    pub match_end: usize,
+    pub matched_code: String,
+    pub replacement_preview: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct AstGrepFileResult {
+    pub file_path: String,
+    pub relative_path: String,
+    pub file_name: String,
+    pub matches: Vec<AstGrepMatch>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct AstGrepResponse {
+    pub results: Vec<AstGrepFileResult>,
+    pub total_files: usize,
+    pub total_matches: usize,
+    pub duration_ms: u128,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct AstGrepOptions {
+    pub pattern: String,
+    pub rewrite: Option<String>,
+    pub roots: Vec<String>,
+    pub include_pattern: Option<String>,
+    pub exclude_pattern: Option<String>,
+}
+
+#[tauri::command]
+pub async fn search_ast_grep(options: AstGrepOptions) -> Result<AstGrepResponse, String> {
+    tokio::task::spawn_blocking(move || {
+        let start = Instant::now();
+        let pattern_raw = options.pattern.trim();
+
+        if pattern_raw.is_empty() || options.roots.is_empty() {
+            return Ok(AstGrepResponse {
+                results: Vec::new(),
+                total_files: 0,
+                total_matches: 0,
+                duration_ms: start.elapsed().as_millis(),
+            });
+        }
+
+        // Convert AST pattern into regex capture group ($VAR -> metavariables)
+        let regex_builder_str = regex::escape(pattern_raw);
+
+        // Replace metavariable placeholders like \$VAR or \$...
+        let var_regex = regex::Regex::new(r"\\\$(?:[a-zA-Z0-9_]+|\.\.\.)").unwrap();
+        let mut captures_names = Vec::new();
+
+        let converted_pattern = var_regex.replace_all(&regex_builder_str, |caps: &regex::Captures| {
+            let var_name = &caps[0][2..];
+            if var_name == "..." {
+                r"[\s\S]*?".to_string()
+            } else {
+                captures_names.push(var_name.to_string());
+                format!(r"(?P<{}>[^\n\r]+?)", var_name)
+            }
+        });
+
+        // Allow flexible whitespace around syntax tokens
+        let flex_pattern = converted_pattern
+            .replace(r"\ ", r"\s+")
+            .replace(r"\=", r"\s*=\s*")
+            .replace(r"\;", r"\s*;")
+            .replace(r"\{", r"\s*\{\s*")
+            .replace(r"\}", r"\s*\}\s*")
+            .replace(r"\(", r"\s*\(\s*")
+            .replace(r"\)", r"\s*\)\s*");
+
+        let re = match regex::RegexBuilder::new(&flex_pattern).multi_line(true).build() {
+            Ok(r) => r,
+            Err(_) => {
+                regex::RegexBuilder::new(&regex::escape(pattern_raw)).build().map_err(|e| e.to_string())?
+            }
+        };
+
+        let mut results = Vec::new();
+        let mut total_matches = 0;
+
+        let default_excludes = ["node_modules", ".git", "target", "dist", "build"];
+
+        for root_path_str in &options.roots {
+            let root_path = Path::new(root_path_str);
+            if !root_path.exists() {
+                continue;
+            }
+
+            for entry in WalkDir::new(root_path).into_iter().flatten() {
+                if !entry.file_type().is_file() {
+                    continue;
+                }
+                let p = entry.path();
+                let file_name = p.file_name().unwrap_or_default().to_string_lossy();
+                let rel_path = p.strip_prefix(root_path).unwrap_or(p).to_string_lossy();
+
+                if default_excludes.iter().any(|exc| rel_path.contains(exc)) {
+                    continue;
+                }
+
+                if let Ok(content) = fs::read_to_string(p) {
+                    let mut file_matches = Vec::new();
+                    let lines: Vec<&str> = content.lines().collect();
+
+                    for cap in re.captures_iter(&content) {
+                        if let Some(m) = cap.get(0) {
+                            let match_start_byte = m.start();
+                            let line_number = content[..match_start_byte].lines().count().max(1);
+                            let line_text = lines.get(line_number - 1).unwrap_or(&"").to_string();
+
+                            let mut replacement_preview = None;
+                            if let Some(rewrite_fmt) = &options.rewrite {
+                                let mut substituted = rewrite_fmt.clone();
+                                for var in &captures_names {
+                                    if let Some(captured_val) = cap.name(var) {
+                                        substituted = substituted.replace(&format!("${}", var), captured_val.as_str());
+                                    }
+                                }
+                                replacement_preview = Some(substituted);
+                            }
+
+                            file_matches.push(AstGrepMatch {
+                                line_number,
+                                line_text,
+                                match_start: m.start(),
+                                match_end: m.end(),
+                                matched_code: m.as_str().trim().to_string(),
+                                replacement_preview,
+                            });
+                            total_matches += 1;
+
+                            if file_matches.len() >= 50 || total_matches >= 500 {
+                                break;
+                            }
+                        }
+                    }
+
+                    if !file_matches.is_empty() {
+                        results.push(AstGrepFileResult {
+                            file_path: p.to_string_lossy().to_string(),
+                            relative_path: rel_path.to_string(),
+                            file_name: file_name.to_string(),
+                            matches: file_matches,
+                        });
+                    }
+
+                    if total_matches >= 500 {
+                        break;
+                    }
+                }
+            }
+        }
+
+        let total_files = results.len();
+
+        Ok(AstGrepResponse {
+            results,
+            total_files,
+            total_matches,
+            duration_ms: start.elapsed().as_millis(),
+        })
+    }).await.map_err(|e| e.to_string())?
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

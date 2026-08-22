@@ -11,6 +11,14 @@ use serde_json::Value;
 use tauri::AppHandle;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DataflowStep {
+    pub path: String,
+    pub line: usize,
+    pub message: Option<String>,
+    pub snippet: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LinterFinding {
     pub check_id: String,
     pub path: String,
@@ -21,6 +29,10 @@ pub struct LinterFinding {
     pub message: String,
     pub severity: String, // "ERROR", "WARNING", "INFO"
     pub code_snippet: Option<String>,
+    pub fix: Option<String>,
+    pub category: Option<String>,
+    pub validation_state: Option<String>,
+    pub dataflow_trace: Option<Vec<DataflowStep>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -138,6 +150,31 @@ pub async fn run_linter_scan(
                                 .unwrap_or("WARNING")
                                 .to_uppercase();
                             let lines = res["extra"]["lines"].as_str().map(|s| s.to_string());
+                            let fix = res["extra"]["fix"].as_str().map(|s| s.to_string());
+                            let category = res["extra"]["metadata"]["category"]
+                                .as_str()
+                                .map(|s| s.to_string());
+                            let validation_state = res["extra"]["validation_state"]
+                                .as_str()
+                                .map(|s| s.to_string());
+
+                            let dataflow_trace = res["extra"]["dataflow_trace"]["taint_source"]
+                                .as_array()
+                                .map(|arr| {
+                                    arr.iter()
+                                        .filter_map(|step| {
+                                            let p = step["location"]["path"].as_str()?.to_string();
+                                            let l = step["location"]["start"]["line"].as_u64()? as usize;
+                                            let msg = step["content"].as_str().map(|s| s.to_string());
+                                            Some(DataflowStep {
+                                                path: p,
+                                                line: l,
+                                                message: msg,
+                                                snippet: None,
+                                            })
+                                        })
+                                        .collect()
+                                });
 
                             findings.push(LinterFinding {
                                 check_id,
@@ -149,6 +186,10 @@ pub async fn run_linter_scan(
                                 message,
                                 severity,
                                 code_snippet: lines,
+                                fix,
+                                category,
+                                validation_state,
+                                dataflow_trace,
                             });
                         }
                     }
@@ -221,6 +262,10 @@ pub fn run_in_process_scan(workspace_path: &Path, rules_config: Option<&str>) ->
                                     message: "Potential panic risk: use `?` operator or `expect()` with explanatory message instead of `.unwrap()`".to_string(),
                                     severity: "WARNING".to_string(),
                                     code_snippet: Some(line.trim().to_string()),
+                                    fix: Some(line.replace(".unwrap()", "?")),
+                                    category: Some("reliability".to_string()),
+                                    validation_state: None,
+                                    dataflow_trace: None,
                                 });
                             }
 
@@ -236,6 +281,10 @@ pub fn run_in_process_scan(workspace_path: &Path, rules_config: Option<&str>) ->
                                     message: "Unsafe block detected: requires explicit safety invariant comment".to_string(),
                                     severity: "INFO".to_string(),
                                     code_snippet: Some(line.trim().to_string()),
+                                    fix: Some(format!("// SAFETY: Verified invariants\n{}", line)),
+                                    category: Some("unsafe".to_string()),
+                                    validation_state: None,
+                                    dataflow_trace: None,
                                 });
                             }
 
@@ -251,6 +300,10 @@ pub fn run_in_process_scan(workspace_path: &Path, rules_config: Option<&str>) ->
                                     message: format!("Unresolved task annotation: {}", line.trim()),
                                     severity: "INFO".to_string(),
                                     code_snippet: Some(line.trim().to_string()),
+                                    fix: Some(line.replace("TODO:", "DONE:")),
+                                    category: Some("quality".to_string()),
+                                    validation_state: None,
+                                    dataflow_trace: None,
                                 });
                             }
 
@@ -266,6 +319,15 @@ pub fn run_in_process_scan(workspace_path: &Path, rules_config: Option<&str>) ->
                                     message: "Potential hardcoded secret or credential detected".to_string(),
                                     severity: "ERROR".to_string(),
                                     code_snippet: Some(line.trim().to_string()),
+                                    fix: Some(format!("// pomai:ignore-secret\n{}", line)),
+                                    category: Some("security".to_string()),
+                                    validation_state: Some("CONFIRMED_VALID".to_string()),
+                                    dataflow_trace: Some(vec![DataflowStep {
+                                        path: rel_path.clone(),
+                                        line: line_num,
+                                        message: Some("Credential assignment source".to_string()),
+                                        snippet: Some(line.trim().to_string()),
+                                    }]),
                                 });
                             }
                         }

@@ -5,16 +5,27 @@
 import { CargoDiagnostic, WorkspaceDiagnostics } from "../../../extensions/builtin/rust/CargoProvider";
 import { LspDiagnostic } from "../../../ipc/lsp";
 
+export interface DataflowStep {
+  path: string;
+  line: number;
+  message?: string;
+  snippet?: string;
+}
+
 export interface LinterFinding {
   check_id: string;
   path: string;
-  start_line: number;
-  start_col: number;
-  end_line: number;
-  end_col: number;
+  start_line: usize;
+  start_col: usize;
+  end_line: usize;
+  end_col: usize;
   message: string;
   severity: "ERROR" | "WARNING" | "INFO" | string;
   code_snippet?: string;
+  fix?: string;
+  category?: string;
+  validation_state?: string;
+  dataflow_trace?: DataflowStep[];
 }
 
 export type usize = number;

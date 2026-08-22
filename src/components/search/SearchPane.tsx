@@ -200,6 +200,7 @@ export const SearchPane = React.memo(function SearchPane({
   onOpenFolder,
 }: SearchPaneProps) {
   // Query state
+  const [searchMode, setSearchMode] = useState<"text" | "ast-grep">("text");
   const [query, setQuery] = useState("");
   const [replaceQuery, setReplaceQuery] = useState("");
   const [isReplaceOpen, setIsReplaceOpen] = useState(false);
@@ -259,18 +260,48 @@ export const SearchPane = React.memo(function SearchPane({
       }
 
       if (window.__TAURI_INTERNALS__) {
-        const res = await invoke<SearchResponse>("search_in_files", {
-          options: {
-            query: trimmed,
-            roots,
-            is_case_sensitive: isCaseSensitive,
-            is_whole_word: isWholeWord,
-            is_regex: isRegex,
-            include_pattern: includePattern ? includePattern : null,
-            exclude_pattern: excludePattern ? excludePattern : null,
-            max_results: 1000,
-          },
-        });
+        let res: SearchResponse;
+        if (searchMode === "ast-grep") {
+          const astRes = await invoke<any>("search_ast_grep", {
+            options: {
+              pattern: trimmed,
+              rewrite: isReplaceOpen && replaceQuery ? replaceQuery : null,
+              roots,
+              include_pattern: includePattern ? includePattern : null,
+              exclude_pattern: excludePattern ? excludePattern : null,
+            },
+          });
+          res = {
+            results: (astRes.results || []).map((r: any) => ({
+              file_path: r.file_path,
+              relative_path: r.relative_path,
+              file_name: r.file_name,
+              matches: r.matches.map((m: any) => ({
+                line_number: m.line_number,
+                line_text: m.matched_code || m.line_text,
+                match_start: 0,
+                match_end: (m.matched_code || m.line_text).length,
+              })),
+            })),
+            total_files: astRes.total_files || 0,
+            total_matches: astRes.total_matches || 0,
+            duration_ms: astRes.duration_ms || 0,
+            limit_hit: false,
+          };
+        } else {
+          res = await invoke<SearchResponse>("search_in_files", {
+            options: {
+              query: trimmed,
+              roots,
+              is_case_sensitive: isCaseSensitive,
+              is_whole_word: isWholeWord,
+              is_regex: isRegex,
+              include_pattern: includePattern ? includePattern : null,
+              exclude_pattern: excludePattern ? excludePattern : null,
+              max_results: 1000,
+            },
+          });
+        }
 
         // Only commit state if this request is still the latest one
         if (currentRequestId === searchRequestIdRef.current) {
@@ -440,7 +471,43 @@ export const SearchPane = React.memo(function SearchPane({
     <div className={styles.searchPane} aria-label="Search">
       {/* Top Header */}
       <div className={styles.searchHeader}>
-        <span className={styles.searchTitle}>SEARCH</span>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <span className={styles.searchTitle}>SEARCH</span>
+          <div style={{ display: "flex", gap: "4px", backgroundColor: "var(--pm-bg-subtle, rgba(0,0,0,0.05))", padding: "2px", borderRadius: "4px" }}>
+            <button
+              style={{
+                fontSize: "10px",
+                padding: "2px 6px",
+                borderRadius: "3px",
+                border: "none",
+                cursor: "pointer",
+                backgroundColor: searchMode === "text" ? "var(--pm-accent, #0078d4)" : "transparent",
+                color: searchMode === "text" ? "#ffffff" : "var(--pm-fg-muted, #888)",
+                fontWeight: 600,
+              }}
+              onClick={() => setSearchMode("text")}
+              title="Standard Grep Text Search"
+            >
+              Text
+            </button>
+            <button
+              style={{
+                fontSize: "10px",
+                padding: "2px 6px",
+                borderRadius: "3px",
+                border: "none",
+                cursor: "pointer",
+                backgroundColor: searchMode === "ast-grep" ? "var(--pm-accent, #0078d4)" : "transparent",
+                color: searchMode === "ast-grep" ? "#ffffff" : "var(--pm-fg-muted, #888)",
+                fontWeight: 600,
+              }}
+              onClick={() => setSearchMode("ast-grep")}
+              title="AST Structural Code Search (ast-grep)"
+            >
+              ast-grep AST
+            </button>
+          </div>
+        </div>
         <div className={styles.headerActions}>
           <button
             className={styles.headerButton}
@@ -483,7 +550,11 @@ export const SearchPane = React.memo(function SearchPane({
               ref={searchInputRef}
               className={styles.textInput}
               type="text"
-              placeholder="Search"
+              placeholder={
+                searchMode === "ast-grep"
+                  ? "ast-grep pattern (e.g. format!($MSG) or if ($COND) { $BODY })"
+                  : "Search"
+              }
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => {

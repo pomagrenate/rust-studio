@@ -41,6 +41,14 @@ export interface DebugVariable {
   value: string;
 }
 
+export interface BreakpointItem {
+  id: string;
+  file: string;
+  line: number;
+  enabled: boolean;
+  condition?: string;
+}
+
 export interface DebugStateChange {
   isRunning: boolean;
   isPaused: boolean;
@@ -57,7 +65,7 @@ export interface DebugPanelProps {
 }
 
 export const DebugPanel = React.memo(function DebugPanel({ onClose, onNavigateToFile, onDebugStateChange, workspaceRoot }: DebugPanelProps) {
-  const [activeTab, setActiveTab] = useState<"debugger" | "console">("debugger");
+  const [activeTab, setActiveTab] = useState<"debugger" | "console" | "breakpoints">("debugger");
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [selectedFrameId, setSelectedFrameId] = useState<number>(0);
@@ -69,6 +77,10 @@ export const DebugPanel = React.memo(function DebugPanel({ onClose, onNavigateTo
 
   const [frames, setFrames] = useState<StackFrame[]>([]);
   const [variables, setVariables] = useState<DebugVariable[]>([]);
+  const [breakpoints, setBreakpoints] = useState<BreakpointItem[]>([
+    { id: "bp-1", file: "src/main.rs", line: 24, enabled: true },
+    { id: "bp-2", file: "src/buffer/mod.rs", line: 42, enabled: true },
+  ]);
 
   // Step-through simulation interval ref
   const stepIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -395,6 +407,12 @@ export const DebugPanel = React.memo(function DebugPanel({ onClose, onNavigateTo
             >
               <span>Console</span>
             </button>
+            <button
+              className={`${styles.subTab} ${activeTab === "breakpoints" ? styles.subTabActive : ""}`}
+              onClick={() => setActiveTab("breakpoints")}
+            >
+              <span>Breakpoints ({breakpoints.filter(b => b.enabled).length})</span>
+            </button>
           </div>
         </div>
 
@@ -530,10 +548,67 @@ export const DebugPanel = React.memo(function DebugPanel({ onClose, onNavigateTo
           <button
             className={styles.actionToolBtn}
             title="View Breakpoints (Ctrl+Shift+F8)"
-            onClick={() => {}}
+            onClick={() => setActiveTab("breakpoints")}
           >
             <VscDebugBreakpointLog color="#cf222e" />
           </button>
+
+        {/* Breakpoints Management View */}
+        {activeTab === "breakpoints" && (
+          <div className={styles.consoleContainer}>
+            <div className={styles.paneHeader} style={{ justifyContent: "space-between", padding: "8px 12px", borderBottom: "1px solid var(--pm-border, #d0d7de)" }}>
+              <span style={{ fontWeight: 600 }}>Active Breakpoints ({breakpoints.length})</span>
+              <button
+                className={styles.cardActionBtn}
+                title="Clear All Breakpoints"
+                onClick={() => setBreakpoints([])}
+                style={{ fontSize: "11px", padding: "2px 8px" }}
+              >
+                Clear All
+              </button>
+            </div>
+            <div className={styles.consoleLogs} style={{ padding: "8px 12px" }}>
+              {breakpoints.length === 0 ? (
+                <div className={styles.emptyState}>No breakpoints set</div>
+              ) : (
+                breakpoints.map((bp) => (
+                  <div
+                    key={bp.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                      padding: "6px 8px",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                      marginBottom: "4px",
+                      backgroundColor: "var(--pm-bg-subtle, rgba(0,0,0,0.02))",
+                    }}
+                    onClick={() => onNavigateToFile?.(bp.file, bp.line, 1)}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={bp.enabled}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        setBreakpoints((prev) =>
+                          prev.map((b) => (b.id === bp.id ? { ...b, enabled: e.target.checked } : b))
+                        );
+                      }}
+                    />
+                    <VscDebugBreakpointLog color={bp.enabled ? "#cf222e" : "#8c8c8c"} size={14} />
+                    <span style={{ fontWeight: 500, fontFamily: "monospace" }}>{bp.file}:{bp.line}</span>
+                    {bp.condition && (
+                      <span style={{ color: "var(--pm-fg-muted, #57606a)", fontSize: "11px" }}>
+                        Condition: {bp.condition}
+                      </span>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
           <button
             className={styles.actionToolBtn}
             title="Clear Console Buffer"
