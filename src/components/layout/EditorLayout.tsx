@@ -94,6 +94,42 @@ export function EditorLayout({ initialWorkspace, onCloseWorkspace }: EditorLayou
   });
   const [isResizingSidebar, setIsResizingSidebar] = useState(false);
 
+  const [bottomPanelHeight, setBottomPanelHeight] = useState<number>(() => {
+    const saved = localStorage.getItem('pm-bottom-panel-height');
+    return saved ? Math.max(120, Math.min(window.innerHeight * 0.8, Number(saved))) : 280;
+  });
+  const [isResizingBottomPanel, setIsResizingBottomPanel] = useState(false);
+
+  const handleBottomPanelResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizingBottomPanel(true);
+    const startY = e.clientY;
+    const startHeight = bottomPanelHeight;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const deltaY = startY - moveEvent.clientY;
+      const newHeight = Math.max(120, Math.min(window.innerHeight * 0.8, startHeight + deltaY));
+      setBottomPanelHeight(newHeight);
+    };
+
+    const onMouseUp = (upEvent: MouseEvent) => {
+      setIsResizingBottomPanel(false);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      const deltaY = startY - upEvent.clientY;
+      const finalHeight = Math.max(120, Math.min(window.innerHeight * 0.8, startHeight + deltaY));
+      localStorage.setItem('pm-bottom-panel-height', finalHeight.toString());
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  };
+
+  const handleResetBottomPanelHeight = () => {
+    setBottomPanelHeight(280);
+    localStorage.setItem('pm-bottom-panel-height', '280');
+  };
+
   // Git repository state for branch management
   const [gitRepo, setGitRepo] = useState<ISCMRepository | null>(null);
   const [gitBranches, setGitBranches] = useState<string[]>([]);
@@ -389,7 +425,7 @@ export function EditorLayout({ initialWorkspace, onCloseWorkspace }: EditorLayou
     setActiveBottomTool('problems');
   }, [workspaceRoots, applyClippyWorkspaceFix, fileContents, loadFileContentIfNeeded, setActiveBottomTool]);
 
-  const handleOpenFileInActiveGroup = useCallback(async (rawPath: string, isPermanent = false, targetGroupId = activeGroupId) => {
+  const handleOpenFileInActiveGroup = useCallback(async (rawPath: string, isPermanent = false, targetGroupId = activeGroupId, line?: number, col?: number) => {
     if (!rawPath) return;
 
     let path = rawPath.replace(/\\/g, "/");
@@ -411,11 +447,13 @@ export function EditorLayout({ initialWorkspace, onCloseWorkspace }: EditorLayou
             openFiles: newOpen,
             activeFile: path,
             previewFile: group.previewFile === path ? null : group.previewFile,
+            activeCursorLine: line,
+            activeCursorCol: col,
           };
         }
 
         if (newOpen.includes(path)) {
-          return { ...group, activeFile: path };
+          return { ...group, activeFile: path, activeCursorLine: line, activeCursorCol: col };
         }
 
         const newPreview = group.previewFile;
@@ -426,7 +464,7 @@ export function EditorLayout({ initialWorkspace, onCloseWorkspace }: EditorLayou
         } else {
           newOpen.push(path);
         }
-        return { ...group, openFiles: newOpen, activeFile: path, previewFile: path };
+        return { ...group, openFiles: newOpen, activeFile: path, previewFile: path, activeCursorLine: line, activeCursorCol: col };
       });
     });
     
@@ -882,7 +920,7 @@ export function EditorLayout({ initialWorkspace, onCloseWorkspace }: EditorLayou
     }
   };
 
-  const runCargoBuildCommand = useCallback(async (cmd: "build" | "run" | "test" | "check", profile = "dev") => {
+  const runCargoBuildCommand = useCallback(async (cmd: "build" | "run" | "test" | "check" | "clippy", profile = "dev") => {
     if (!workspaceRoots[0]) return;
     const buildId = `build-${Date.now()}`;
     const pkgName = workspaceRoots[0].split(/[/\\]/).pop() || "project";
@@ -1162,9 +1200,24 @@ export function EditorLayout({ initialWorkspace, onCloseWorkspace }: EditorLayou
           onRunDebug={() => {
             setActiveBottomTool(prev => prev === 'debug' ? null : 'debug');
           }}
-          onCargoCheck={() => workspaceRoots[0] && runCheck(workspaceRoots[0])}
-          onCargoClippy={() => workspaceRoots[0] && runClippy(workspaceRoots[0])}
-          onClippyAutoFix={handleClippyAutoFix}
+          onCargoCheck={() => {
+            if (workspaceRoots[0]) {
+              runCheck(workspaceRoots[0]);
+              runCargoBuildCommand("check", "dev");
+            }
+          }}
+          onCargoClippy={() => {
+            if (workspaceRoots[0]) {
+              runClippy(workspaceRoots[0]);
+              runCargoBuildCommand("clippy", "dev");
+            }
+          }}
+          onClippyAutoFix={() => {
+            handleClippyAutoFix();
+            if (workspaceRoots[0]) {
+              runCargoBuildCommand("clippy", "dev");
+            }
+          }}
           onOpenSearchEverywhere={() => setIsSearchEverywhereOpen(true)}
           isCodeWikiOpen={isCodeWikiOpen}
           onToggleCodeWiki={() => setIsCodeWikiOpen(prev => !prev)}
@@ -1330,136 +1383,127 @@ export function EditorLayout({ initialWorkspace, onCloseWorkspace }: EditorLayou
             </div>
           </div>
 
-          {activeBottomTool === 'build' && (
-            <div className={styles.terminalPanelWrapper}>
-              <CargoBuildPanel 
-                buildRecords={buildRecords}
-                activeBuildId={activeBuildId}
-                onSelectBuild={(id: string) => setActiveBuildId(id)}
-                onRerunBuild={() => runCargoBuildCommand("build", "dev")}
-                onStopBuild={() => {}}
-                onClearBuilds={() => setBuildRecords([])}
-                onClose={() => setActiveBottomTool(null)}
+          {activeBottomTool && (
+            <div className={styles.terminalPanelWrapper} style={{ height: bottomPanelHeight }}>
+              <div 
+                className={`${styles.bottomPanelResizer} ${isResizingBottomPanel ? styles.isResizing : ''}`}
+                onMouseDown={handleBottomPanelResizeStart}
+                onDoubleClick={handleResetBottomPanelHeight}
+                title="Drag to resize bottom panel (Double click to reset height)"
               />
-            </div>
-          )}
 
-          {activeBottomTool === 'problems' && (
-            <div className={styles.terminalPanelWrapper}>
-              <ProblemsPanel 
-                activeFile={activeFile}
-                workspaceRoot={workspaceRoots[0]}
-                workspaceDiagnostics={workspaceDiagnostics}
-                diagnostics={cargoDiagnostics}
-                lspDiagnostics={lspDiagnosticsMap}
-                onOpenFile={(filePath) => {
-                  handleOpenFileInActiveGroup(filePath, true);
-                }}
-                onNavigateToProblem={(filePath, _line, _col) => {
-                  handleOpenFileInActiveGroup(filePath, true);
-                }}
-                onClose={() => setActiveBottomTool(null)}
-              />
-            </div>
-          )}
+              {activeBottomTool === 'build' && (
+                <CargoBuildPanel 
+                  buildRecords={buildRecords}
+                  activeBuildId={activeBuildId}
+                  onSelectBuild={(id: string) => setActiveBuildId(id)}
+                  onRerunBuild={() => runCargoBuildCommand("build", "dev")}
+                  onStopBuild={() => {}}
+                  onClearBuilds={() => setBuildRecords([])}
+                  onClose={() => setActiveBottomTool(null)}
+                />
+              )}
 
-          {activeBottomTool === 'terminal' && (
-            <div className={styles.terminalPanelWrapper}>
-              <BottomPanel 
-                onClose={() => setActiveBottomTool(null)}
-                cwd={workspaceRoots[0]}
-                activeTab={terminalTab}
-                onTabChange={(tab) => setTerminalTab(tab)}
-                diagnostics={cargoDiagnostics}
-                outputLogs={cargoOutputLogs}
-                onNavigateToProblem={(filePath) => {
-                  handleOpenFileInActiveGroup(filePath, true);
-                }}
-              />
-            </div>
-          )}
+              {activeBottomTool === 'problems' && (
+                <ProblemsPanel 
+                  activeFile={activeFile}
+                  workspaceRoot={workspaceRoots[0]}
+                  workspaceDiagnostics={workspaceDiagnostics}
+                  diagnostics={cargoDiagnostics}
+                  lspDiagnostics={lspDiagnosticsMap}
+                  onOpenFile={(filePath) => {
+                    handleOpenFileInActiveGroup(filePath, true);
+                  }}
+                  onNavigateToProblem={(filePath, line, col) => {
+                    handleOpenFileInActiveGroup(filePath, true, activeGroupId, line, col);
+                  }}
+                  onClose={() => setActiveBottomTool(null)}
+                />
+              )}
 
-          {activeBottomTool === 'debug' && (
-            <div className={styles.terminalPanelWrapper}>
-              <DebugPanel 
-                workspaceRoot={workspaceRoots[0]}
-                onNavigateToFile={(filePath, line, _col) => {
-                  handleOpenFileInActiveGroup(filePath, true);
-                  setDebugActiveFile(filePath);
-                  setDebugActiveLine(line - 1);
-                }}
-                onDebugStateChange={(state) => {
-                  setDebugIsRunning(state.isRunning);
-                  setDebugIsPaused(state.isPaused);
-                  if (state.activeFile) {
-                    setDebugActiveFile(state.activeFile);
-                    handleOpenFileInActiveGroup(state.activeFile, true);
-                  }
-                  if (state.activeLine !== undefined) {
-                    setDebugActiveLine(state.activeLine);
-                  }
-                  if (state.inlineValues) {
-                    setDebugInlineValues(state.inlineValues);
-                  }
-                  if (!state.isRunning) {
-                    setDebugActiveFile(undefined);
-                    setDebugActiveLine(undefined);
-                    setDebugInlineValues({});
-                  }
-                }}
-                onClose={() => setActiveBottomTool(null)}
-              />
-            </div>
-          )}
+              {activeBottomTool === 'terminal' && (
+                <BottomPanel 
+                  onClose={() => setActiveBottomTool(null)}
+                  cwd={workspaceRoots[0]}
+                  activeTab={terminalTab}
+                  onTabChange={(tab) => setTerminalTab(tab)}
+                  diagnostics={cargoDiagnostics}
+                  outputLogs={cargoOutputLogs}
+                  onNavigateToProblem={(filePath, line, col) => {
+                    handleOpenFileInActiveGroup(filePath, true, activeGroupId, line, col);
+                  }}
+                />
+              )}
 
-          {activeBottomTool === 'tests' && (
-            <div className={styles.terminalPanelWrapper}>
-              <TestExplorer 
-                workspaceRoot={workspaceRoots[0]}
-                onNavigateToFile={(filePath, _line, _col) => {
-                  handleOpenFileInActiveGroup(filePath, true);
-                }}
-                onDebugTest={(_testName, filePath, _line) => {
-                  handleOpenFileInActiveGroup(filePath, true);
-                  setActiveBottomTool('debug');
-                }}
-                onClose={() => setActiveBottomTool(null)}
-              />
-            </div>
-          )}
+              {activeBottomTool === 'debug' && (
+                <DebugPanel 
+                  workspaceRoot={workspaceRoots[0]}
+                  onNavigateToFile={(filePath, line, _col) => {
+                    handleOpenFileInActiveGroup(filePath, true);
+                    setDebugActiveFile(filePath);
+                    setDebugActiveLine(line - 1);
+                  }}
+                  onDebugStateChange={(state) => {
+                    setDebugIsRunning(state.isRunning);
+                    setDebugIsPaused(state.isPaused);
+                    if (state.activeFile) {
+                      setDebugActiveFile(state.activeFile);
+                      handleOpenFileInActiveGroup(state.activeFile, true);
+                    }
+                    if (state.activeLine !== undefined) {
+                      setDebugActiveLine(state.activeLine);
+                    }
+                    if (state.inlineValues) {
+                      setDebugInlineValues(state.inlineValues);
+                    }
+                    if (!state.isRunning) {
+                      setDebugActiveFile(undefined);
+                      setDebugActiveLine(undefined);
+                      setDebugInlineValues({});
+                    }
+                  }}
+                  onClose={() => setActiveBottomTool(null)}
+                />
+              )}
 
-          {activeBottomTool === 'hierarchy' && (
-            <div className={styles.terminalPanelWrapper}>
-              <HierarchyPanel 
-                workspaceRoot={workspaceRoots[0]}
-                onNavigateToFile={(filePath, _line, _col) => {
-                  handleOpenFileInActiveGroup(filePath, true);
-                }}
-                onDebugTest={(_symName, filePath, _line) => {
-                  handleOpenFileInActiveGroup(filePath, true);
-                  setActiveBottomTool('debug');
-                }}
-                onClose={() => setActiveBottomTool(null)}
-              />
+              {activeBottomTool === 'tests' && (
+                <TestExplorer 
+                  workspaceRoot={workspaceRoots[0]}
+                  onNavigateToFile={(filePath, _line, _col) => {
+                    handleOpenFileInActiveGroup(filePath, true);
+                  }}
+                  onDebugTest={(_testName, filePath, _line) => {
+                    handleOpenFileInActiveGroup(filePath, true);
+                    setActiveBottomTool('debug');
+                  }}
+                  onClose={() => setActiveBottomTool(null)}
+                />
+              )}
+
+              {activeBottomTool === 'hierarchy' && (
+                <HierarchyPanel 
+                  workspaceRoot={workspaceRoots[0]}
+                  onNavigateToFile={(filePath, _line, _col) => {
+                    handleOpenFileInActiveGroup(filePath, true);
+                  }}
+                  onDebugTest={(_symName, filePath, _line) => {
+                    handleOpenFileInActiveGroup(filePath, true);
+                    setActiveBottomTool('debug');
+                  }}
+                  onClose={() => setActiveBottomTool(null)}
+                />
+              )}
             </div>
           )}
         </main>
 
         {isScmOpen && (
-          <div className={styles.sidebarWrapper} style={{ width: sidebarWidth, borderLeft: '1px solid var(--pm-border-default, #282b33)', borderRight: 'none' }}>
-            <div 
-              className={`${styles.sidebarResizer} ${isResizingSidebar ? styles.isResizing : ''}`}
-              style={{ left: -2, right: 'auto' }}
-              onMouseDown={handleSidebarResizeStart}
-              onDoubleClick={handleSidebarResetWidth}
-              title="Drag to resize sidebar (Double click to reset)"
-            />
-            <SourceControlPane
-              workspaceRoots={workspaceRoots}
-              onOpenFile={(path) => handleOpenFileInActiveGroup(path, true)}
-              onStatusChange={(total) => setScmBadgeCount(total)}
-            />
-          </div>
+          <SourceControlPane
+            workspaceRoots={workspaceRoots}
+            onOpenFile={(path) => handleOpenFileInActiveGroup(path, true)}
+            onStatusChange={(total) => setScmBadgeCount(total)}
+            onClose={() => setIsScmOpen(false)}
+          />
         )}
 
         {isSearchDockedRight && (

@@ -23,7 +23,7 @@ fn calculate() {
     let file_path = root.join("main.rs");
     fs::write(&file_path, rs_content).unwrap();
 
-    let report = run_in_process_scan(root);
+    let report = run_in_process_scan(root, None);
 
     assert!(report.success);
     assert_eq!(report.scanned_files_count, 1);

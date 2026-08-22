@@ -11,7 +11,6 @@ import { useTextMeasurement } from "../../hooks/useTextMeasurement";
 import { useRopeBuffer } from "../../hooks/useRopeBuffer";
 import { useCodeActions } from "../../hooks/useCodeActions";
 import { lspCompletion, pathToUri, lspSyncDocument } from "../../ipc/lsp";
-import { undoEdit, redoEdit } from "../../ipc/buffer";
 import { ViewModel } from "./viewModel/ViewModel";
 import { commandRegistry } from "./commands/CommandRegistry";
 import { MouseHandler } from "./controller/MouseHandler";
@@ -206,8 +205,14 @@ export function EditorView({
     if (executionLine !== undefined && containerRef.current) {
       const targetScrollTop = Math.max(0, executionLine * LINE_HEIGHT_PX - viewportHeight / 2);
       containerRef.current.scrollTo({ top: targetScrollTop, behavior: "smooth" });
+    } else if (activeLine !== undefined && activeLine >= 0 && containerRef.current) {
+      const targetScrollTop = Math.max(0, activeLine * LINE_HEIGHT_PX - viewportHeight / 3);
+      containerRef.current.scrollTo({ top: targetScrollTop, behavior: "smooth" });
+      if (viewModelRef.current) {
+        viewModelRef.current.setCursorPosition({ line: activeLine, column: activeCol || 0 });
+      }
     }
-  }, [executionLine, viewportHeight]);
+  }, [executionLine, activeLine, activeCol, viewportHeight]);
 
   const { measureText } = useTextMeasurement({
     fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, Monaco, Consolas, monospace",
@@ -216,15 +221,48 @@ export function EditorView({
     charWidth: 8.4,
   });
 
+  // Synchronous text model buffer ref (VS Code TextModel pattern)
+  const bufferRef = useRef<{ lines: string[]; activeLine: number; activeCol: number }>({
+    lines: lines || [],
+    activeLine: activeLine || 0,
+    activeCol: activeCol || 0,
+  });
+
+  const undoStackRef = useRef<Array<{ lines: string[]; line: number; col: number }>>([]);
+  const redoStackRef = useRef<Array<{ lines: string[]; line: number; col: number }>>([]);
+  const prevFilePathRef = useRef<string | undefined>(filePath);
+
+  // Local state for view updates
+  const [localLines, setLocalLines] = useState<string[]>(lines || []);
+  const [localActiveLine, setLocalActiveLine] = useState(activeLine);
+  const [localActiveCol, setLocalActiveCol] = useState(activeCol);
+
+  // Synchronize buffer with props only on active file change or when undo stack is clean
+  useEffect(() => {
+    if (filePath !== prevFilePathRef.current) {
+      prevFilePathRef.current = filePath;
+      undoStackRef.current = [];
+      redoStackRef.current = [];
+      bufferRef.current = {
+        lines: lines || [],
+        activeLine: activeLine || 0,
+        activeCol: activeCol || 0,
+      };
+      setLocalLines(lines || []);
+      setLocalActiveLine(activeLine || 0);
+      setLocalActiveCol(activeCol || 0);
+    } else if (undoStackRef.current.length === 0) {
+      bufferRef.current.lines = lines || [];
+      setLocalLines(lines || []);
+    }
+  }, [filePath, lines, activeLine, activeCol]);
+
   // Integrate rope buffer when enabled
   const ropeBuffer = useRopeBuffer(enableRopeBuffer ? filePath : undefined);
-  // Memoize so the array reference only changes when the content actually changes,
-  // preventing downstream effects from firing on every parent render.
-  const effectiveLines = useMemo(
-    () => (enableRopeBuffer && ropeBuffer && ropeBuffer.lines.length > 0) ? ropeBuffer.lines : (lines || []),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [enableRopeBuffer, ropeBuffer?.lines, lines]
-  );
+  
+  const effectiveLines = (enableRopeBuffer && ropeBuffer && ropeBuffer.lines.length > 0)
+    ? ropeBuffer.lines
+    : localLines;
   const effectiveLineCount = (enableRopeBuffer && ropeBuffer && ropeBuffer.lineCount > 0)
     ? ropeBuffer.lineCount
     : effectiveLines.length;
@@ -365,23 +403,23 @@ export function EditorView({
     });
 
   useEffect(() => {
-    const activeLineText = effectiveLines[activeLine] || "";
-    const textBeforeCursor = activeLineText.slice(0, activeCol);
+    const activeLineText = effectiveLines[localActiveLine] || "";
+    const textBeforeCursor = activeLineText.slice(0, localActiveCol);
     const normalizedText = textBeforeCursor.replace(/\t/g, "    ");
     const width = measureText(normalizedText);
     setCursorX(width);
-  }, [activeCol, activeLine, effectiveLines, measureText]);
+  }, [localActiveCol, localActiveLine, effectiveLines, measureText]);
 
   useEffect(() => {
     if (!containerRef.current) return;
-    const lineY = activeLine * LINE_HEIGHT_PX;
+    const lineY = localActiveLine * LINE_HEIGHT_PX;
     const st = containerRef.current.scrollTop;
     if (lineY < st) {
       containerRef.current.scrollTop = lineY;
     } else if (lineY > st + viewportHeight - LINE_HEIGHT_PX * 2) {
       containerRef.current.scrollTop = lineY - viewportHeight + LINE_HEIGHT_PX * 2;
     }
-  }, [activeLine, viewportHeight]);
+  }, [localActiveLine, viewportHeight]);
 
   // Memoize visible slice — new array reference only when startLine/endLine or content changes
   const visibleLines = useMemo(
@@ -430,8 +468,8 @@ export function EditorView({
         return tokens;
       });
 
-      setTokenCache((prev) => {
-        const next = { ...prev };
+      setTokenCache(() => {
+        const next: Record<number, number[]> = {};
         fallbackTokens.forEach((tokens, i) => {
           next[startLine + i] = tokens;
         });
@@ -446,8 +484,8 @@ export function EditorView({
       invoke<number[][]>("tokenize_lines", { lines: visibleLines })
         .then((tokenArrays) => {
           if (!isMounted) return;
-          setTokenCache((prev) => {
-            const next = { ...prev };
+          setTokenCache(() => {
+            const next: Record<number, number[]> = {};
             tokenArrays.forEach((tokens, i) => {
               next[startLine + i] = tokens;
             });
@@ -506,8 +544,8 @@ export function EditorView({
     const y = e.clientY - rect.top + scrollTop;
     const line = Math.floor(y / LINE_HEIGHT_PX);
 
-    if (line >= 0 && line < lines.length && line !== activeLine) {
-      const lineText = lines[line] || "";
+    if (line >= 0 && line < effectiveLines.length && line !== activeLine) {
+      const lineText = effectiveLines[line] || "";
       const x = e.clientX - rect.left - GUTTER_TOTAL_OFFSET;
       const col = Math.max(0, Math.min(Math.round(x / 8.1), lineText.length));
 
@@ -526,11 +564,21 @@ export function EditorView({
   }, []);
 
   // Request completions from LSP
-  const requestCompletions = useCallback(async () => {
+  const requestCompletions = useCallback(async (isManualTrigger = false) => {
     if (!filePath) return;
     
+    const lineText = effectiveLines[activeLine] || "";
+    const charBeforeCursor = activeCol > 0 ? lineText[activeCol - 1] : "";
+    const { prefix } = getWordPrefix(lineText, activeCol);
+    const isTriggerChar = [".", ":", "#", "$"].includes(charBeforeCursor);
+
+    // Don't auto-popup on empty lines or spaces unless manually triggered (Ctrl+Space) or after a trigger char or active word prefix
+    if (!isManualTrigger && !isTriggerChar && !prefix) {
+      setCompletionOpen(false);
+      return;
+    }
+    
     const uri = pathToUri(filePath);
-    const { prefix } = getWordPrefix(effectiveLines[activeLine] || "", activeCol);
     
     try {
       // Use the provided onLspCompletion if available, otherwise fall back to direct IPC call
@@ -568,7 +616,7 @@ export function EditorView({
     
     const delay = triggerInstant ? 0 : 75;
     completionTimeoutRef.current = setTimeout(() => {
-      requestCompletions();
+      requestCompletions(triggerInstant);
     }, delay);
   }, [requestCompletions]);
 
@@ -651,7 +699,7 @@ export function EditorView({
         e.preventDefault();
         handleCompletionNavigate(e.key === "ArrowUp" ? "up" : "down");
         return;
-      } else if (e.key === "Enter" || e.key === "Tab") {
+      } else if (e.key === "Tab") {
         e.preventDefault();
         if (completionItems[selectedIndex]) {
           handleCompletionSelect(completionItems[selectedIndex]);
@@ -743,76 +791,49 @@ export function EditorView({
       return;
     }
 
-    // Undo/Redo shortcuts (fallback if not in command registry)
+    // In-memory Undo / Redo shortcuts for zero-latency instant editing
     if (e.ctrlKey && e.key.toLowerCase() === "z" && !e.shiftKey && !e.altKey) {
       e.preventDefault();
-      if (filePath) {
-        undoEdit(filePath)
-          .then(({ edit, cursor }) => {
-            // Apply the inverse edit to the lines
-            const newLines = [...lines];
-            const { start, end } = edit.range;
-            
-            // Delete the affected range
-            if (start.line === end.line) {
-              const line = newLines[start.line];
-              newLines[start.line] = line.slice(0, start.column) + line.slice(end.column);
-            } else {
-              // Multi-line delete (simplified)
-              const firstLine = newLines[start.line].slice(0, start.column);
-              const lastLine = newLines[end.line].slice(end.column);
-              newLines[start.line] = firstLine + lastLine;
-              for (let i = start.line + 1; i <= end.line; i++) {
-                newLines.splice(start.line + 1, 1);
-              }
-            }
-            
-            // Restore cursor position
-            onLinesChange?.(newLines, cursor.line, cursor.column);
-          })
-          .catch(console.error);
+      const prev = undoStackRef.current.pop();
+      if (prev) {
+        redoStackRef.current.push({
+          lines: [...bufferRef.current.lines],
+          line: bufferRef.current.activeLine,
+          col: bufferRef.current.activeCol,
+        });
+        bufferRef.current = { lines: prev.lines, activeLine: prev.line, activeCol: prev.col };
+        setLocalLines(prev.lines);
+        setLocalActiveLine(prev.line);
+        setLocalActiveCol(prev.col);
+        onLinesChange?.(prev.lines, prev.line, prev.col);
       }
       return;
-    } else if ((e.ctrlKey && e.key.toLowerCase() === "y" && !e.shiftKey && !e.altKey) ||
-               (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "z" && !e.altKey)) {
+    } else if (
+      (e.ctrlKey && e.key.toLowerCase() === "y" && !e.shiftKey && !e.altKey) ||
+      (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "z" && !e.altKey)
+    ) {
       e.preventDefault();
-      if (filePath) {
-        redoEdit(filePath)
-          .then(({ edit, result }) => {
-            // Apply the redo edit
-            const newLines = [...lines];
-            const { start, end } = edit.range;
-            
-            if (start.line === end.line) {
-              const line = newLines[start.line];
-              newLines[start.line] = line.slice(0, start.column) + edit.new_text + line.slice(end.column);
-            } else {
-              // Multi-line insert (simplified)
-              const insertedLines = edit.new_text.split('\n');
-              const firstLine = newLines[start.line].slice(0, start.column) + insertedLines[0];
-              const lastLine = insertedLines[insertedLines.length - 1] + newLines[end.line].slice(end.column);
-              newLines[start.line] = firstLine;
-              for (let i = 1; i < insertedLines.length - 1; i++) {
-                newLines.splice(start.line + i, 0, insertedLines[i]);
-              }
-              if (insertedLines.length > 1) {
-                newLines[start.line + insertedLines.length - 1] = lastLine;
-              }
-            }
-            
-            // Move cursor to end of edit
-            onLinesChange?.(newLines, result.affected_range.end.line, result.affected_range.end.column);
-          })
-          .catch(console.error);
+      const next = redoStackRef.current.pop();
+      if (next) {
+        undoStackRef.current.push({
+          lines: [...bufferRef.current.lines],
+          line: bufferRef.current.activeLine,
+          col: bufferRef.current.activeCol,
+        });
+        bufferRef.current = { lines: next.lines, activeLine: next.line, activeCol: next.col };
+        setLocalLines(next.lines);
+        setLocalActiveLine(next.line);
+        setLocalActiveCol(next.col);
+        onLinesChange?.(next.lines, next.line, next.col);
       }
       return;
     }
     
     if (!onLinesChange) return;
 
-    let newLines = [...lines];
-    let nLine = activeLine;
-    let nCol = activeCol;
+    let newLines = [...bufferRef.current.lines];
+    let nLine = bufferRef.current.activeLine;
+    let nCol = bufferRef.current.activeCol;
     let isTriggerChar = false;
 
     if (e.ctrlKey && e.key.toLowerCase() === "f" && !e.shiftKey && !e.altKey) {
@@ -840,7 +861,7 @@ export function EditorView({
       e.preventDefault();
     } else if (e.key === "ArrowRight") {
       if (nCol < newLines[nLine].length) nCol += 1;
-      else if (nLine < lines.length - 1) {
+      else if (nLine < newLines.length - 1) {
         nLine += 1;
         nCol = 0;
       }
@@ -852,34 +873,63 @@ export function EditorView({
       }
       e.preventDefault();
     } else if (e.key === "ArrowDown") {
-      if (nLine < lines.length - 1) {
+      if (nLine < newLines.length - 1) {
         nLine += 1;
         nCol = Math.min(nCol, newLines[nLine].length);
       }
       e.preventDefault();
     } else if (e.key === "Backspace") {
+      const line = newLines[nLine] || "";
       if (nCol > 0) {
-        const line = newLines[nLine];
-        newLines[nLine] = line.slice(0, nCol - 1) + line.slice(nCol);
-        nCol -= 1;
+        const before = line.slice(0, nCol);
+        // Smart indentation backspace: if text before cursor is pure whitespace, delete full 4-space tab stop
+        if (/^\s+$/.test(before)) {
+          const deleteCount = before.length % 4 || 4;
+          newLines[nLine] = line.slice(0, nCol - deleteCount) + line.slice(nCol);
+          nCol -= deleteCount;
+        } else {
+          newLines[nLine] = line.slice(0, nCol - 1) + line.slice(nCol);
+          nCol -= 1;
+        }
       } else if (nLine > 0) {
-        const prevLen = newLines[nLine - 1].length;
-        newLines[nLine - 1] += newLines[nLine];
-        newLines.splice(nLine, 1);
-        nLine -= 1;
-        nCol = prevLen;
+        // Line merge: if current line is blank/whitespace-only, remove line cleanly without attaching trailing spaces to previous line
+        const currentTrimmed = line.trim();
+        const prevLine = newLines[nLine - 1] || "";
+        if (currentTrimmed === "") {
+          newLines.splice(nLine, 1);
+          nLine -= 1;
+          nCol = prevLine.length;
+        } else {
+          const prevLen = prevLine.length;
+          newLines[nLine - 1] += line.trimStart();
+          newLines.splice(nLine, 1);
+          nLine -= 1;
+          nCol = prevLen;
+        }
       }
       e.preventDefault();
       closeCompletion();
     } else if (e.key === "Enter") {
-      const line = newLines[nLine];
+      const line = newLines[nLine] || "";
       const before = line.slice(0, nCol);
       const after = line.slice(nCol);
+
+      // Inherit leading indentation from current line
+      const indentMatch = line.match(/^(\s*)/);
+      let indent = indentMatch ? indentMatch[1] : "";
+
+      // Auto-indent increase if line ends with '{', '(', '[', or ':'
+      const trimmedBefore = before.trimEnd();
+      if (/[{(\[:]$/.test(trimmedBefore)) {
+        indent += "    ";
+      }
+
       newLines[nLine] = before;
-      newLines.splice(nLine + 1, 0, after);
+      newLines.splice(nLine + 1, 0, indent + after);
       nLine += 1;
-      nCol = 0;
+      nCol = indent.length;
       e.preventDefault();
+      closeCompletion();
     } else if (e.key === "Tab") {
       e.preventDefault();
       const tabSpaces = "    ";
@@ -940,6 +990,21 @@ export function EditorView({
       return;
     }
 
+    // Save snapshot for undo before committing edit mutation
+    undoStackRef.current.push({
+      lines: [...bufferRef.current.lines],
+      line: bufferRef.current.activeLine,
+      col: bufferRef.current.activeCol,
+    });
+    if (undoStackRef.current.length > 200) {
+      undoStackRef.current.shift();
+    }
+    redoStackRef.current = [];
+
+    bufferRef.current = { lines: newLines, activeLine: nLine, activeCol: nCol };
+    setLocalLines(newLines);
+    setLocalActiveLine(nLine);
+    setLocalActiveCol(nCol);
     onLinesChange(newLines, nLine, nCol);
     
     // Trigger completion after character insertion
@@ -1026,6 +1091,10 @@ export function EditorView({
     }
 
     const finalCol = Math.min(col, effectiveLines[clickedLine].length);
+    bufferRef.current.activeLine = clickedLine;
+    bufferRef.current.activeCol = finalCol;
+    setLocalActiveLine(clickedLine);
+    setLocalActiveCol(finalCol);
     onLinesChange(effectiveLines, clickedLine, finalCol);
   };
 
@@ -1144,8 +1213,10 @@ export function EditorView({
               <div
                 className={styles.cursor}
                 style={{
-                  top: `${(activeLine - startLine) * LINE_HEIGHT_PX + 1}px`,
-                  left: `${GUTTER_TOTAL_OFFSET + cursorX}px`,
+                  top: 0,
+                  left: 0,
+                  transform: `translate3d(${GUTTER_TOTAL_OFFSET + cursorX}px, ${(activeLine - startLine) * LINE_HEIGHT_PX + 1}px, 0)`,
+                  willChange: "transform",
                 }}
               />
             )}

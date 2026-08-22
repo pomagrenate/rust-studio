@@ -139,14 +139,29 @@
 
 /* ── Bottom Tool Panels (Build, Terminal, Problems, Debug...) ── */
 .terminalPanelWrapper {
-  height: 260px;
-  min-height: 150px;
-  max-height: 60%;
+  position: relative;
   flex-shrink: 0;
   width: 100%;
   border-top: 1px solid var(--pm-border-default, #282b33);
   background-color: var(--pm-bg-editor, #14161b);
   overflow: hidden;
+}
+
+.bottomPanelResizer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 5px;
+  cursor: row-resize;
+  z-index: 60;
+  user-select: none;
+  transition: background-color 0.15s ease;
+}
+
+.bottomPanelResizer:hover,
+.bottomPanelResizer.isResizing {
+  background-color: var(--pm-accent-rust, #f74c00);
 }
 
 /* ── Global Editor Toolbar Actions ── */

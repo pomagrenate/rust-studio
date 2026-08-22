@@ -59,6 +59,64 @@ pub struct CreateIssueParams {
     pub body: String,
     pub labels: Vec<String>,
 }
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct UserRepoItem {
+    pub name: String,
+    pub full_name: String,
+    pub clone_url: String,
+    pub is_private: bool,
+    pub description: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct GitHubUser {
+    pub login: String,
+    pub name: Option<String>,
+    pub avatar_url: String,
+    pub html_url: String,
+}
+
+pub fn format_octocrab_error(e: octocrab::Error) -> String {
+    let msg = e.to_string();
+    if msg.contains("401") || msg.contains("Bad credentials") || msg.contains("Requires authentication") {
+        "Authentication Failed (401): GitHub Personal Access Token is invalid or expired. Please re-authenticate.".to_string()
+    } else if msg.contains("403") || msg.contains("Resource not accessible") || msg.contains("Must have admin rights") {
+        format!("Access Denied (403): Token lacks required permission ({})", msg)
+    } else if msg.contains("404") {
+        "Repository Not Found (404): Verify repository URL and token access permissions.".to_string()
+    } else {
+        format!("GitHub API Error: {}", msg)
+    }
+}
+
+/// Live verification of a GitHub PAT against https://api.github.com/user
+#[tauri::command]
+pub async fn github_verify_token(token: Option<String>) -> Result<GitHubUser, String> {
+    let pat = match token {
+        Some(t) if !t.trim().is_empty() => t.trim().to_string(),
+        _ => get_github_token()
+            .map_err(|e| format!("Keyring error: {}", e))?
+            .ok_or_else(|| "No GitHub token found in OS keyring".to_string())?,
+    };
+
+    let client = Octocrab::builder()
+        .personal_token(pat)
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let user = client
+        .current()
+        .user()
+        .await
+        .map_err(format_octocrab_error)?;
+
+    Ok(GitHubUser {
+        login: user.login.clone(),
+        name: Some(user.login),
+        avatar_url: user.avatar_url.to_string(),
+        html_url: user.html_url.to_string(),
+    })
+}
 
 /// Initialize octocrab client with stored PAT
 async fn get_github_client() -> Result<Octocrab, GitHubApiError> {
@@ -92,7 +150,7 @@ pub async fn github_list_prs(repo_path: String) -> Result<Vec<PullRequest>, Stri
         .state(octocrab::params::State::All)
         .send()
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(format_octocrab_error)?;
     
     let mut result = Vec::new();
     let mut page = Some(prs);
@@ -140,7 +198,7 @@ pub async fn github_create_pr(repo_path: String, params: CreatePRParams) -> Resu
         .draft(params.draft)
         .send()
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(format_octocrab_error)?;
     
     Ok(PullRequest {
         number: new_pr.number,
@@ -176,7 +234,7 @@ pub async fn github_list_issues(repo_path: String) -> Result<Vec<Issue>, String>
         .state(octocrab::params::State::All)
         .send()
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(format_octocrab_error)?;
     
     let mut result = Vec::new();
     let mut page = Some(issues);
@@ -265,15 +323,6 @@ pub async fn github_get_repo_info(repo_path: String) -> Result<GitHubRepoInfo, S
     }
     
     Ok(repo_info)
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct UserRepoItem {
-    pub name: String,
-    pub full_name: String,
-    pub clone_url: String,
-    pub is_private: bool,
-    pub description: Option<String>,
 }
 
 /// List GitHub repositories for the authenticated user

@@ -19,6 +19,8 @@ export interface EditorGroup {
   openFiles: string[];
   activeFile?: string;
   previewFile: string | null;
+  activeCursorLine?: number;
+  activeCursorCol?: number;
 }
 
 interface EditorPaneGroupProps {
@@ -92,6 +94,15 @@ export const EditorPaneGroup = React.memo(function EditorPaneGroup({
   const [activeLine, setActiveLine] = useState(0);
   const [activeCol, setActiveCol] = useState(0);
   const [is3WayOpen, setIs3WayOpen] = useState(false);
+
+  React.useEffect(() => {
+    if (group.activeCursorLine !== undefined) {
+      setActiveLine(group.activeCursorLine);
+    }
+    if (group.activeCursorCol !== undefined) {
+      setActiveCol(group.activeCursorCol);
+    }
+  }, [group.activeCursorLine, group.activeCursorCol]);
 
   const handleEditorLinesChange = useCallback(
     (newLines: string[], nLine: number, nCol: number) => {

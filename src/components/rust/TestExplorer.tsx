@@ -20,7 +20,8 @@ import {
   VscChevronRight,
   VscChevronDown,
   VscChromeMinimize,
-  VscClearAll
+  VscClearAll,
+  VscCopy
 } from "react-icons/vsc";
 import styles from "./TestExplorer.module.css";
 
@@ -39,11 +40,52 @@ export interface SingleTestResult {
   stderr: string;
 }
 
+export interface AllTestResults {
+  results: Record<string, SingleTestResult>;
+  total_duration_ms: number;
+  full_output: string;
+}
+
 interface TestExplorerProps {
   workspaceRoot?: string;
   onNavigateToFile?: (filePath: string, line: number, column: number) => void;
   onDebugTest?: (testName: string, filePath: string, line: number) => void;
   onClose?: () => void;
+}
+
+function cleanTestOutput(rawOutput: string, testName?: string): string {
+  if (!rawOutput) return "";
+
+  const lines = rawOutput.split("\n");
+
+  const filtered = lines.filter((line) => {
+    const t = line.trim();
+    if (t === "running 0 tests") return false;
+    if (
+      t.startsWith(
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out"
+      )
+    )
+      return false;
+    return true;
+  });
+
+  const cleanedText = filtered.join("\n").trim();
+
+  if (testName) {
+    const relevantLines = filtered.filter(
+      (line) =>
+        line.includes(testName) ||
+        line.startsWith("     Running ") ||
+        line.startsWith("running ") ||
+        line.startsWith("test result:")
+    );
+    if (relevantLines.length > 0) {
+      return relevantLines.join("\n").trim();
+    }
+  }
+
+  return cleanedText || rawOutput;
 }
 
 export function TestExplorer({
@@ -151,13 +193,69 @@ export function TestExplorer({
     }
   };
 
-  // ── 3. Run All Tests ──
+  // ── 3. Run All Tests Batch ──
   const runAllTests = async () => {
     setIsRunningAll(true);
-    for (const test of discoveredTests) {
-      await runSingleTest(test);
+
+    // Mark all discovered tests as running
+    setTestResults((prev) => {
+      const next = { ...prev };
+      for (const t of discoveredTests) {
+        next[t.name] = {
+          name: t.name,
+          status: "running",
+          duration_ms: 0,
+          stdout: "Executing batch cargo test...",
+          stderr: "",
+        };
+      }
+      return next;
+    });
+
+    if (window.__TAURI_INTERNALS__) {
+      try {
+        const batchRes = await invoke<AllTestResults>("cargo_run_all_tests", {
+          projectPath: workspaceRoot || ".",
+        });
+
+        setTestResults((prev) => {
+          const next = { ...prev };
+          for (const test of discoveredTests) {
+            const found =
+              batchRes.results[test.name] ||
+              batchRes.results[test.module_path + "::" + test.name];
+
+            if (found) {
+              next[test.name] = {
+                ...found,
+                stdout: batchRes.full_output,
+              };
+            } else {
+              const isPassed = batchRes.full_output.includes(`test ${test.name} ... ok`);
+              const isFailed = batchRes.full_output.includes(`test ${test.name} ... FAILED`);
+
+              next[test.name] = {
+                name: test.name,
+                status: isPassed ? "passed" : isFailed ? "failed" : "passed",
+                duration_ms: batchRes.total_duration_ms,
+                stdout: batchRes.full_output,
+                stderr: "",
+              };
+            }
+          }
+          return next;
+        });
+      } catch (err) {
+        console.error("Run all tests batch failed:", err);
+      } finally {
+        setIsRunningAll(false);
+      }
+    } else {
+      for (const test of discoveredTests) {
+        await runSingleTest(test);
+      }
+      setIsRunningAll(false);
     }
-    setIsRunningAll(false);
   };
 
   // ── 4. Debug Single Test (CodeLLDB Integration) ──
@@ -408,21 +506,36 @@ export function TestExplorer({
           <div className={styles.outputHeader}>
             <span>Test Output {selectedTestName ? `— ${selectedTestName}` : ""}</span>
             {selectedResult && (
-              <button
-                className={styles.iconBtn}
-                title="Clear Output"
-                onClick={() => {
-                  if (selectedTestName) {
-                    setTestResults((prev) => {
-                      const next = { ...prev };
-                      delete next[selectedTestName];
-                      return next;
-                    });
-                  }
-                }}
-              >
-                <VscClearAll />
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                <button
+                  className={styles.iconBtn}
+                  title="Copy Output to Clipboard (Ctrl+C)"
+                  onClick={() => {
+                    const textToCopy = cleanTestOutput(
+                      selectedResult.stdout,
+                      selectedTestName || undefined
+                    );
+                    navigator.clipboard.writeText(textToCopy);
+                  }}
+                >
+                  <VscCopy />
+                </button>
+                <button
+                  className={styles.iconBtn}
+                  title="Clear Output"
+                  onClick={() => {
+                    if (selectedTestName) {
+                      setTestResults((prev) => {
+                        const next = { ...prev };
+                        delete next[selectedTestName];
+                        return next;
+                      });
+                    }
+                  }}
+                >
+                  <VscClearAll />
+                </button>
+              </div>
             )}
           </div>
 
@@ -433,7 +546,14 @@ export function TestExplorer({
               </div>
             ) : (
               <div>
-                {selectedResult.stdout && <div>{selectedResult.stdout}</div>}
+                {selectedResult.stdout && (
+                  <div>
+                    {cleanTestOutput(
+                      selectedResult.stdout,
+                      selectedTestName || undefined
+                    )}
+                  </div>
+                )}
                 {selectedResult.stderr && (
                   <div style={{ color: "#cf222e", marginTop: "8px" }}>
                     {selectedResult.stderr}

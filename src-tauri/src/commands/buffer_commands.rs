@@ -53,6 +53,13 @@ pub fn apply_edit(
     Ok(result)
 }
 
+#[derive(Debug, serde::Serialize)]
+pub struct VersionedLineRange {
+    pub version: u64,
+    pub start_line: usize,
+    pub lines: Vec<String>,
+}
+
 /// Get the content of a range of lines (0-indexed, inclusive).
 ///
 /// Called by the viewport renderer to fetch visible line content.
@@ -70,6 +77,29 @@ pub fn get_line_range(
 
     let doc = doc_arc.read();
     Ok(doc.buffer.lines_content(start_line, end_line + 1))
+}
+
+/// Get the content of a range of lines along with the document's current version counter.
+///
+/// Discards stale asynchronous range fetches on the UI side if document version has advanced.
+#[tauri::command]
+pub fn get_line_range_versioned(
+    path: String,
+    start_line: usize,
+    end_line: usize,
+    registry: State<'_, DocumentRegistry>,
+) -> Result<VersionedLineRange, String> {
+    let path = PathBuf::from(&path);
+    let doc_arc = registry.get(&path)
+        .ok_or_else(|| format!("Document not open: {}", path.display()))?;
+
+    let doc = doc_arc.read();
+    let lines = doc.buffer.lines_content(start_line, end_line + 1);
+    Ok(VersionedLineRange {
+        version: doc.version,
+        start_line,
+        lines,
+    })
 }
 
 /// Get metadata about a document (line count, version, dirty status, etc.).

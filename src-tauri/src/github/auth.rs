@@ -1,8 +1,16 @@
 use keyring::{Entry, Error as KeyringError};
+use parking_lot::RwLock;
+use std::sync::OnceLock;
 use thiserror::Error;
 
 const SERVICE_NAME: &str = "pomai-studio";
 const KEYRING_ENTRY_NAME: &str = "github-pat";
+
+static MEMORY_TOKEN: OnceLock<RwLock<Option<String>>> = OnceLock::new();
+
+fn get_memory_token_lock() -> &'static RwLock<Option<String>> {
+    MEMORY_TOKEN.get_or_init(|| RwLock::new(None))
+}
 
 #[derive(Error, Debug)]
 pub enum AuthError {
@@ -14,41 +22,57 @@ pub enum AuthError {
     InvalidToken,
 }
 
-/// Store GitHub Personal Access Token securely in OS keyring
+/// Store GitHub Personal Access Token securely in OS keyring and in-memory cache
 #[tauri::command]
 pub fn store_github_token(token: String) -> Result<(), String> {
-    let entry = Entry::new(SERVICE_NAME, KEYRING_ENTRY_NAME)
-        .map_err(|e| e.to_string())?;
-    entry.set_password(&token)
-        .map_err(|e| e.to_string())?;
+    let clean_token = token.trim().to_string();
+
+    // Store in memory cache immediately
+    *get_memory_token_lock().write() = Some(clean_token.clone());
+
+    // Best-effort OS keyring persistence
+    if let Ok(entry) = Entry::new(SERVICE_NAME, KEYRING_ENTRY_NAME) {
+        let _ = entry.set_password(&clean_token);
+    }
+
     Ok(())
 }
 
-/// Retrieve stored GitHub Personal Access Token from OS keyring
+/// Retrieve stored GitHub Personal Access Token from in-memory cache or OS keyring
 #[tauri::command]
 pub fn get_github_token() -> Result<Option<String>, String> {
-    let entry = Entry::new(SERVICE_NAME, KEYRING_ENTRY_NAME)
-        .map_err(|e| e.to_string())?;
-    match entry.get_password() {
-        Ok(token) => {
-            if token.trim().is_empty() {
-                Ok(None)
-            } else {
-                Ok(Some(token))
+    // 1. Check in-memory cache first
+    if let Some(token) = get_memory_token_lock().read().as_ref() {
+        if !token.trim().is_empty() {
+            return Ok(Some(token.clone()));
+        }
+    }
+
+    // 2. Fall back to OS keyring
+    if let Ok(entry) = Entry::new(SERVICE_NAME, KEYRING_ENTRY_NAME) {
+        if let Ok(token) = entry.get_password() {
+            if !token.trim().is_empty() {
+                // Populate memory cache
+                *get_memory_token_lock().write() = Some(token.clone());
+                return Ok(Some(token));
             }
         }
-        Err(KeyringError::NoEntry) => Ok(None),
-        Err(e) => Err(e.to_string()),
     }
+
+    Ok(None)
 }
 
-/// Clear stored GitHub Personal Access Token from OS keyring
+/// Clear stored GitHub Personal Access Token from in-memory cache and OS keyring
 #[tauri::command]
 pub fn clear_github_token() -> Result<(), String> {
-    let entry = Entry::new(SERVICE_NAME, KEYRING_ENTRY_NAME)
-        .map_err(|e| e.to_string())?;
-    entry.delete_credential()
-        .map_err(|e| e.to_string())?;
+    // Clear in-memory cache
+    *get_memory_token_lock().write() = None;
+
+    // Delete from OS keyring
+    if let Ok(entry) = Entry::new(SERVICE_NAME, KEYRING_ENTRY_NAME) {
+        let _ = entry.delete_credential();
+    }
+
     Ok(())
 }
 

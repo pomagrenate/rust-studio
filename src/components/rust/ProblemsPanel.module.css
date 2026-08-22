@@ -3,10 +3,12 @@
  * Fully responsive to Light and Dark themes via useTheme CSS variables.
  */
 
-.problemsContainer {
+.problemsContainer,
+.container {
   display: flex;
   flex-direction: column;
   height: 100%;
+  max-height: 100%;
   width: 100%;
   background-color: var(--pm-bg-panel, #ffffff);
   color: var(--pm-fg-default, #24292f);
@@ -15,10 +17,12 @@
   overflow: hidden;
   user-select: none;
   border-top: 1px solid var(--pm-border-panel, #d8d8d8);
+  box-sizing: border-box;
 }
 
 /* ── Header Subtabs Bar ── */
-.panelHeader {
+.panelHeader,
+.header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -45,13 +49,15 @@
   padding: 0 6px;
 }
 
-.subTabsList {
+.subTabsList,
+.tabGroup {
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
-.subTab {
+.subTab,
+.tabBtn {
   all: unset;
   display: flex;
   align-items: center;
@@ -67,12 +73,14 @@
   transition: all 0.1s ease;
 }
 
-.subTab:hover {
+.subTab:hover,
+.tabBtn:hover {
   background-color: rgba(128, 128, 128, 0.1);
   color: var(--pm-fg-default, #24292f);
 }
 
-.subTabActive {
+.subTabActive,
+.tabBtnActive {
   background-color: var(--pm-bg-tab-active, #ffffff) !important;
   color: var(--pm-fg-default, #24292f) !important;
   border-color: var(--pm-border-panel, #d8d8d8) !important;
@@ -80,7 +88,8 @@
   font-weight: var(--font-weight-semibold, 600);
 }
 
-.tabBadge {
+.tabBadge,
+.badge {
   background-color: var(--pm-accent, #005fb8);
   color: #ffffff;
   font-size: 10.5px;
@@ -89,13 +98,59 @@
   font-weight: var(--font-weight-semibold, 600);
 }
 
-.headerRight {
+.headerRight,
+.actions {
   display: flex;
   align-items: center;
   gap: 2px;
+  position: relative;
 }
 
-.iconBtn {
+.moreMenuWrapper {
+  position: relative;
+}
+
+.moreMenuDropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  width: 220px;
+  background-color: var(--pm-bg-panel, #ffffff);
+  border: 1px solid var(--pm-border-panel, #d8d8d8);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  border-radius: 6px;
+  padding: 4px 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+}
+
+.moreMenuItem {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: var(--font-size-sm, 12px);
+  color: var(--pm-fg-default, #24292f);
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: background 0.1s ease;
+}
+
+.moreMenuItem:hover {
+  background-color: rgba(128, 128, 128, 0.1);
+  color: var(--pm-accent, #005fb8);
+}
+
+.moreMenuDivider {
+  height: 1px;
+  background-color: var(--pm-border-panel, #d8d8d8);
+  margin: 4px 0;
+}
+
+.iconBtn,
+.actionBtn {
   all: unset;
   display: flex;
   align-items: center;
@@ -108,16 +163,20 @@
   transition: all 0.1s ease;
 }
 
-.iconBtn:hover {
+.iconBtn:hover,
+.actionBtn:hover {
   background-color: rgba(128, 128, 128, 0.12);
   color: var(--pm-fg-default, #24292f);
 }
 
 /* ── Panel Body Split ── */
-.panelBody {
+.panelBody,
+.body {
   display: flex;
+  flex-direction: column;
   flex: 1;
   min-height: 0;
+  height: calc(100% - 32px);
   width: 100%;
   overflow: hidden;
   background-color: var(--pm-bg-panel, #ffffff);
@@ -167,11 +226,14 @@
 /* ── Content View Area ── */
 .contentArea {
   flex: 1;
-  min-width: 0;
+  min-height: 0;
+  width: 100%;
   height: 100%;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 4px 0;
   background-color: var(--pm-bg-panel, #ffffff);
+  box-sizing: border-box;
 }
 
 .emptyState {
@@ -337,6 +399,8 @@
 .linterContainer {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-height: 0;
   height: 100%;
   padding: 0;
   overflow: hidden;
@@ -535,4 +599,99 @@
   border-left: 3px solid var(--pm-accent, #005fb8);
   white-space: pre-wrap;
   word-break: break-all;
+}
+
+/* Quick Fix Card Button & Box (RushRover style) */
+.cardActionBtn {
+  all: unset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  color: #d97706;
+  cursor: pointer;
+  background-color: rgba(217, 119, 6, 0.1);
+  transition: all 0.12s ease;
+}
+
+.cardActionBtn:hover {
+  background-color: rgba(217, 119, 6, 0.25);
+  color: #b45309;
+  transform: scale(1.05);
+}
+
+.cardActionBtnActive {
+  background-color: #d97706 !important;
+  color: #ffffff !important;
+}
+
+.quickFixBox {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background-color: rgba(217, 119, 6, 0.05);
+  border: 1px dashed rgba(217, 119, 6, 0.4);
+  border-radius: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.quickFixHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #b45309;
+}
+
+.quickFixOptionsList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.quickFixOption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 8px;
+  background-color: var(--pm-bg-panel, #ffffff);
+  border: 1px solid var(--pm-border-panel, #d8d8d8);
+  border-radius: 4px;
+  font-size: 11.5px;
+}
+
+.quickFixOptionTitle {
+  font-weight: 500;
+  color: var(--pm-fg-default, #24292f);
+}
+
+.quickFixApplyBtn {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  background-color: #005fb8;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.quickFixApplyBtn:hover {
+  background-color: #004586;
+}
+
+.quickFixStatus {
+  font-size: 11px;
+  font-weight: 600;
+  color: #1a7f37;
+  padding: 2px 4px;
 }

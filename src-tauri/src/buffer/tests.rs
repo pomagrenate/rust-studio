@@ -153,6 +153,43 @@ mod integration_tests {
     }
 
     #[test]
+    fn test_consecutive_enter_key_line_splits() {
+        let initial = "fn main() {\n    let a = 10;\n}";
+        let mut buffer = RopeBuffer::from_str(initial);
+        assert_eq!(buffer.len_lines(), 3);
+
+        // Press Enter 5 times at line 1, col 15 (after `let a = 10;`)
+        for i in 0..5 {
+            let edit = TextEdit::insert(1 + i, 15, "\n    ");
+            buffer.apply_edit(&edit);
+        }
+
+        assert_eq!(buffer.len_lines(), 8);
+        assert_eq!(buffer.line_content(1), "    let a = 10;");
+        assert_eq!(buffer.line_content(2), "    ");
+        assert_eq!(buffer.line_content(6), "    ");
+        assert_eq!(buffer.line_content(7), "}");
+    }
+
+    #[test]
+    fn test_document_versioning_increments() {
+        use crate::document::Document;
+
+        let mut doc = Document::from_content("hello\nworld", None);
+        assert_eq!(doc.version, 0);
+
+        let edit1 = TextEdit::insert(0, 5, "!");
+        let res1 = doc.apply_edit(&edit1, None);
+        assert_eq!(res1.new_version, 1);
+        assert_eq!(doc.version, 1);
+
+        let edit2 = TextEdit::insert(1, 5, "!");
+        let res2 = doc.apply_edit(&edit2, None);
+        assert_eq!(res2.new_version, 2);
+        assert_eq!(doc.version, 2);
+    }
+
+    #[test]
     fn test_thread_safety_send_sync() {
         let buffer = Arc::new(RwLock::new(RopeBuffer::from_str("line 1\nline 2\nline 3")));
         let mut handles = vec![];

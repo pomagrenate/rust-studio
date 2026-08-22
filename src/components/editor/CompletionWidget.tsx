@@ -113,6 +113,94 @@ function renderHighlightedLabel(label: string, indices: number[]): React.ReactNo
   return parts;
 }
 
+// Inline Markdown formatter: [`code`], `code`, [text][link], [text](link), **bold**, *italic*
+function formatInlineMarkdown(text: string): React.ReactNode {
+  if (!text) return null;
+  const tokenRegex = /(\[`[^`]+`\]|`[^`]+`|\[[^\]]+\](?:\([^)]+\)|\[[^\]]*\])?|\*\*[^*]+\*\*|\*[^*]+\*)/g;
+  const parts = text.split(tokenRegex);
+
+  return parts.map((part, i) => {
+    if (!part) return null;
+
+    // [`code`] or `code`
+    if ((part.startsWith("[`") && part.endsWith("`]")) || (part.startsWith("`") && part.endsWith("`"))) {
+      const codeText = part.replace(/^\[?`|`\]?$/g, "");
+      return <code key={i} className={styles.docCodeInline}>{codeText}</code>;
+    }
+
+    // [text](url) or [text][ref] or [text]
+    if (part.startsWith("[")) {
+      const linkMatch = part.match(/^\[([^\]]+)\](?:\(([^)]+)\)|\[([^\]]*)\])?$/);
+      if (linkMatch) {
+        const linkText = linkMatch[1];
+        return <span key={i} className={styles.docLink}>{linkText}</span>;
+      }
+    }
+
+    // **bold**
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    }
+
+    // *italic*
+    if (part.startsWith("*") && part.endsWith("*")) {
+      return <em key={i}>{part.slice(1, -1)}</em>;
+    }
+
+    return part;
+  });
+}
+
+// Render LSP Markdown Documentation into styled HTML elements
+function renderMarkdownDoc(content: string): React.ReactNode {
+  if (!content) return null;
+
+  const lines = content.split(/\r?\n/);
+  const elements: React.ReactNode[] = [];
+
+  lines.forEach((line, idx) => {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      elements.push(<div key={idx} className={styles.docSpacer} />);
+      return;
+    }
+
+    // Headers: # Heading, ## Heading
+    const headerMatch = trimmed.match(/^(#{1,6})\s+(.*)$/);
+    if (headerMatch) {
+      const level = Math.min(headerMatch[1].length, 3);
+      const titleNode = formatInlineMarkdown(headerMatch[2]);
+      elements.push(
+        <div key={idx} className={`${styles.docHeader} ${styles[`docHeader${level}`]}`}>
+          {titleNode}
+        </div>
+      );
+      return;
+    }
+
+    // Bullet items: - item, * item
+    const bulletMatch = trimmed.match(/^[-*]\s+(.*)$/);
+    if (bulletMatch) {
+      elements.push(
+        <div key={idx} className={styles.docBullet}>
+          <span className={styles.bulletDot}>•</span>
+          <span>{formatInlineMarkdown(bulletMatch[1])}</span>
+        </div>
+      );
+      return;
+    }
+
+    // Normal paragraph
+    elements.push(
+      <p key={idx} className={styles.docParagraph}>
+        {formatInlineMarkdown(line)}
+      </p>
+    );
+  });
+
+  return elements;
+}
+
 export function CompletionWidget({
   x,
   y,
@@ -127,8 +215,8 @@ export function CompletionWidget({
   const listRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ x, y });
   const [docPanePosition, setDocPanePosition] = useState<"right" | "left">("right");
-  const VISIBLE_ITEM_COUNT = 12;
-  const ITEM_HEIGHT = 32;
+  const VISIBLE_ITEM_COUNT = 7;
+  const ITEM_HEIGHT = 24;
 
   // Filter and sort items with fuzzy matching
   const filteredItems = useMemo(() => {
@@ -339,7 +427,7 @@ export function CompletionWidget({
             
             {selectedItem?.documentation && (
               <div className={styles.docDocumentation}>
-                {selectedItem.documentation}
+                {renderMarkdownDoc(selectedItem.documentation)}
               </div>
             )}
             

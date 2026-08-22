@@ -67,7 +67,9 @@ const EditorLine = React.memo(function EditorLine({
       tokenKind: number;
     }> = [];
 
-    if (!tokens || tokens.length === 0) {
+    const isValidTokens = Array.isArray(tokens) && tokens.length > 0 && tokens[0] < content.length;
+
+    if (!isValidTokens) {
       segments.push({
         start: 0,
         end: content.length,

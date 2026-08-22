@@ -22,6 +22,8 @@ pub struct GitStatusResult {
     pub staged_changes: Vec<GitFileChange>,
     pub unstaged_changes: Vec<GitFileChange>,
     pub untracked_files: Vec<GitFileChange>,
+    pub has_conflicts: bool,
+    pub conflicted_files: Vec<GitFileChange>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -50,6 +52,8 @@ pub async fn git_status(repo_path: String) -> Result<GitStatusResult, String> {
                 staged_changes: Vec::new(),
                 unstaged_changes: Vec::new(),
                 untracked_files: Vec::new(),
+                has_conflicts: false,
+                conflicted_files: Vec::new(),
             });
         }
 
@@ -70,6 +74,8 @@ pub async fn git_status(repo_path: String) -> Result<GitStatusResult, String> {
                     staged_changes: Vec::new(),
                     unstaged_changes: Vec::new(),
                     untracked_files: Vec::new(),
+                    has_conflicts: false,
+                    conflicted_files: Vec::new(),
                 });
             }
         };
@@ -81,6 +87,7 @@ pub async fn git_status(repo_path: String) -> Result<GitStatusResult, String> {
         let mut staged_changes = Vec::new();
         let mut unstaged_changes = Vec::new();
         let mut untracked_files = Vec::new();
+        let mut conflicted_files = Vec::new();
 
         for line in stdout.lines() {
             if line.starts_with("##") {
@@ -126,6 +133,21 @@ pub async fn git_status(repo_path: String) -> Result<GitStatusResult, String> {
                 .map(|f| f.to_string_lossy().to_string())
                 .unwrap_or_else(|| file_rel_path.clone());
 
+            // Conflict check (UU, AA, DD, AU, UA, DU, UD)
+            let is_conflict = index_status == 'U' || worktree_status == 'U' ||
+                (index_status == 'A' && worktree_status == 'A') ||
+                (index_status == 'D' && worktree_status == 'D');
+
+            if is_conflict {
+                conflicted_files.push(GitFileChange {
+                    path: file_rel_path.clone(),
+                    filename: filename.clone(),
+                    status: "C".to_string(),
+                    staged: false,
+                });
+                continue;
+            }
+
             // Untracked
             if index_status == '?' && worktree_status == '?' {
                 untracked_files.push(GitFileChange {
@@ -158,6 +180,8 @@ pub async fn git_status(repo_path: String) -> Result<GitStatusResult, String> {
             }
         }
 
+        let has_conflicts = !conflicted_files.is_empty();
+
         Ok(GitStatusResult {
             is_repo: true,
             branch,
@@ -166,7 +190,67 @@ pub async fn git_status(repo_path: String) -> Result<GitStatusResult, String> {
             staged_changes,
             unstaged_changes,
             untracked_files,
+            has_conflicts,
+            conflicted_files,
         })
+    }).await.map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn git_checkout_ours(repo_path: String, file_path: String) -> Result<GitCommandResult, String> {
+    tokio::task::spawn_blocking(move || {
+        let path = Path::new(&repo_path);
+        let out = Command::new("git").hide_window()
+            .args(&["checkout", "--ours", &file_path])
+            .current_dir(path)
+            .output();
+
+        let _ = Command::new("git").hide_window()
+            .args(&["add", &file_path])
+            .current_dir(path)
+            .output();
+
+        match out {
+            Ok(o) => Ok(GitCommandResult::from_command_output(o)),
+            Err(e) => Err(e.to_string()),
+        }
+    }).await.map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn git_checkout_theirs(repo_path: String, file_path: String) -> Result<GitCommandResult, String> {
+    tokio::task::spawn_blocking(move || {
+        let path = Path::new(&repo_path);
+        let out = Command::new("git").hide_window()
+            .args(&["checkout", "--theirs", &file_path])
+            .current_dir(path)
+            .output();
+
+        let _ = Command::new("git").hide_window()
+            .args(&["add", &file_path])
+            .current_dir(path)
+            .output();
+
+        match out {
+            Ok(o) => Ok(GitCommandResult::from_command_output(o)),
+            Err(e) => Err(e.to_string()),
+        }
+    }).await.map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn git_abort_merge(repo_path: String) -> Result<GitCommandResult, String> {
+    tokio::task::spawn_blocking(move || {
+        let path = Path::new(&repo_path);
+        let out = Command::new("git").hide_window()
+            .args(&["merge", "--abort"])
+            .current_dir(path)
+            .output();
+
+        match out {
+            Ok(o) => Ok(GitCommandResult::from_command_output(o)),
+            Err(e) => Err(e.to_string()),
+        }
     }).await.map_err(|e| e.to_string())?
 }
 
@@ -354,26 +438,29 @@ pub async fn git_unstage_all(repo_path: String) -> Result<(), String> {
 #[tauri::command]
 pub async fn git_discard_file(repo_path: String, file_path: String) -> Result<(), String> {
     tokio::task::spawn_blocking(move || {
-        let output = Command::new("git").hide_window()
-            .args(&["checkout", "--", &file_path])
+        // 1. Unstage the file from git index if it's staged
+        let _ = Command::new("git").hide_window()
+            .args(&["restore", "--staged", "--", &file_path])
             .current_dir(&repo_path)
             .output();
 
-        if let Ok(out) = output {
-            if out.status.success() {
-                return Ok(());
-            }
-        }
+        let _ = Command::new("git").hide_window()
+            .args(&["reset", "HEAD", "--", &file_path])
+            .current_dir(&repo_path)
+            .output();
 
-        let clean = Command::new("git").hide_window()
+        // 2. Checkout file from HEAD to discard tracked working directory changes
+        let _ = Command::new("git").hide_window()
+            .args(&["checkout", "HEAD", "--", &file_path])
+            .current_dir(&repo_path)
+            .output();
+
+        // 3. Remove untracked files/directories if newly created
+        let _ = Command::new("git").hide_window()
             .args(&["clean", "-fd", "--", &file_path])
-            .current_dir(repo_path)
-            .output()
-            .map_err(|e| e.to_string())?;
+            .current_dir(&repo_path)
+            .output();
 
-        if !clean.status.success() {
-            return Err(String::from_utf8_lossy(&clean.stderr).to_string());
-        }
         Ok(())
     }).await.map_err(|e| e.to_string())?
 }
@@ -382,19 +469,20 @@ pub async fn git_discard_file(repo_path: String, file_path: String) -> Result<()
 pub async fn git_discard_all(repo_path: String) -> Result<(), String> {
     tokio::task::spawn_blocking(move || {
         let _ = Command::new("git").hide_window()
-            .args(&["checkout", "--", "."])
+            .args(&["restore", "--staged", "--worktree", "."])
             .current_dir(&repo_path)
             .output();
 
-        let clean = Command::new("git").hide_window()
-            .args(&["clean", "-fd"])
-            .current_dir(repo_path)
-            .output()
-            .map_err(|e| e.to_string())?;
+        let _ = Command::new("git").hide_window()
+            .args(&["reset", "--hard", "HEAD"])
+            .current_dir(&repo_path)
+            .output();
 
-        if !clean.status.success() {
-            return Err(String::from_utf8_lossy(&clean.stderr).to_string());
-        }
+        let _ = Command::new("git").hide_window()
+            .args(&["clean", "-fd"])
+            .current_dir(&repo_path)
+            .output();
+
         Ok(())
     }).await.map_err(|e| e.to_string())?
 }
@@ -575,4 +663,187 @@ pub async fn git_resolve_conflict_file(
         }
         Ok(())
     }).await.map_err(|e| e.to_string())?
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct GitStashItem {
+    pub index: usize,
+    pub name: String,
+    pub branch: String,
+    pub message: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct GitCommitDetail {
+    pub hash: String,
+    pub author: String,
+    pub date: String,
+    pub message: String,
+    pub files: Vec<GitFileChange>,
+}
+
+#[tauri::command]
+pub async fn git_stash_save(repo_path: String, message: Option<String>) -> Result<(), String> {
+    tokio::task::spawn_blocking(move || {
+        let mut cmd = Command::new("git");
+        cmd.hide_window().current_dir(&repo_path).arg("stash").arg("push").arg("-u");
+        if let Some(msg) = message {
+            if !msg.trim().is_empty() {
+                cmd.arg("-m").arg(msg);
+            }
+        }
+        let output = cmd.output().map_err(|e| e.to_string())?;
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).to_string());
+        }
+        Ok(())
+    }).await.map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn git_stash_pop(repo_path: String) -> Result<(), String> {
+    tokio::task::spawn_blocking(move || {
+        let output = Command::new("git")
+            .hide_window()
+            .args(&["stash", "pop"])
+            .current_dir(&repo_path)
+            .output()
+            .map_err(|e| e.to_string())?;
+
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).to_string());
+        }
+        Ok(())
+    }).await.map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn git_stash_list(repo_path: String) -> Result<Vec<GitStashItem>, String> {
+    tokio::task::spawn_blocking(move || {
+        let output = Command::new("git")
+            .hide_window()
+            .args(&["stash", "list"])
+            .current_dir(&repo_path)
+            .output()
+            .map_err(|e| e.to_string())?;
+
+        if !output.status.success() {
+            return Ok(Vec::new());
+        }
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let mut stashes = Vec::new();
+        for (i, line) in stdout.lines().enumerate() {
+            // Format: stash@{0}: WIP on main: c12345 message
+            let parts: Vec<&str> = line.splitn(3, ':').collect();
+            let branch = if parts.len() > 1 { parts[1].trim().to_string() } else { "WIP".to_string() };
+            let msg = if parts.len() > 2 { parts[2].trim().to_string() } else { line.to_string() };
+            stashes.push(GitStashItem {
+                index: i,
+                name: format!("stash@{{{}}}", i),
+                branch,
+                message: msg,
+            });
+        }
+        Ok(stashes)
+    }).await.map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn git_get_commit_details(repo_path: String, hash: String) -> Result<GitCommitDetail, String> {
+    tokio::task::spawn_blocking(move || {
+        let output = Command::new("git")
+            .hide_window()
+            .args(&["show", "--name-status", "--format=%an%x1f%cr%x1f%s%n", &hash])
+            .current_dir(&repo_path)
+            .output()
+            .map_err(|e| e.to_string())?;
+
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).to_string());
+        }
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let mut lines = stdout.lines();
+        let first_line = lines.next().unwrap_or_default();
+        let parts: Vec<&str> = first_line.split('\x1f').collect();
+        let author = parts.get(0).unwrap_or(&"").to_string();
+        let date = parts.get(1).unwrap_or(&"").to_string();
+        let message = parts.get(2).unwrap_or(&"").to_string();
+
+        let mut files = Vec::new();
+        for line in lines {
+            let line = line.trim();
+            if line.is_empty() { continue; }
+            let item_parts: Vec<&str> = line.split_whitespace().collect();
+            if item_parts.len() >= 2 {
+                let status = item_parts[0].to_string();
+                let file_path = item_parts[1].to_string();
+                let filename = Path::new(&file_path)
+                    .file_name()
+                    .map(|f| f.to_string_lossy().to_string())
+                    .unwrap_or_else(|| file_path.clone());
+                files.push(GitFileChange {
+                    path: file_path,
+                    filename,
+                    status,
+                    staged: false,
+                });
+            }
+        }
+
+        Ok(GitCommitDetail {
+            hash,
+            author,
+            date,
+            message,
+            files,
+        })
+    }).await.map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn git_get_file_diff(
+    repo_path: String,
+    file_path: String,
+    staged: bool,
+) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        let mut args = vec!["diff", "-U3"];
+        if staged {
+            args.push("--staged");
+        }
+        args.push("--");
+        args.push(&file_path);
+
+        let output = Command::new("git")
+            .hide_window()
+            .args(&args)
+            .current_dir(&repo_path)
+            .output()
+            .map_err(|e| e.to_string())?;
+
+        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+        if !stdout.is_empty() {
+            return Ok(stdout);
+        }
+
+        // If diff is empty (e.g. untracked/new file), read file content directly
+        let full_path = Path::new(&repo_path).join(&file_path);
+        if full_path.exists() {
+            if let Ok(content) = std::fs::read_to_string(&full_path) {
+                let mut diff = format!("--- /dev/null\n+++ b/{}\n@@ -0,0 +1,{} @@\n", file_path, content.lines().count());
+                for line in content.lines() {
+                    diff.push('+');
+                    diff.push_str(line);
+                    diff.push('\n');
+                }
+                return Ok(diff);
+            }
+        }
+
+        Ok(stdout)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }

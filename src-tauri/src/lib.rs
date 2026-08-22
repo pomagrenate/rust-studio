@@ -78,6 +78,7 @@ pub fn run() {
             buffer_commands::close_document,
             buffer_commands::apply_edit,
             buffer_commands::get_line_range,
+            buffer_commands::get_line_range_versioned,
             buffer_commands::get_document_info,
             buffer_commands::get_line_count,
             buffer_commands::undo_edit,
@@ -156,9 +157,16 @@ pub fn run() {
             git_commands::git_init,
             git_commands::git_get_branches,
             git_commands::git_checkout,
-            git_commands::git_create_branch,
             git_commands::git_get_conflicts,
             git_commands::git_resolve_conflict_file,
+            git_commands::git_stash_save,
+            git_commands::git_stash_pop,
+            git_commands::git_stash_list,
+            git_commands::git_get_commit_details,
+            git_commands::git_checkout_ours,
+            git_commands::git_checkout_theirs,
+            git_commands::git_abort_merge,
+            git_commands::git_get_file_diff,
 
             // Rust IDE (Cargo) commands
             cargo_commands::cargo_get_project_info,
@@ -170,6 +178,7 @@ pub fn run() {
             cargo_commands::cargo_create_project,
             cargo_commands::cargo_scaffold_project,
             cargo_commands::cargo_run_single_test,
+            cargo_commands::cargo_run_all_tests,
             cargo_commands::cargo_check_streaming,
             cargo_commands::cargo_clippy_streaming,
             cargo_commands::cargo_build_streaming,
@@ -204,6 +213,7 @@ pub fn run() {
             auth::get_github_token,
             auth::clear_github_token,
             auth::validate_token_format,
+            api::github_verify_token,
 
             // CodeWiki commands
             codewiki_commands::build_code_wiki_index,
