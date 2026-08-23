@@ -4,6 +4,7 @@
  */
 
 import { Position, Selection } from '../commands/NavigationCommands';
+export type { Position, Selection };
 
 export class ViewModel {
   private lines: string[];
@@ -33,7 +34,6 @@ export class ViewModel {
    */
   setCursorPosition(position: Position): void {
     this.cursor = { ...position };
-    this.notifyChange();
   }
 
   /**
@@ -55,7 +55,6 @@ export class ViewModel {
    */
   setSelection(selection: Selection): void {
     this.selection = { ...selection };
-    this.notifyChange();
   }
 
   /**
@@ -69,7 +68,11 @@ export class ViewModel {
    * Check if has selection
    */
   hasSelection(): boolean {
-    return this.selection !== null;
+    if (!this.selection) return false;
+    return (
+      this.selection.start.line !== this.selection.end.line ||
+      this.selection.start.column !== this.selection.end.column
+    );
   }
 
   /**

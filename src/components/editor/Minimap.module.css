@@ -1,0 +1,32 @@
+.container {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100px;
+  background: #f6f8fa;
+  border-left: 1px solid #e1e4e8;
+  overflow: hidden;
+  cursor: pointer;
+  user-select: none;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  image-rendering: pixelated;
+}
+
+.viewport {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: rgba(9, 105, 218, 0.08);
+  border: 1px solid rgba(9, 105, 218, 0.18);
+  pointer-events: none;
+  transition: top 0.05s;
+}

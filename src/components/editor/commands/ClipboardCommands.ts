@@ -33,13 +33,25 @@ export interface ClipboardArgs {
   viewModel: any;
 }
 
+function normalizeSelection(selection: Selection): { startLine: number; startCol: number; endLine: number; endCol: number } {
+  const { line: l1, column: c1 } = selection.start;
+  const { line: l2, column: c2 } = selection.end;
+  if (l1 < l2 || (l1 === l2 && c1 <= c2)) {
+    return { startLine: l1, startCol: c1, endLine: l2, endCol: c2 };
+  }
+  return { startLine: l2, startCol: c2, endLine: l1, endCol: c1 };
+}
+
 /**
- * Copy selected text to clipboard
+ * Copy selected text to clipboard (or current line if no selection)
  */
 export async function copySelection(args: ClipboardArgs): Promise<void> {
   const { viewModel } = args;
   
   if (!viewModel.hasSelection()) {
+    const cursor = viewModel.getCursorPosition();
+    const line = viewModel.getLine(cursor.line);
+    await writeText(line + '\n');
     return;
   }
   
@@ -50,22 +62,32 @@ export async function copySelection(args: ClipboardArgs): Promise<void> {
 }
 
 /**
- * Cut selected text to clipboard
+ * Cut selected text to clipboard (or current line if no selection)
  */
 export async function cutSelection(args: ClipboardArgs): Promise<void> {
   const { viewModel } = args;
   
   if (!viewModel.hasSelection()) {
+    const cursor = viewModel.getCursorPosition();
+    const line = viewModel.getLine(cursor.line);
+    await writeText(line + '\n');
+    viewModel.deleteLine(cursor.line);
+    const lineCount = viewModel.getLineCount();
+    if (lineCount === 0) {
+      viewModel.setLines(['']);
+      viewModel.setCursorPosition({ line: 0, column: 0 });
+    } else {
+      const newLine = Math.min(cursor.line, lineCount - 1);
+      const newCol = Math.min(cursor.column, viewModel.getLine(newLine).length);
+      viewModel.setCursorPosition({ line: newLine, column: newCol });
+    }
     return;
   }
   
   const selection = viewModel.getSelection();
   const text = getSelectedText(viewModel, selection);
   
-  // Copy to clipboard
   await writeText(text);
-  
-  // Delete selected text
   deleteSelectedText(viewModel, selection);
 }
 
@@ -78,15 +100,14 @@ export async function pasteText(args: ClipboardArgs): Promise<void> {
   const text = await readText();
   if (!text) return;
   
-  const cursor = viewModel.getCursorPosition();
+  let cursor = viewModel.getCursorPosition();
   
   if (viewModel.hasSelection()) {
-    // Delete selection first
     const selection = viewModel.getSelection();
     deleteSelectedText(viewModel, selection);
+    cursor = viewModel.getCursorPosition();
   }
   
-  // Insert text
   insertTextAtPosition(viewModel, cursor, text);
 }
 
@@ -94,29 +115,20 @@ export async function pasteText(args: ClipboardArgs): Promise<void> {
  * Get selected text from selection
  */
 function getSelectedText(viewModel: any, selection: Selection): string {
-  const startLine = Math.min(selection.start.line, selection.end.line);
-  const endLine = Math.max(selection.start.line, selection.end.line);
-  const startCol = Math.min(selection.start.column, selection.end.column);
-  const endCol = Math.max(selection.start.column, selection.end.column);
+  const { startLine, startCol, endLine, endCol } = normalizeSelection(selection);
   
   if (startLine === endLine) {
-    // Single line selection
     const line = viewModel.getLine(startLine);
     return line.substring(startCol, endCol);
   } else {
-    // Multi-line selection
     let text = '';
-    
-    // First line (from startCol to end)
     const firstLine = viewModel.getLine(startLine);
     text += firstLine.substring(startCol) + '\n';
     
-    // Middle lines (full lines)
     for (let line = startLine + 1; line < endLine; line++) {
       text += viewModel.getLine(line) + '\n';
     }
     
-    // Last line (from start to endCol)
     const lastLine = viewModel.getLine(endLine);
     text += lastLine.substring(0, endCol);
     
@@ -128,27 +140,20 @@ function getSelectedText(viewModel: any, selection: Selection): string {
  * Delete selected text
  */
 function deleteSelectedText(viewModel: any, selection: Selection): void {
-  const startLine = Math.min(selection.start.line, selection.end.line);
-  const endLine = Math.max(selection.start.line, selection.end.line);
-  const startCol = Math.min(selection.start.column, selection.end.column);
-  const endCol = Math.max(selection.start.column, selection.end.column);
+  const { startLine, startCol, endLine, endCol } = normalizeSelection(selection);
   
   if (startLine === endLine) {
-    // Single line deletion
     const line = viewModel.getLine(startLine);
     const newLine = line.substring(0, startCol) + line.substring(endCol);
     viewModel.setLine(startLine, newLine);
     viewModel.setCursorPosition({ line: startLine, column: startCol });
   } else {
-    // Multi-line deletion
     const firstLine = viewModel.getLine(startLine);
     const lastLine = viewModel.getLine(endLine);
     
-    // Combine first line (before selection) with last line (after selection)
     const newLine = firstLine.substring(0, startCol) + lastLine.substring(endCol);
     viewModel.setLine(startLine, newLine);
     
-    // Delete middle lines
     for (let line = endLine; line > startLine; line--) {
       viewModel.deleteLine(line);
     }

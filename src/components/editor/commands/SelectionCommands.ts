@@ -43,7 +43,7 @@ export function extendSelection(viewModel: any, position: Position): Selection {
 }
 
 /**
- * Extend selection left
+ * Extend selection left with line-boundary wrapping
  */
 export function extendSelectionLeft(viewModel: any): Selection {
   const selection = viewModel.getSelection();
@@ -53,12 +53,18 @@ export function extendSelectionLeft(viewModel: any): Selection {
       start: selection.start,
       end: { line: cursor.line, column: cursor.column - 1 }
     };
+  } else if (cursor.line > 0) {
+    const prevLineLen = viewModel.getLine(cursor.line - 1).length;
+    return {
+      start: selection.start,
+      end: { line: cursor.line - 1, column: prevLineLen }
+    };
   }
   return selection;
 }
 
 /**
- * Extend selection right
+ * Extend selection right with line-boundary wrapping
  */
 export function extendSelectionRight(viewModel: any): Selection {
   const selection = viewModel.getSelection();
@@ -68,6 +74,11 @@ export function extendSelectionRight(viewModel: any): Selection {
     return {
       start: selection.start,
       end: { line: cursor.line, column: cursor.column + 1 }
+    };
+  } else if (cursor.line < viewModel.getLineCount() - 1) {
+    return {
+      start: selection.start,
+      end: { line: cursor.line + 1, column: 0 }
     };
   }
   return selection;

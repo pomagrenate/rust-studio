@@ -189,9 +189,9 @@ commandRegistry.registerCommand({
       indentSelection(args.viewModel);
     }
   },
-  keybindings: [
-    { key: 'Tab' }
-  ]
+  keybindings: [],
+  title: 'Indent Line',
+  category: 'Editor'
 });
 
 commandRegistry.registerCommand({
@@ -201,9 +201,9 @@ commandRegistry.registerCommand({
       outdentSelection(args.viewModel);
     }
   },
-  keybindings: [
-    { key: 'Shift+Tab' }
-  ]
+  keybindings: [],
+  title: 'Outdent Line',
+  category: 'Editor'
 });
 
 commandRegistry.registerCommand({

@@ -11,16 +11,23 @@ import { useTextMeasurement } from "../../hooks/useTextMeasurement";
 import { useRopeBuffer } from "../../hooks/useRopeBuffer";
 import { useCodeActions } from "../../hooks/useCodeActions";
 import { lspCompletion, pathToUri, lspSyncDocument } from "../../ipc/lsp";
-import { ViewModel } from "./viewModel/ViewModel";
+import { ViewModel, type Selection } from "./viewModel/ViewModel";
 import { commandRegistry } from "./commands/CommandRegistry";
 import { MouseHandler } from "./controller/MouseHandler";
 import { ContextMenu } from "./contextmenu/ContextMenu";
 import { ContextMenuController } from "./contextmenu/ContextMenuController";
 import type { MenuItem, EditorContextState } from "./contextmenu/types";
 import { applySurroundTemplate, detectBaseIndentation, type SurroundTemplate } from "../../utils/surroundWith";
+import { GoToLineWidget } from "./GoToLineWidget";
+import { StickyScroll } from "./StickyScroll";
+import { Minimap } from "./Minimap";
+import { useWordHighlighter } from "../../hooks/useWordHighlighter";
+import { useBracketMatcher } from "../../hooks/useBracketMatcher";
+import { computeFoldingRanges, buildFoldableLineSet, getHiddenLines } from "./folding/FoldingProvider";
 import "./commands/NavigationCommands";
 import "./commands/SelectionCommands";
 import "./commands/EditingCommands";
+import "./commands/LinesOperationsCommands";
 import "./commands/MultiCursorCommands";
 import "./commands/AutoClosingCommands";
 import "./commands/ScrollCommands";
@@ -64,7 +71,10 @@ function formatKeybinding(e: ReactKeyboardEvent): string {
     'Insert': 'Insert',
   };
   
-  const key = keyMap[e.key] || e.key;
+  let key = keyMap[e.key] || e.key;
+  if (key.length === 1) {
+    key = key.toUpperCase();
+  }
   parts.push(key);
   
   return parts.join('+');
@@ -149,6 +159,14 @@ export function EditorView({
   const [surroundWithOpen, setSurroundWithOpen] = useState(false);
   const [surroundWithPosition, setSurroundWithPosition] = useState({ x: 0, y: 0 });
   const [selectedTextForSurround, setSelectedTextForSurround] = useState("");
+
+  // Go to Line widget state
+  const [isGoToLineOpen, setIsGoToLineOpen] = useState(false);
+  // Feature toggles
+  const [showMinimap] = useState(true);
+  const [showStickyScroll] = useState(true);
+  // Code folding state
+  const [foldedLines, setFoldedLines] = useState<Set<number>>(new Set());
 
   // Handle quick-fix action application
   const handleQuickFixApply = useCallback((_action: any) => {
@@ -236,6 +254,10 @@ export function EditorView({
   const [localLines, setLocalLines] = useState<string[]>(lines || []);
   const [localActiveLine, setLocalActiveLine] = useState(activeLine);
   const [localActiveCol, setLocalActiveCol] = useState(activeCol);
+  const [selection, setSelection] = useState<Selection | null>(null);
+
+  const isDraggingRef = useRef<boolean>(false);
+  const dragStartPosRef = useRef<{ line: number; column: number } | null>(null);
 
   // Synchronize buffer with props only on active file change or when undo stack is clean
   useEffect(() => {
@@ -271,27 +293,32 @@ export function EditorView({
   const viewModelRef = useRef<ViewModel | null>(null);
   const mouseHandlerRef = useRef<MouseHandler | null>(null);
 
+  const onLinesChangeRef = useRef(onLinesChange);
+  useEffect(() => {
+    onLinesChangeRef.current = onLinesChange;
+  }, [onLinesChange]);
+
   // Keep ViewModel's internal lines in sync WITHOUT triggering notifyChange
   // (which would call onLinesChange → parent setState → infinite cascade).
   useEffect(() => {
     if (!viewModelRef.current) {
       viewModelRef.current = new ViewModel(effectiveLines, (newLines, line, col) => {
-        onLinesChange?.(newLines, line, col);
+        onLinesChangeRef.current?.(newLines, line, col);
       });
     } else {
       // Directly update internal lines reference to avoid notifyChange feedback loop
       (viewModelRef.current as any).lines = [...effectiveLines];
     }
-  }, [effectiveLines, onLinesChange]);
+  }, [effectiveLines]);
 
   useEffect(() => {
     if (!mouseHandlerRef.current && viewModelRef.current) {
       mouseHandlerRef.current = new MouseHandler({
         viewModel: viewModelRef.current,
-        onLinesChange
+        onLinesChange: (...args) => onLinesChangeRef.current?.(...args)
       });
     }
-  }, [onLinesChange]);
+  }, []);
 
   // Initialize ContextMenuController
   useEffect(() => {
@@ -377,11 +404,16 @@ export function EditorView({
         return true;
       });
     };
+    const handleGoToLineEvent = () => {
+      setIsGoToLineOpen((prev) => !prev);
+    };
     window.addEventListener("pm:find", handleFindEvent);
     window.addEventListener("pm:replace", handleReplaceEvent);
+    window.addEventListener("pm:gotoline", handleGoToLineEvent);
     return () => {
       window.removeEventListener("pm:find", handleFindEvent);
       window.removeEventListener("pm:replace", handleReplaceEvent);
+      window.removeEventListener("pm:gotoline", handleGoToLineEvent);
     };
   }, [isReplaceOpen]);
 
@@ -401,6 +433,38 @@ export function EditorView({
       lineHeightPx: LINE_HEIGHT_PX,
       viewportHeightPx: viewportHeight,
     });
+
+  // Word occurrence highlighter
+  const wordHighlightMap = useWordHighlighter(
+    effectiveLines,
+    localActiveLine,
+    localActiveCol,
+    startLine,
+    endLine,
+    true
+  );
+
+  // Bracket pair matcher
+  const bracketMatch = useBracketMatcher(
+    effectiveLines,
+    localActiveLine,
+    localActiveCol,
+    true
+  );
+
+  // Code folding computations
+  const foldingRanges = useMemo(
+    () => computeFoldingRanges(effectiveLines),
+    [effectiveLines]
+  );
+  const foldableSet = useMemo(
+    () => buildFoldableLineSet(foldingRanges),
+    [foldingRanges]
+  );
+  const hiddenLinesSet = useMemo(
+    () => getHiddenLines(foldedLines, foldingRanges),
+    [foldedLines, foldingRanges]
+  );
 
   useEffect(() => {
     const activeLineText = effectiveLines[localActiveLine] || "";
@@ -501,28 +565,82 @@ export function EditorView({
     };
   }, [visibleLines, startLine]);
 
+  const getLineSelectionRange = useCallback(
+    (lineIdx: number): { startCol: number; endCol: number } | null => {
+      const vm = viewModelRef.current;
+      if (!vm || !vm.hasSelection()) return null;
+      const sel = vm.getSelection();
+
+      let l1 = sel.start.line;
+      let c1 = sel.start.column;
+      let l2 = sel.end.line;
+      let c2 = sel.end.column;
+
+      if (l1 > l2 || (l1 === l2 && c1 > c2)) {
+        [l1, l2] = [l2, l1];
+        [c1, c2] = [c2, c1];
+      }
+
+      if (lineIdx < l1 || lineIdx > l2) return null;
+
+      const lineLen = effectiveLines[lineIdx] ? effectiveLines[lineIdx].length : 0;
+
+      if (l1 === l2) {
+        return { startCol: c1, endCol: c2 };
+      }
+      if (lineIdx === l1) {
+        return { startCol: c1, endCol: lineLen + 1 };
+      }
+      if (lineIdx === l2) {
+        return { startCol: 0, endCol: c2 };
+      }
+      return { startCol: 0, endCol: lineLen + 1 };
+    },
+    [effectiveLines]
+  );
+
   const handleContextMenu = (e: ReactMouseEvent<HTMLDivElement>) => {
     e.preventDefault();
-    
     if (!contextMenuControllerRef.current) return;
 
-    // Update context state based on current position
+    const vm = viewModelRef.current;
+    const hasSel = vm ? vm.hasSelection() : false;
+    let selText = "";
+    if (hasSel && vm) {
+      const sel = vm.getSelection();
+      let l1 = sel.start.line, c1 = sel.start.column;
+      let l2 = sel.end.line, c2 = sel.end.column;
+      if (l1 > l2 || (l1 === l2 && c1 > c2)) {
+        [l1, l2] = [l2, l1];
+        [c1, c2] = [c2, c1];
+      }
+      if (l1 === l2) {
+        selText = (effectiveLines[l1] || "").substring(c1, c2);
+      } else {
+        let t = (effectiveLines[l1] || "").substring(c1) + "\n";
+        for (let i = l1 + 1; i < l2; i++) {
+          t += (effectiveLines[i] || "") + "\n";
+        }
+        t += (effectiveLines[l2] || "").substring(0, c2);
+        selText = t;
+      }
+    }
+
     const line = effectiveLines[activeLine] || "";
     const tokenUnderCursor = ContextMenuController.detectTokenUnderCursor(line, activeCol);
     const diagnosticAtCursor = ContextMenuController.findDiagnosticAtCursor(diagnostics, activeLine, activeCol);
 
     contextMenuControllerRef.current.updateContextState({
-      hasSelection: false, // TODO: Integrate with actual selection state
-      selectionText: "",
+      hasSelection: hasSel,
+      selectionText: selText,
       cursorPosition: { line: activeLine, column: activeCol },
-      lspConnected: true, // TODO: Integrate with actual LSP state
+      lspConnected: true,
       tokenUnderCursor,
       diagnosticAtCursor,
       fileType: ContextMenuController.detectFileType(filePath),
       isTestContext: ContextMenuController.detectTestContext(effectiveLines, activeLine),
     });
 
-    // Get menu items for current context
     const items = contextMenuControllerRef.current.getMenuItems();
     setContextMenuItems(items);
     setContextMenuPosition({ x: e.clientX, y: e.clientY });
@@ -536,22 +654,124 @@ export function EditorView({
     setContextMenuOpen(false);
   };
 
+  const getPosFromMouseEvent = useCallback(
+    (e: ReactMouseEvent<HTMLDivElement> | MouseEvent): { line: number; column: number } => {
+      if (!containerRef.current) return { line: 0, column: 0 };
+      const rect = containerRef.current.getBoundingClientRect();
+      const scrollTop = containerRef.current.scrollTop;
+
+      const y = e.clientY - rect.top + scrollTop;
+      let clickedLine = Math.floor(y / LINE_HEIGHT_PX);
+
+      if (clickedLine >= effectiveLines.length) clickedLine = Math.max(0, effectiveLines.length - 1);
+      if (clickedLine < 0) clickedLine = 0;
+
+      let col = -1;
+
+      if (document.caretRangeFromPoint) {
+        const range = document.caretRangeFromPoint(e.clientX, e.clientY);
+        if (range && range.startContainer) {
+          const node = range.startContainer;
+          if (node.nodeType === Node.TEXT_NODE && node.parentElement) {
+            let charOffset = range.startOffset;
+            let sibling = node.parentElement.previousSibling;
+            while (sibling) {
+              charOffset += sibling.textContent?.length || 0;
+              sibling = sibling.previousSibling;
+            }
+            col = charOffset;
+          } else if (
+            (node as HTMLElement).className &&
+            typeof (node as HTMLElement).className === "string" &&
+            (node as HTMLElement).className.includes("lineContent")
+          ) {
+            col = effectiveLines[clickedLine] ? effectiveLines[clickedLine].length : 0;
+          }
+        }
+      } else if ((document as any).caretPositionFromPoint) {
+        const pos = (document as any).caretPositionFromPoint(e.clientX, e.clientY);
+        if (pos && pos.offsetNode) {
+          const node = pos.offsetNode;
+          if (node.nodeType === Node.TEXT_NODE && node.parentElement) {
+            let charOffset = pos.offset;
+            let sibling = node.parentElement.previousSibling;
+            while (sibling) {
+              charOffset += sibling.textContent?.length || 0;
+              sibling = sibling.previousSibling;
+            }
+            col = charOffset;
+          } else if (
+            (node as HTMLElement).className &&
+            typeof (node as HTMLElement).className === "string" &&
+            (node as HTMLElement).className.includes("lineContent")
+          ) {
+            col = effectiveLines[clickedLine] ? effectiveLines[clickedLine].length : 0;
+          }
+        }
+      }
+
+      if (col === -1) {
+        const targetClass = (e.target as HTMLElement)?.className || "";
+        if (
+          typeof targetClass === "string" &&
+          (targetClass.includes("lineContent") ||
+            targetClass.includes("editorScrollContainer") ||
+            targetClass.includes("linesContainer") ||
+            targetClass.includes("editorInner"))
+        ) {
+          col = effectiveLines[clickedLine] ? effectiveLines[clickedLine].length : 0;
+        } else {
+          const x = e.clientX - rect.left - GUTTER_TOTAL_OFFSET;
+          col = Math.max(0, Math.round(x / 8.4));
+        }
+      }
+
+      const lineLen = effectiveLines[clickedLine] ? effectiveLines[clickedLine].length : 0;
+      const finalCol = Math.min(col, lineLen);
+      return { line: clickedLine, column: finalCol };
+    },
+    [effectiveLines]
+  );
+
   const handleMouseMove = (e: ReactMouseEvent<HTMLDivElement>) => {
-    if (!onHover || !containerRef.current) return;
+    if (isDraggingRef.current && dragStartPosRef.current) {
+      const endPos = getPosFromMouseEvent(e);
+      const startPos = dragStartPosRef.current;
+      if (startPos.line !== endPos.line || startPos.column !== endPos.column) {
+        const newSel: Selection = { start: startPos, end: endPos };
+        setSelection(newSel);
+        if (viewModelRef.current) viewModelRef.current.setSelection(newSel);
+        bufferRef.current.activeLine = endPos.line;
+        bufferRef.current.activeCol = endPos.column;
+        setLocalActiveLine(endPos.line);
+        setLocalActiveCol(endPos.column);
+        return;
+      }
+    }
 
-    const rect = containerRef.current.getBoundingClientRect();
-    const scrollTop = containerRef.current.scrollTop;
-    const y = e.clientY - rect.top + scrollTop;
-    const line = Math.floor(y / LINE_HEIGHT_PX);
+    if (onHover && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const scrollTop = containerRef.current.scrollTop;
+      const y = e.clientY - rect.top + scrollTop;
+      const line = Math.floor(y / LINE_HEIGHT_PX);
 
-    if (line >= 0 && line < effectiveLines.length && line !== activeLine) {
-      const lineText = effectiveLines[line] || "";
-      const x = e.clientX - rect.left - GUTTER_TOTAL_OFFSET;
-      const col = Math.max(0, Math.min(Math.round(x / 8.1), lineText.length));
+      if (line >= 0 && line < effectiveLines.length && line !== activeLine) {
+        const lineText = effectiveLines[line] || "";
+        const x = e.clientX - rect.left - GUTTER_TOTAL_OFFSET;
+        const col = Math.max(0, Math.min(Math.round(x / 8.1), lineText.length));
 
-      onHover(line, col);
+        onHover(line, col);
+      }
     }
   };
+
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      isDraggingRef.current = false;
+    };
+    window.addEventListener("mouseup", handleGlobalMouseUp);
+    return () => window.removeEventListener("mouseup", handleGlobalMouseUp);
+  }, []);
 
   // Extract word prefix before cursor for completion
   const getWordPrefix = useCallback((line: string, col: number): { prefix: string; start: number } => {
@@ -613,7 +833,6 @@ export function EditorView({
     if (completionTimeoutRef.current) {
       clearTimeout(completionTimeoutRef.current);
     }
-    
     const delay = triggerInstant ? 0 : 75;
     completionTimeoutRef.current = setTimeout(() => {
       requestCompletions(triggerInstant);
@@ -622,9 +841,8 @@ export function EditorView({
 
   // Handle completion selection with Rust-specific insertion logic
   const handleCompletionSelect = useCallback((item: CompletionItem) => {
-    if (!onLinesChange) return;
-    
-    const line = lines[activeLine] || "";
+    const currentLines = bufferRef.current.lines.length > 0 ? bufferRef.current.lines : effectiveLines;
+    const line = currentLines[activeLine] || "";
     const { start } = getWordPrefix(line, activeCol);
     let insertText = item.insertText || item.label;
     let newCol = start + insertText.length;
@@ -641,12 +859,25 @@ export function EditorView({
       newCol = start + insertText.length;
     }
     
-    // Replace prefix with insert text
-    const newLine = line.slice(0, start) + insertText.replace("$0", "") + line.slice(activeCol);
-    const newLines = [...lines];
+    const cleanText = insertText.replace("$0", "");
+    // Replace word prefix (from start to activeCol) with cleanText
+    const newLine = line.slice(0, start) + cleanText + line.slice(activeCol);
+    const newLines = [...currentLines];
     newLines[activeLine] = newLine;
     
-    onLinesChange(newLines, activeLine, newCol);
+    bufferRef.current = {
+      lines: newLines,
+      activeLine,
+      activeCol: newCol,
+    };
+    setLocalLines(newLines);
+    setLocalActiveLine(activeLine);
+    setLocalActiveCol(newCol);
+    if (viewModelRef.current) {
+      viewModelRef.current.setLines(newLines);
+      viewModelRef.current.setCursorPosition({ line: activeLine, column: newCol });
+    }
+    onLinesChangeRef.current?.(newLines, activeLine, newCol);
     setCompletionOpen(false);
     setFilterText("");
     
@@ -661,11 +892,11 @@ export function EditorView({
             start: { line: activeLine, character: start },
             end: { line: activeLine, character: activeCol }
           },
-          text: insertText.replace("$0", "")
+          text: cleanText
         }]
       }).catch(console.error);
     }
-  }, [lines, activeLine, activeCol, onLinesChange, filePath, getWordPrefix]);
+  }, [effectiveLines, activeLine, activeCol, filePath, getWordPrefix, lspSyncDocument]);
 
   // Handle completion navigation
   const handleCompletionNavigate = useCallback((direction: "up" | "down") => {
@@ -688,6 +919,42 @@ export function EditorView({
     }
   }, []);
 
+  // Synchronize state from ViewModel after command execution
+  const syncFromViewModel = useCallback(() => {
+    if (!viewModelRef.current) return;
+    const vm = viewModelRef.current;
+    const newLines = vm.getLines();
+    const cursor = vm.getCursorPosition();
+
+    const linesChanged =
+      newLines.length !== bufferRef.current.lines.length ||
+      newLines.some((l, idx) => l !== bufferRef.current.lines[idx]);
+
+    if (linesChanged) {
+      undoStackRef.current.push({
+        lines: [...bufferRef.current.lines],
+        line: bufferRef.current.activeLine,
+        col: bufferRef.current.activeCol,
+      });
+      if (undoStackRef.current.length > 200) {
+        undoStackRef.current.shift();
+      }
+      redoStackRef.current = [];
+    }
+
+    bufferRef.current = {
+      lines: newLines,
+      activeLine: cursor.line,
+      activeCol: cursor.column,
+    };
+    setLocalLines(newLines);
+    setLocalActiveLine(cursor.line);
+    setLocalActiveCol(cursor.column);
+    const sel = vm.hasSelection() ? vm.getSelection() : null;
+    setSelection(sel);
+    onLinesChange?.(newLines, cursor.line, cursor.column);
+  }, [onLinesChange]);
+
   const handleKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
     // Intercept keys when completion is open
     if (completionOpen) {
@@ -699,10 +966,20 @@ export function EditorView({
         e.preventDefault();
         handleCompletionNavigate(e.key === "ArrowUp" ? "up" : "down");
         return;
-      } else if (e.key === "Tab") {
+      } else if (e.key === "Enter" || e.key === "Tab") {
         e.preventDefault();
-        if (completionItems[selectedIndex]) {
-          handleCompletionSelect(completionItems[selectedIndex]);
+        const filtered = filterText
+          ? completionItems.filter((item) => {
+              if (!item.label) return false;
+              return item.label.toLowerCase().includes(filterText.toLowerCase());
+            })
+          : completionItems;
+
+        const targetItem = filtered[selectedIndex] || completionItems[selectedIndex] || completionItems[0];
+        if (targetItem) {
+          handleCompletionSelect(targetItem);
+        } else {
+          closeCompletion();
         }
         return;
       }
@@ -722,6 +999,13 @@ export function EditorView({
           setQuickFixOpen(true);
         }
       }
+      return;
+    }
+
+    // Go To Line trigger: Ctrl+G
+    if (e.ctrlKey && e.key.toLowerCase() === "g" && !e.shiftKey && !e.altKey) {
+      e.preventDefault();
+      setIsGoToLineOpen((prev) => !prev);
       return;
     }
 
@@ -787,7 +1071,19 @@ export function EditorView({
     
     if (command && viewModelRef.current) {
       e.preventDefault();
-      command.execute({ viewModel: viewModelRef.current });
+      const vm = viewModelRef.current;
+      vm.setLines(bufferRef.current.lines);
+      vm.setCursorPosition({
+        line: bufferRef.current.activeLine,
+        column: bufferRef.current.activeCol,
+      });
+
+      const res = command.execute({ viewModel: vm });
+      if (res && typeof (res as any).then === "function") {
+        (res as Promise<void>).then(() => syncFromViewModel());
+      } else {
+        syncFromViewModel();
+      }
       return;
     }
 
@@ -836,6 +1132,45 @@ export function EditorView({
     let nCol = bufferRef.current.activeCol;
     let isTriggerChar = false;
 
+    // Handle selection deletion when Backspace, Delete, Enter, or a printable key is pressed
+    const vmForSelection = viewModelRef.current;
+    let selectionWasDeleted = false;
+    if (
+      vmForSelection &&
+      vmForSelection.hasSelection() &&
+      (e.key === "Backspace" ||
+        e.key === "Delete" ||
+        e.key === "Enter" ||
+        (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey))
+    ) {
+      const sel = vmForSelection.getSelection();
+      let l1 = sel.start.line;
+      let c1 = sel.start.column;
+      let l2 = sel.end.line;
+      let c2 = sel.end.column;
+
+      if (l1 > l2 || (l1 === l2 && c1 > c2)) {
+        [l1, l2] = [l2, l1];
+        [c1, c2] = [c2, c1];
+      }
+
+      const startLineText = newLines[l1] || "";
+      const endLineText = newLines[l2] || "";
+      const prefix = startLineText.slice(0, c1);
+      const suffix = endLineText.slice(c2);
+
+      newLines.splice(l1, l2 - l1 + 1, prefix + suffix);
+      if (newLines.length === 0) {
+        newLines.push("");
+      }
+
+      nLine = l1;
+      nCol = c1;
+      vmForSelection.clearSelection();
+      setSelection(null);
+      selectionWasDeleted = true;
+    }
+
     if (e.ctrlKey && e.key.toLowerCase() === "f" && !e.shiftKey && !e.altKey) {
       e.preventDefault();
       setIsFindOpen((prev) => (prev && !isReplaceOpen ? false : true));
@@ -878,37 +1213,68 @@ export function EditorView({
         nCol = Math.min(nCol, newLines[nLine].length);
       }
       e.preventDefault();
-    } else if (e.key === "Backspace") {
-      const line = newLines[nLine] || "";
-      if (nCol > 0) {
-        const before = line.slice(0, nCol);
-        // Smart indentation backspace: if text before cursor is pure whitespace, delete full 4-space tab stop
-        if (/^\s+$/.test(before)) {
-          const deleteCount = before.length % 4 || 4;
-          newLines[nLine] = line.slice(0, nCol - deleteCount) + line.slice(nCol);
-          nCol -= deleteCount;
-        } else {
-          newLines[nLine] = line.slice(0, nCol - 1) + line.slice(nCol);
-          nCol -= 1;
+    } else if (e.key === "Backspace" || e.key === "Delete") {
+      if (selectionWasDeleted) {
+        e.preventDefault();
+        closeCompletion();
+      } else if (e.key === "Backspace") {
+        const line = newLines[nLine] || "";
+        if (nCol > 0) {
+          const charBefore = line[nCol - 1];
+          const charAfter = line[nCol];
+          const isBracketPair =
+            (charBefore === "(" && charAfter === ")") ||
+            (charBefore === "[" && charAfter === "]") ||
+            (charBefore === "{" && charAfter === "}") ||
+            (charBefore === '"' && charAfter === '"') ||
+            (charBefore === "'" && charAfter === "'") ||
+            (charBefore === "`" && charAfter === "`");
+
+          if (isBracketPair) {
+            newLines[nLine] = line.slice(0, nCol - 1) + line.slice(nCol + 1);
+            nCol -= 1;
+          } else {
+            const before = line.slice(0, nCol);
+            // Smart indentation backspace: if text before cursor is pure whitespace, delete full 4-space tab stop
+            if (/^\s+$/.test(before)) {
+              const deleteCount = before.length % 4 || 4;
+              newLines[nLine] = line.slice(0, nCol - deleteCount) + line.slice(nCol);
+              nCol -= deleteCount;
+            } else {
+              newLines[nLine] = line.slice(0, nCol - 1) + line.slice(nCol);
+              nCol -= 1;
+            }
+          }
+        } else if (nLine > 0) {
+          // Line merge: if current line is blank/whitespace-only, remove line cleanly without attaching trailing spaces to previous line
+          const currentTrimmed = line.trim();
+          const prevLine = newLines[nLine - 1] || "";
+          if (currentTrimmed === "") {
+            newLines.splice(nLine, 1);
+            nLine -= 1;
+            nCol = prevLine.length;
+          } else {
+            const prevLen = prevLine.length;
+            newLines[nLine - 1] += line.trimStart();
+            newLines.splice(nLine, 1);
+            nLine -= 1;
+            nCol = prevLen;
+          }
         }
-      } else if (nLine > 0) {
-        // Line merge: if current line is blank/whitespace-only, remove line cleanly without attaching trailing spaces to previous line
-        const currentTrimmed = line.trim();
-        const prevLine = newLines[nLine - 1] || "";
-        if (currentTrimmed === "") {
-          newLines.splice(nLine, 1);
-          nLine -= 1;
-          nCol = prevLine.length;
-        } else {
-          const prevLen = prevLine.length;
-          newLines[nLine - 1] += line.trimStart();
-          newLines.splice(nLine, 1);
-          nLine -= 1;
-          nCol = prevLen;
+        e.preventDefault();
+        closeCompletion();
+      } else if (e.key === "Delete") {
+        const line = newLines[nLine] || "";
+        if (nCol < line.length) {
+          newLines[nLine] = line.slice(0, nCol) + line.slice(nCol + 1);
+        } else if (nLine < newLines.length - 1) {
+          const nextLine = newLines[nLine + 1] || "";
+          newLines[nLine] += nextLine;
+          newLines.splice(nLine + 1, 1);
         }
+        e.preventDefault();
+        closeCompletion();
       }
-      e.preventDefault();
-      closeCompletion();
     } else if (e.key === "Enter") {
       const line = newLines[nLine] || "";
       const before = line.slice(0, nCol);
@@ -916,18 +1282,31 @@ export function EditorView({
 
       // Inherit leading indentation from current line
       const indentMatch = line.match(/^(\s*)/);
-      let indent = indentMatch ? indentMatch[1] : "";
+      const baseIndent = indentMatch ? indentMatch[1] : "";
 
-      // Auto-indent increase if line ends with '{', '(', '[', or ':'
       const trimmedBefore = before.trimEnd();
-      if (/[{(\[:]$/.test(trimmedBefore)) {
-        indent += "    ";
-      }
+      const trimmedAfter = after.trimStart();
 
-      newLines[nLine] = before;
-      newLines.splice(nLine + 1, 0, indent + after);
-      nLine += 1;
-      nCol = indent.length;
+      // Bracket-split: e.g. cursor between `{` and `}`, `(` and `)`, or `[` and `]`
+      if (/[{(\[]$/.test(trimmedBefore) && /^[}\]\)]/.test(trimmedAfter)) {
+        const innerIndent = baseIndent + "    ";
+        newLines[nLine] = before;
+        newLines.splice(nLine + 1, 0, innerIndent);
+        newLines.splice(nLine + 2, 0, baseIndent + after);
+        nLine += 1;
+        nCol = innerIndent.length;
+      } else if (/[{(\[:]$/.test(trimmedBefore)) {
+        const nextIndent = baseIndent + "    ";
+        newLines[nLine] = before;
+        newLines.splice(nLine + 1, 0, nextIndent + after);
+        nLine += 1;
+        nCol = nextIndent.length;
+      } else {
+        newLines[nLine] = before;
+        newLines.splice(nLine + 1, 0, baseIndent + after);
+        nLine += 1;
+        nCol = baseIndent.length;
+      }
       e.preventDefault();
       closeCompletion();
     } else if (e.key === "Tab") {
@@ -977,9 +1356,36 @@ export function EditorView({
         }
       }
     } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
-      const line = newLines[nLine];
-      newLines[nLine] = line.slice(0, nCol) + e.key + line.slice(nCol);
-      nCol += 1;
+      const char = e.key;
+      const line = newLines[nLine] || "";
+
+      const bracketPairs: Record<string, string> = {
+        "(": ")",
+        "[": "]",
+        "{": "}",
+        '"': '"',
+        "'": "'",
+        "`": "`",
+      };
+      const closingChars = new Set([")", "]", "}", '"', "'", "`"]);
+
+      if (closingChars.has(char) && line[nCol] === char) {
+        // Skip over existing closing character
+        nCol += 1;
+      } else if (bracketPairs[char]) {
+        const closing = bracketPairs[char];
+        const charAfter = line[nCol] || "";
+        if ((char === '"' || char === "'" || char === "`") && /[a-zA-Z0-9_]/.test(charAfter)) {
+          newLines[nLine] = line.slice(0, nCol) + char + line.slice(nCol);
+          nCol += 1;
+        } else {
+          newLines[nLine] = line.slice(0, nCol) + char + closing + line.slice(nCol);
+          nCol += 1;
+        }
+      } else {
+        newLines[nLine] = line.slice(0, nCol) + char + line.slice(nCol);
+        nCol += 1;
+      }
       e.preventDefault();
       
       // Check for Rust-idiomatic trigger characters
@@ -1018,84 +1424,49 @@ export function EditorView({
   const handleMouseDown = (e: ReactMouseEvent<HTMLDivElement>) => {
     containerRef.current?.focus();
     if (!onLinesChange || !containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const scrollTop = containerRef.current.scrollTop;
 
-    const y = e.clientY - rect.top + scrollTop;
-    let clickedLine = Math.floor(y / LINE_HEIGHT_PX);
+    const pos = getPosFromMouseEvent(e);
 
-    if (clickedLine >= effectiveLines.length) clickedLine = effectiveLines.length - 1;
-    if (clickedLine < 0) clickedLine = 0;
-
-    let col = -1;
-
-    if (document.caretRangeFromPoint) {
-      const range = document.caretRangeFromPoint(e.clientX, e.clientY);
-      if (range && range.startContainer) {
-        const node = range.startContainer;
-        if (node.nodeType === Node.TEXT_NODE && node.parentElement) {
-          let charOffset = range.startOffset;
-          let sibling = node.parentElement.previousSibling;
-          while (sibling) {
-            charOffset += sibling.textContent?.length || 0;
-            sibling = sibling.previousSibling;
-          }
-          col = charOffset;
-        } else if (
-          (node as HTMLElement).className &&
-          typeof (node as HTMLElement).className === "string" &&
-          (node as HTMLElement).className.includes("lineContent")
-        ) {
-          col = effectiveLines[clickedLine].length;
+    // Right click (button 2): preserve selection if clicked inside active selection
+    if (e.button === 2) {
+      const vm = viewModelRef.current;
+      if (vm && vm.hasSelection()) {
+        const sel = vm.getSelection();
+        let l1 = sel.start.line, c1 = sel.start.column;
+        let l2 = sel.end.line, c2 = sel.end.column;
+        if (l1 > l2 || (l1 === l2 && c1 > c2)) {
+          [l1, l2] = [l2, l1];
+          [c1, c2] = [c2, c1];
         }
-      }
-    }
-    // @ts-ignore
-    else if (document.caretPositionFromPoint) {
-      // @ts-ignore
-      const pos = document.caretPositionFromPoint(e.clientX, e.clientY);
-      if (pos && pos.offsetNode) {
-        const node = pos.offsetNode;
-        if (node.nodeType === Node.TEXT_NODE && node.parentElement) {
-          let charOffset = pos.offset;
-          let sibling = node.parentElement.previousSibling;
-          while (sibling) {
-            charOffset += sibling.textContent?.length || 0;
-            sibling = sibling.previousSibling;
-          }
-          col = charOffset;
-        } else if (
-          (node as HTMLElement).className &&
-          typeof (node as HTMLElement).className === "string" &&
-          (node as HTMLElement).className.includes("lineContent")
-        ) {
-          col = effectiveLines[clickedLine].length;
+        const inside =
+          pos.line >= l1 &&
+          pos.line <= l2 &&
+          (pos.line !== l1 || pos.column >= c1) &&
+          (pos.line !== l2 || pos.column <= c2);
+
+        if (inside) {
+          return;
         }
       }
     }
 
-    if (col === -1) {
-      const targetClass = (e.target as HTMLElement).className || "";
-      if (
-        typeof targetClass === "string" &&
-        (targetClass.includes("lineContent") ||
-          targetClass.includes("editorScrollContainer") ||
-          targetClass.includes("linesContainer") ||
-          targetClass.includes("editorInner"))
-      ) {
-        col = effectiveLines[clickedLine].length;
-      } else {
-        const x = e.clientX - rect.left - GUTTER_TOTAL_OFFSET;
-        col = Math.max(0, Math.round(x / 8.4));
-      }
-    }
+    dragStartPosRef.current = pos;
+    isDraggingRef.current = true;
 
-    const finalCol = Math.min(col, effectiveLines[clickedLine].length);
-    bufferRef.current.activeLine = clickedLine;
-    bufferRef.current.activeCol = finalCol;
-    setLocalActiveLine(clickedLine);
-    setLocalActiveCol(finalCol);
-    onLinesChange(effectiveLines, clickedLine, finalCol);
+    if (e.shiftKey && bufferRef.current) {
+      const anchor = selection ? selection.start : { line: bufferRef.current.activeLine, column: bufferRef.current.activeCol };
+      const newSel: Selection = { start: anchor, end: pos };
+      setSelection(newSel);
+      if (viewModelRef.current) viewModelRef.current.setSelection(newSel);
+    } else {
+      bufferRef.current.activeLine = pos.line;
+      bufferRef.current.activeCol = pos.column;
+      setLocalActiveLine(pos.line);
+      setLocalActiveCol(pos.column);
+      setSelection(null);
+      if (viewModelRef.current) viewModelRef.current.clearSelection();
+      onLinesChange(effectiveLines, pos.line, pos.column);
+    }
   };
 
   const calculatedTotalHeight = Math.max(
@@ -1170,6 +1541,52 @@ export function EditorView({
       )}
 
 
+      {isGoToLineOpen && (
+        <GoToLineWidget
+          isOpen={isGoToLineOpen}
+          totalLines={effectiveLines.length}
+          onGoToLine={(targetLine) => {
+            if (viewModelRef.current) {
+              viewModelRef.current.setCursorPosition({ line: targetLine, column: 0 });
+            }
+            bufferRef.current.activeLine = targetLine;
+            bufferRef.current.activeCol = 0;
+            setLocalActiveLine(targetLine);
+            setLocalActiveCol(0);
+            onLinesChange?.(effectiveLines, targetLine, 0);
+          }}
+          onClose={() => setIsGoToLineOpen(false)}
+        />
+      )}
+
+      {showStickyScroll && (
+        <StickyScroll
+          lines={effectiveLines}
+          startLine={startLine}
+          onJumpToLine={(targetLine) => {
+            if (containerRef.current) {
+              containerRef.current.scrollTop = targetLine * LINE_HEIGHT_PX;
+            }
+          }}
+        />
+      )}
+
+      {showMinimap && (
+        <Minimap
+          lines={effectiveLines}
+          totalLines={effectiveLines.length}
+          startLine={startLine}
+          endLine={endLine}
+          activeLine={activeLine}
+          viewportHeight={viewportHeight}
+          onJumpToLine={(targetLine) => {
+            if (containerRef.current) {
+              containerRef.current.scrollTop = targetLine * LINE_HEIGHT_PX;
+            }
+          }}
+        />
+      )}
+
       <div
         ref={containerRef}
         className={styles.editorScrollContainer}
@@ -1192,6 +1609,19 @@ export function EditorView({
           <div className={styles.linesContainer} onMouseDown={handleMouseDown}>
             {visibleLines.map((content, i) => {
               const lineIndex = startLine + i;
+
+              if (hiddenLinesSet.has(lineIndex)) {
+                return null;
+              }
+
+              const wordRanges = wordHighlightMap.ranges.get(lineIndex) || [];
+              const bracketRange =
+                bracketMatch.source?.line === lineIndex
+                  ? bracketMatch.source
+                  : bracketMatch.target?.line === lineIndex
+                  ? bracketMatch.target
+                  : null;
+
               return (
                 <EditorLine
                   key={lineIndex}
@@ -1205,6 +1635,19 @@ export function EditorView({
                   onToggleBreakpoint={onToggleBreakpoint}
                   diagnosticSeverity={lineGutterSeverities[lineIndex]}
                   lineDiagnostics={lineDiagnosticsMap[lineIndex]}
+                  selectionRange={getLineSelectionRange(lineIndex)}
+                  wordHighlightRanges={wordRanges}
+                  bracketMatchRange={bracketRange}
+                  isFoldable={foldableSet.has(lineIndex)}
+                  isFolded={foldedLines.has(lineIndex)}
+                  onToggleFold={(idx) => {
+                    setFoldedLines((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(idx)) next.delete(idx);
+                      else next.add(idx);
+                      return next;
+                    });
+                  }}
                 />
               );
             })}

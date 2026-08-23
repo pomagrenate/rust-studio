@@ -227,7 +227,9 @@ commandRegistry.registerCommand({
       addCursorAtPosition(args);
     }
   },
-  keybindings: [] // Alt+Click is handled by mouse handler
+  keybindings: [],
+  title: 'Add Cursor at Position',
+  category: 'Multi-Cursor'
 });
 
 commandRegistry.registerCommand({
@@ -239,7 +241,9 @@ commandRegistry.registerCommand({
   },
   keybindings: [
     { key: 'Ctrl+D' }
-  ]
+  ],
+  title: 'Add Selection To Next Find Match',
+  category: 'Multi-Cursor'
 });
 
 commandRegistry.registerCommand({
@@ -251,7 +255,9 @@ commandRegistry.registerCommand({
   },
   keybindings: [
     { key: 'Ctrl+Shift+L' }
-  ]
+  ],
+  title: 'Select All Occurrences of Find Match',
+  category: 'Multi-Cursor'
 });
 
 commandRegistry.registerCommand({
@@ -265,7 +271,9 @@ commandRegistry.registerCommand({
     { key: 'Ctrl+Alt+Up', platform: 'windows' },
     { key: 'Ctrl+Alt+Up', platform: 'linux' },
     { key: 'Cmd+Alt+Up', platform: 'mac' }
-  ]
+  ],
+  title: 'Add Cursor Above',
+  category: 'Multi-Cursor'
 });
 
 commandRegistry.registerCommand({
@@ -279,7 +287,9 @@ commandRegistry.registerCommand({
     { key: 'Ctrl+Alt+Down', platform: 'windows' },
     { key: 'Ctrl+Alt+Down', platform: 'linux' },
     { key: 'Cmd+Alt+Down', platform: 'mac' }
-  ]
+  ],
+  title: 'Add Cursor Below',
+  category: 'Multi-Cursor'
 });
 
 commandRegistry.registerCommand({
@@ -289,5 +299,7 @@ commandRegistry.registerCommand({
       removeSecondaryCursors(args);
     }
   },
-  keybindings: [] // Handled by Escape key in selection commands
+  keybindings: [],
+  title: 'Escape Cursors',
+  category: 'Multi-Cursor'
 });

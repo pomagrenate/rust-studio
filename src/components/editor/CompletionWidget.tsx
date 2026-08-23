@@ -209,7 +209,7 @@ export function CompletionWidget({
   filterText,
   onSelect,
   onClose,
-  onNavigate,
+  onNavigate: _onNavigate,
 }: CompletionWidgetProps) {
   const widgetRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -287,30 +287,6 @@ export function CompletionWidget({
       }
     }
   }, [selectedIndex]);
-
-  // Keyboard event handling
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        onNavigate("up");
-      } else if (e.key === "ArrowDown") {
-        e.preventDefault();
-        onNavigate("down");
-      } else if (e.key === "Enter" || e.key === "Tab") {
-        e.preventDefault();
-        if (filteredItems[selectedIndex]) {
-          onSelect(filteredItems[selectedIndex]);
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, onNavigate, onSelect, filteredItems, selectedIndex]);
 
   // Click outside to close
   useEffect(() => {
@@ -393,7 +369,6 @@ export function CompletionWidget({
                 className={`${styles.completionItem} ${actualIndex === selectedIndex ? styles.completionItemSelected : ""}`}
                 style={{ height: `${ITEM_HEIGHT}px` }}
                 onClick={() => onSelect(item)}
-                onMouseEnter={() => onNavigate("down")}
               >
                 <span className={styles.completionIcon}>{getKindIcon(item.kind)}</span>
                 <span className={styles.completionLabel}>

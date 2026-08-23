@@ -67,6 +67,7 @@ pub fn run() {
             fs_commands::rename_path,
             fs_commands::copy_path,
             fs_commands::move_path,
+            fs_commands::show_in_folder,
             fs_commands::read_file,
             fs_commands::create_rust_file,
             fs_commands::create_rust_module,

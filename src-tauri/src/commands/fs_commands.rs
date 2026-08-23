@@ -42,11 +42,19 @@ pub async fn list_dir(path: String) -> Result<Vec<FsEntry>, String> {
 
 #[tauri::command]
 pub async fn open_file(path: String) -> Result<String, String> {
+    let p = Path::new(&path);
+    if p.is_dir() {
+        return Err(format!("Cannot open directory: {}", path));
+    }
     fs::read_to_string(&path).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn read_file(path: String) -> Result<String, String> {
+    let p = Path::new(&path);
+    if p.is_dir() {
+        return Err(format!("Cannot read directory: {}", path));
+    }
     fs::read_to_string(&path).map_err(|e| e.to_string())
 }
 
@@ -101,6 +109,35 @@ pub async fn copy_path(src: String, dest: String) -> Result<(), String> {
 #[tauri::command]
 pub async fn move_path(src: String, dest: String) -> Result<(), String> {
     fs::rename(&src, &dest).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn show_in_folder(path: String) -> Result<(), String> {
+    use crate::utils::CommandExtHideWindow;
+    let p = Path::new(&path);
+    if cfg!(target_os = "windows") {
+        let mut cmd = std::process::Command::new("explorer.exe");
+        cmd.hide_window();
+        if p.is_dir() {
+            cmd.arg(&path);
+        } else {
+            cmd.arg(format!("/select,{}", path));
+        }
+        cmd.spawn().map_err(|e| e.to_string())?;
+    } else if cfg!(target_os = "macos") {
+        let mut cmd = std::process::Command::new("open");
+        if p.is_dir() {
+            cmd.arg(&path);
+        } else {
+            cmd.arg("-R").arg(&path);
+        }
+        cmd.spawn().map_err(|e| e.to_string())?;
+    } else {
+        let parent = if p.is_file() { p.parent().unwrap_or(p) } else { p };
+        let mut cmd = std::process::Command::new("xdg-open");
+        cmd.arg(parent).spawn().map_err(|e| e.to_string())?;
+    }
+    Ok(())
 }
 
 fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {

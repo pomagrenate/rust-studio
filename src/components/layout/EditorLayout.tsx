@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { Navbar } from "../navbar/Navbar";
 import { ExplorerPane } from "../explorer/ExplorerPane";
@@ -81,7 +81,12 @@ export function EditorLayout({ initialWorkspace, onCloseWorkspace }: EditorLayou
   }, []);
   
   const [fileContents, setFileContents] = useState<Record<string, string[]>>({});
+  const fileContentsRef = useRef<Record<string, string[]>>({});
   const [dirtyFiles, setDirtyFiles] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    fileContentsRef.current = fileContents;
+  }, [fileContents]);
   
   const [isScmOpen, setIsScmOpen] = useState(false);
   const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
@@ -149,6 +154,33 @@ export function EditorLayout({ initialWorkspace, onCloseWorkspace }: EditorLayou
     gotoDefinition: lspGotoDefinition,
     completion,
   } = useLsp(workspaceRoots[0] ?? null);
+
+  const handleLinesChange = useCallback((filePath: string, newLines: string[]) => {
+    if (!filePath || filePath === "Welcome") return;
+
+    const existingLines = fileContentsRef.current[filePath];
+    const isContentEqual = Boolean(
+      existingLines &&
+      existingLines.length === newLines.length &&
+      existingLines.every((line, idx) => line === newLines[idx])
+    );
+
+    fileContentsRef.current[filePath] = newLines;
+    setFileContents(prev => ({ ...prev, [filePath]: newLines }));
+
+    if (!isContentEqual) {
+      setDirtyFiles(prev => {
+        if (prev.has(filePath)) return prev;
+        const next = new Set(prev);
+        next.add(filePath);
+        return next;
+      });
+
+      setEditorGroups(prev => prev.map(g => g.previewFile === filePath ? { ...g, previewFile: null } : g));
+      const fullText = newLines.join("\n");
+      lspSyncDoc(filePath, 0, fullText).catch(console.error);
+    }
+  }, [lspSyncDoc]);
 
   const [hoverTooltip, setHoverTooltip] = useState<{
     x: number;
@@ -618,30 +650,6 @@ export function EditorLayout({ initialWorkspace, onCloseWorkspace }: EditorLayou
     });
   }, []);
 
-  const handleLinesChange = useCallback((filePath: string, newLines: string[]) => {
-    if (!filePath || filePath === "Welcome") return;
-    
-    // Check if content actually changed — if only cursor moved, skip expensive state updates
-    const existingLines = fileContents[filePath];
-    const contentChanged = !existingLines || 
-      existingLines.length !== newLines.length || 
-      existingLines.some((line, i) => line !== newLines[i]);
-    
-    if (!contentChanged) {
-      // Cursor-only update: no file content change, no re-render needed
-      return;
-    }
-
-    setFileContents(prev => ({ ...prev, [filePath]: newLines }));
-    
-    if (!dirtyFiles.has(filePath)) {
-      setDirtyFiles(prev => new Set(prev).add(filePath));
-    }
-    setEditorGroups(prev => prev.map(g => g.previewFile === filePath ? { ...g, previewFile: null } : g));
-    const fullText = newLines.join("\n");
-    lspSyncDoc(filePath, 0, fullText).catch(console.error);
-  }, [fileContents, dirtyFiles, lspSyncDoc]);
-
   const handleNewFile = async () => {
     if (workspaceRoots.length === 0) {
       try {
@@ -746,15 +754,17 @@ export function EditorLayout({ initialWorkspace, onCloseWorkspace }: EditorLayou
     } catch (e) { console.error(e); }
   };
 
-  const handleSaveFile = useCallback(async (filePath = activeFile) => {
-    if (!filePath || filePath === "Welcome" || !fileContents[filePath]) return;
+  const handleSaveFile = useCallback(async (targetPath?: string) => {
+    const filePath = targetPath || activeFile;
+    const lines = filePath ? (fileContentsRef.current[filePath] || fileContents[filePath]) : undefined;
+    if (!filePath || filePath === "Welcome" || !lines) return;
 
     if (filePath.startsWith("Untitled")) {
       await handleSaveFileAs(filePath);
       return;
     }
 
-    const content = fileContents[filePath].join("\n");
+    const content = lines.join("\n");
     if (window.__TAURI_INTERNALS__) {
       try {
         const { invoke } = await import("@tauri-apps/api/core");
@@ -776,19 +786,22 @@ export function EditorLayout({ initialWorkspace, onCloseWorkspace }: EditorLayou
     }
   }, [activeFile, fileContents]);
 
-  const handleSaveFileAs = useCallback(async (filePath = activeFile) => {
+  const handleSaveFileAs = useCallback(async (targetPath?: string) => {
+    const filePath = targetPath || activeFile;
     if (!filePath || filePath === "Welcome") return;
     try {
       const selectedPath = await save({ defaultPath: filePath.startsWith("Untitled") ? "Untitled.txt" : filePath });
       if (selectedPath) {
-        const content = (fileContents[filePath] || []).join("\n");
+        const lines = fileContentsRef.current[filePath] || fileContents[filePath] || [""];
+        const content = lines.join("\n");
         if (window.__TAURI_INTERNALS__) {
           const { invoke } = await import("@tauri-apps/api/core");
           await invoke("save_file", { path: selectedPath, content });
           await invoke("add_recently_opened", { path: selectedPath, isFolder: false });
         }
+        fileContentsRef.current[selectedPath] = lines;
         setFileContents(prev => {
-          const next = { ...prev, [selectedPath]: prev[filePath] || [""] };
+          const next = { ...prev, [selectedPath]: lines };
           delete next[filePath];
           return next;
         });
@@ -1150,16 +1163,7 @@ export function EditorLayout({ initialWorkspace, onCloseWorkspace }: EditorLayou
         e.preventDefault();
         handleNewWindow();
       }
-      if (e.key === "Shift") {
-        const now = Date.now();
-        if (now - lastShiftTime < 350) {
-          setIsSearchEverywhereOpen(true);
-        }
-        lastShiftTime = now;
-      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') {
-        e.preventDefault();
-        setIsSearchEverywhereOpen(true);
-      } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'f') {
+      else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') {
         e.preventDefault();
         setIsSearchEverywhereOpen(true);
       }
@@ -1169,7 +1173,6 @@ export function EditorLayout({ initialWorkspace, onCloseWorkspace }: EditorLayou
       }
     };
     
-    let lastShiftTime = 0;
     window.addEventListener("keydown", onKeyDown);
     return () => {
       window.removeEventListener("keydown", onKeyDown);
