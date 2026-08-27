@@ -55,6 +55,7 @@ interface FuzzyMatchResult {
 
 // Fuzzy matching algorithm (IntelliJ-style)
 function fuzzyMatch(query: string, target: string): FuzzyMatchResult | null {
+  if (!target || typeof target !== "string") return null;
   if (!query) return { score: 1, indices: [] };
   
   const queryLower = query.toLowerCase();
@@ -93,7 +94,8 @@ function fuzzyMatch(query: string, target: string): FuzzyMatchResult | null {
 
 // Highlight matched characters in label
 function renderHighlightedLabel(label: string, indices: number[]): React.ReactNode {
-  if (!indices || indices.length === 0) return label;
+  if (!label || typeof label !== "string") return "";
+  if (!indices || !Array.isArray(indices) || indices.length === 0) return label;
   
   const parts: React.ReactNode[] = [];
   let lastIdx = 0;
@@ -220,10 +222,14 @@ export function CompletionWidget({
 
   // Filter and sort items with fuzzy matching
   const filteredItems = useMemo(() => {
-    if (!filterText) return items;
+    if (!items || !Array.isArray(items)) return [];
     
-    const scored = items.map((item) => {
-      const match = fuzzyMatch(filterText, item.label);
+    const valid = items.filter(item => Boolean(item && (item.label || (item as any).insert_text)));
+    if (!filterText) return valid;
+    
+    const scored = valid.map((item) => {
+      const labelText = item.label || (item as any).insert_text || "";
+      const match = fuzzyMatch(filterText, labelText);
       return { item, match };
     });
     

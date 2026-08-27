@@ -9,6 +9,7 @@ import { EditorLayout } from "./components/layout/EditorLayout";
 import { WorkspaceLauncher } from "./components/launcher/WorkspaceLauncher";
 import { useTheme } from "./hooks/useTheme";
 import { useFontScaling } from "./hooks/useFontScaling";
+import { ErrorBoundary } from "./components/common/ErrorBoundary";
 
 export function App() {
   const [activeWorkspace, setActiveWorkspace] = useState<string | null>(null);
@@ -26,10 +27,12 @@ export function App() {
   }
 
   return (
-    <EditorLayout
-      initialWorkspace={activeWorkspace}
-      onCloseWorkspace={() => setActiveWorkspace(null)}
-    />
+    <ErrorBoundary>
+      <EditorLayout
+        initialWorkspace={activeWorkspace}
+        onCloseWorkspace={() => setActiveWorkspace(null)}
+      />
+    </ErrorBoundary>
   );
 }
 

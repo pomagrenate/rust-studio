@@ -799,18 +799,25 @@ export function EditorView({
     }
     
     const uri = pathToUri(filePath);
-    
     try {
       // Use the provided onLspCompletion if available, otherwise fall back to direct IPC call
-      let items: CompletionItem[];
+      let rawItems: CompletionItem[] = [];
       if (onLspCompletion) {
-        items = await onLspCompletion(uri, activeLine, activeCol);
+        rawItems = (await onLspCompletion(uri, activeLine, activeCol)) || [];
       } else {
-        items = await lspCompletion(uri, activeLine, activeCol);
+        rawItems = (await lspCompletion(uri, activeLine, activeCol)) || [];
       }
       
-      setCompletionItems(items);
-      setFilterText(prefix);
+      const validItems = (Array.isArray(rawItems) ? rawItems : [])
+        .filter((item): item is CompletionItem => Boolean(item && (item.label || (item as any).insert_text || (item as any).insertText)))
+        .map((item) => ({
+          ...item,
+          label: item.label || (item as any).insert_text || (item as any).insertText || "",
+          insertText: item.insertText || (item as any).insert_text || item.label || "",
+        }));
+
+      setCompletionItems(validItems);
+      setFilterText(prefix || "");
       setSelectedIndex(0);
       
       // Calculate widget position
@@ -821,10 +828,11 @@ export function EditorView({
         setCompletionPosition({ x, y });
       }
       
-      setCompletionOpen(items.length > 0);
+      setCompletionOpen(validItems.length > 0);
     } catch (err) {
       console.error("Completion request failed:", err);
       setCompletionOpen(false);
+      setCompletionItems([]);
     }
   }, [filePath, effectiveLines, activeLine, activeCol, cursorX, startLine, getWordPrefix, onLspCompletion]);
 
@@ -841,27 +849,34 @@ export function EditorView({
 
   // Handle completion selection with Rust-specific insertion logic
   const handleCompletionSelect = useCallback((item: CompletionItem) => {
+    if (!item) {
+      setCompletionOpen(false);
+      return;
+    }
     const currentLines = bufferRef.current.lines.length > 0 ? bufferRef.current.lines : effectiveLines;
     const line = currentLines[activeLine] || "";
     const { start } = getWordPrefix(line, activeCol);
-    let insertText = item.insertText || item.label;
-    let newCol = start + insertText.length;
+    const label = item.label || "";
+    const rawInsertText = item.insertText || (item as any).insert_text || label;
+    let insertText = String(rawInsertText || "");
+    const replaceStart = Math.max(0, start);
+    let newCol = replaceStart + insertText.length;
     
     // Rust-specific: Position cursor inside parentheses for function calls
     if (insertText.endsWith("()") && !insertText.includes("$0")) {
       insertText = insertText.slice(0, -1) + "$0)";
-      newCol = start + insertText.indexOf("$0");
+      newCol = replaceStart + insertText.indexOf("$0");
     }
     
     // Rust-specific: Preserve macro delimiters
-    if (item.label.endsWith("!") && !insertText.endsWith("!")) {
+    if (label.endsWith("!") && !insertText.endsWith("!")) {
       insertText += "!";
-      newCol = start + insertText.length;
+      newCol = replaceStart + insertText.length;
     }
     
-    const cleanText = insertText.replace("$0", "");
+    const cleanText = insertText.replace(/\$0/g, "");
     // Replace word prefix (from start to activeCol) with cleanText
-    const newLine = line.slice(0, start) + cleanText + line.slice(activeCol);
+    const newLine = line.slice(0, replaceStart) + cleanText + line.slice(activeCol);
     const newLines = [...currentLines];
     newLines[activeLine] = newLine;
     
@@ -889,7 +904,7 @@ export function EditorView({
         version: Date.now(),
         changes: [{
           range: {
-            start: { line: activeLine, character: start },
+            start: { line: activeLine, character: replaceStart },
             end: { line: activeLine, character: activeCol }
           },
           text: cleanText
@@ -968,14 +983,15 @@ export function EditorView({
         return;
       } else if (e.key === "Enter" || e.key === "Tab") {
         e.preventDefault();
+        const safeItems = Array.isArray(completionItems) ? completionItems : [];
         const filtered = filterText
-          ? completionItems.filter((item) => {
-              if (!item.label) return false;
-              return item.label.toLowerCase().includes(filterText.toLowerCase());
+          ? safeItems.filter((item) => {
+              const lbl = item?.label || (item as any)?.insert_text || "";
+              return lbl.toLowerCase().includes(filterText.toLowerCase());
             })
-          : completionItems;
+          : safeItems;
 
-        const targetItem = filtered[selectedIndex] || completionItems[selectedIndex] || completionItems[0];
+        const targetItem = filtered[selectedIndex] || safeItems[selectedIndex] || safeItems[0];
         if (targetItem) {
           handleCompletionSelect(targetItem);
         } else {
