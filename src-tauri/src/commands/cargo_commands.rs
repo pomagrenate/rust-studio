@@ -664,11 +664,24 @@ pub async fn cargo_scaffold_project(
         let project_dir = parent.join(&name);
 
         for cmd_raw in commands {
-            let cmd_str = cmd_raw.replace("{name}", &name);
+            let mut cmd_str = cmd_raw.replace("{name}", &name);
+            
+            // If project_dir already exists and command starts with "cd <name> &&" or "cd <name> ;", strip the leading cd
+            let prefix_amp = format!("cd {} && ", name);
+            let prefix_semi = format!("cd {} ; ", name);
+            if project_dir.exists() {
+                if cmd_str.starts_with(&prefix_amp) {
+                    cmd_str = cmd_str[prefix_amp.len()..].to_string();
+                } else if cmd_str.starts_with(&prefix_semi) {
+                    cmd_str = cmd_str[prefix_semi.len()..].to_string();
+                }
+            }
+
             let mut shell_cmd = if cfg!(target_os = "windows") {
+                let win_cmd = cmd_str.replace("&&", ";");
                 let mut c = Command::new("powershell");
                 c.hide_window();
-                c.args(&["-NoProfile", "-Command", &cmd_str]);
+                c.args(&["-NoProfile", "-Command", &win_cmd]);
                 c
             } else {
                 let mut c = Command::new("sh");

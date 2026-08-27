@@ -169,8 +169,8 @@ export const RUST_PROJECT_TEMPLATES: ProjectTemplate[] = [
     defaultName: "my_fastapi_app",
     setupCommands: [
       "uv init --app {name}",
-      "cd {name} && uv add \"fastapi[standard]\"",
-      "cd {name} && uv add pydantic-settings"
+      "uv add \"fastapi[standard]\"",
+      "uv add pydantic-settings"
     ],
     features: [
       "Instant virtual environment & dependency locking via uv",
