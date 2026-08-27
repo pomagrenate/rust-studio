@@ -1,0 +1,50 @@
+.container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  pointer-events: none;
+}
+
+.stickyLine {
+  display: flex;
+  align-items: baseline;
+  height: 21px;
+  line-height: 21px;
+  font-family: var(--editor-font-family, 'JetBrains Mono', Consolas, monospace);
+  font-size: var(--editor-font-size, 14px);
+  font-weight: 600;
+  background: rgba(246, 248, 250, 0.92);
+  border-bottom: 1px solid rgba(208, 215, 222, 0.5);
+  backdrop-filter: blur(4px);
+  white-space: pre;
+  user-select: none;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.stickyLine:hover {
+  background: rgba(235, 238, 242, 0.95);
+}
+
+.gutter {
+  width: 64px;
+  min-width: 64px;
+  padding-right: 16px;
+  text-align: right;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: #8c959f;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.content {
+  padding-left: 16px;
+  flex: 1;
+  color: #1f2328;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

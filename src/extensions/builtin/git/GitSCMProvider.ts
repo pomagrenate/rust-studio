@@ -27,6 +27,8 @@ interface RustGitStatusResult {
   staged_changes: RustGitFileChange[];
   unstaged_changes: RustGitFileChange[];
   untracked_files: RustGitFileChange[];
+  has_conflicts?: boolean;
+  conflicted_files?: RustGitFileChange[];
 }
 
 interface RustGitCommitNode {
@@ -53,7 +55,10 @@ export class GitRepository implements ISCMRepository {
     behind: 0,
     stagedChanges: [],
     unstagedChanges: [],
+    conflictedChanges: [],
+    hasConflicts: false,
     history: [],
+    stashes: [],
     isLoading: false,
   };
 
@@ -88,9 +93,10 @@ export class GitRepository implements ISCMRepository {
 
     try {
       if (window.__TAURI_INTERNALS__) {
-        const [statusRes, graphRes] = await Promise.all([
+        const [statusRes, graphRes, stashesRes] = await Promise.all([
           invoke<RustGitStatusResult>("git_status", { repoPath: this.rootUri }),
           invoke<RustGitCommitNode[]>("git_get_graph", { repoPath: this.rootUri, limit: 50 }),
+          invoke<any[]>("git_stash_list", { repoPath: this.rootUri }).catch(() => []),
         ]);
 
         const staged: ISCMResource[] = (statusRes.staged_changes || []).map((f) => ({
@@ -127,6 +133,13 @@ export class GitRepository implements ISCMRepository {
           localRef: n.local_ref,
         }));
 
+        const conflicted: ISCMResource[] = (statusRes.conflicted_files || []).map((f) => ({
+          path: f.path,
+          filename: f.filename,
+          status: f.status,
+          staged: false,
+        }));
+
         this.state = {
           isRepo: statusRes.is_repo,
           branch: statusRes.branch || "main",
@@ -134,7 +147,10 @@ export class GitRepository implements ISCMRepository {
           behind: statusRes.behind || 0,
           stagedChanges: staged,
           unstagedChanges: unstaged,
+          conflictedChanges: conflicted,
+          hasConflicts: Boolean(statusRes.has_conflicts),
           history,
+          stashes: stashesRes || [],
           isLoading: false,
         };
       } else {
@@ -148,27 +164,10 @@ export class GitRepository implements ISCMRepository {
           unstagedChanges: [
             { path: "src/App.tsx", filename: "App.tsx", status: "M", staged: false },
           ],
-          history: [
-            {
-              hash: "a1b2c3d",
-              parents: [],
-              refs: ["HEAD -> main", "origin/main"],
-              message: "feat(projects): add diagram, infer...",
-              author: "Developer",
-              relativeDate: "10 minutes ago",
-              isHead: true,
-              remoteRef: "origin/main",
-            },
-            ...Array.from({ length: 10 }).map((_, i) => ({
-              hash: `c${i}`,
-              parents: [],
-              refs: [],
-              message: "Update AI Agent",
-              author: "Developer",
-              relativeDate: `${i + 1} hours ago`,
-              isHead: false,
-            })),
-          ],
+          conflictedChanges: [],
+          hasConflicts: false,
+          history: [],
+          stashes: [],
           isLoading: false,
         };
       }
@@ -211,6 +210,13 @@ export class GitRepository implements ISCMRepository {
     await this.refresh();
   }
 
+  async getFileDiff(filePath: string, staged: boolean = false): Promise<string> {
+    if (window.__TAURI_INTERNALS__) {
+      return invoke("git_get_file_diff", { repoPath: this.rootUri, filePath, staged });
+    }
+    return "";
+  }
+
   async discardAll(): Promise<void> {
     await invoke("git_discard_all", { repoPath: this.rootUri });
     await this.refresh();
@@ -233,6 +239,58 @@ export class GitRepository implements ISCMRepository {
     } finally {
       await this.refresh();
     }
+  }
+
+  async fetch(): Promise<void> {
+    this.state.isLoading = true;
+    this.notify();
+    try {
+      await invoke("git_fetch", { repoPath: this.rootUri });
+    } finally {
+      await this.refresh();
+    }
+  }
+
+  async stashSave(message?: string): Promise<void> {
+    if (window.__TAURI_INTERNALS__) {
+      await invoke("git_stash_save", { repoPath: this.rootUri, message: message || null });
+      await this.refresh();
+    }
+  }
+
+  async stashPop(): Promise<void> {
+    if (window.__TAURI_INTERNALS__) {
+      await invoke("git_stash_pop", { repoPath: this.rootUri });
+      await this.refresh();
+    }
+  }
+
+  async checkoutOurs(path: string): Promise<void> {
+    if (window.__TAURI_INTERNALS__) {
+      await invoke("git_checkout_ours", { repoPath: this.rootUri, filePath: path });
+      await this.refresh();
+    }
+  }
+
+  async checkoutTheirs(path: string): Promise<void> {
+    if (window.__TAURI_INTERNALS__) {
+      await invoke("git_checkout_theirs", { repoPath: this.rootUri, filePath: path });
+      await this.refresh();
+    }
+  }
+
+  async abortMerge(): Promise<void> {
+    if (window.__TAURI_INTERNALS__) {
+      await invoke("git_abort_merge", { repoPath: this.rootUri });
+      await this.refresh();
+    }
+  }
+
+  async getCommitDetails(hash: string): Promise<any> {
+    if (window.__TAURI_INTERNALS__) {
+      return await invoke("git_get_commit_details", { repoPath: this.rootUri, hash });
+    }
+    return { hash, author: "Developer", date: "Now", message: "Mock commit", files: [] };
   }
 
   async initRepo(): Promise<void> {

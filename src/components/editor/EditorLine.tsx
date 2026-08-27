@@ -4,7 +4,9 @@ import {
   VscPlay, 
   VscError, 
   VscWarning, 
-  VscInfo 
+  VscInfo,
+  VscChevronRight,
+  VscChevronDown,
 } from "react-icons/vsc";
 import { TokenMetadata } from "../../../src/editor/tokenization/TokenMetadata";
 import { TokenKind } from "../../../src/types/contracts";
@@ -28,6 +30,19 @@ export interface EditorLineProps {
   onToggleBreakpoint?: (lineIndex: number) => void;
   diagnosticSeverity?: string;
   lineDiagnostics?: LineDiagnosticRange[];
+  /** Text selection highlight range */
+  selectionRange?: { startCol: number; endCol: number } | null;
+  /** Word-occurrence highlight ranges (all occurrences of word under cursor) */
+  wordHighlightRanges?: { startCol: number; endCol: number }[];
+  /** Bracket match highlight (just on this line) */
+  bracketMatchRange?: { startCol: number; endCol: number } | null;
+  /** Ghost text shown after the cursor (inline completion preview) */
+  ghostText?: string;
+  ghostTextCol?: number;
+  /** Folding support */
+  isFoldable?: boolean;
+  isFolded?: boolean;
+  onToggleFold?: (lineIndex: number) => void;
 }
 
 const TokenClassMap: Record<number, string> = {
@@ -43,6 +58,9 @@ const TokenClassMap: Record<number, string> = {
   [TokenKind.Punctuation]: styles.tok_punctuation,
 };
 
+const CHAR_WIDTH_PX = 8.4;
+const CONTENT_PADDING_LEFT = 16; // px
+
 const EditorLine = React.memo(function EditorLine({
   lineIndex,
   content,
@@ -54,6 +72,14 @@ const EditorLine = React.memo(function EditorLine({
   onToggleBreakpoint,
   diagnosticSeverity,
   lineDiagnostics = [],
+  selectionRange,
+  wordHighlightRanges = [],
+  bracketMatchRange,
+  ghostText,
+  ghostTextCol,
+  isFoldable = false,
+  isFolded = false,
+  onToggleFold,
 }: EditorLineProps) {
   const spans = useMemo(() => {
     if (!content) {
@@ -67,7 +93,9 @@ const EditorLine = React.memo(function EditorLine({
       tokenKind: number;
     }> = [];
 
-    if (!tokens || tokens.length === 0) {
+    const isValidTokens = Array.isArray(tokens) && tokens.length > 0 && tokens[0] < content.length;
+
+    if (!isValidTokens) {
       segments.push({
         start: 0,
         end: content.length,
@@ -180,8 +208,106 @@ const EditorLine = React.memo(function EditorLine({
         <span>{lineIndex + 1}</span>
       </span>
 
+      {/* Fold toggle icon */}
+      {isFoldable && (
+        <span
+          className={styles.foldToggle}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleFold?.(lineIndex);
+          }}
+          title={isFolded ? "Expand" : "Collapse"}
+          aria-label={isFolded ? "Expand fold" : "Collapse fold"}
+        >
+          {isFolded ? <VscChevronRight size={10} /> : <VscChevronDown size={10} />}
+        </span>
+      )}
+
       <span className={styles.lineContent}>
+        {/* Selection highlight */}
+        {selectionRange && selectionRange.startCol < selectionRange.endCol && (
+          <span
+            style={{
+              position: "absolute",
+              top: 0,
+              bottom: 0,
+              left: `calc(${CONTENT_PADDING_LEFT}px + ${selectionRange.startCol * CHAR_WIDTH_PX}px)`,
+              width: `${Math.max(4, (selectionRange.endCol - selectionRange.startCol) * CHAR_WIDTH_PX)}px`,
+              backgroundColor: "rgba(38, 79, 120, 0.45)",
+              borderRadius: "2px",
+              pointerEvents: "none",
+              zIndex: 0,
+            }}
+          />
+        )}
+
+        {/* Word occurrence highlights */}
+        {wordHighlightRanges.map((range, i) => (
+          <span
+            key={`wh-${i}`}
+            style={{
+              position: "absolute",
+              top: 1,
+              bottom: 1,
+              left: `calc(${CONTENT_PADDING_LEFT}px + ${range.startCol * CHAR_WIDTH_PX}px)`,
+              width: `${(range.endCol - range.startCol) * CHAR_WIDTH_PX}px`,
+              backgroundColor: "rgba(180, 180, 60, 0.18)",
+              border: "1px solid rgba(180, 180, 60, 0.35)",
+              borderRadius: "2px",
+              pointerEvents: "none",
+              zIndex: 0,
+            }}
+          />
+        ))}
+
+        {/* Bracket match highlight */}
+        {bracketMatchRange && (
+          <span
+            style={{
+              position: "absolute",
+              top: 1,
+              bottom: 1,
+              left: `calc(${CONTENT_PADDING_LEFT}px + ${bracketMatchRange.startCol * CHAR_WIDTH_PX}px)`,
+              width: `${(bracketMatchRange.endCol - bracketMatchRange.startCol) * CHAR_WIDTH_PX}px`,
+              backgroundColor: "rgba(80, 200, 120, 0.2)",
+              border: "1px solid rgba(80, 200, 120, 0.5)",
+              borderRadius: "2px",
+              pointerEvents: "none",
+              zIndex: 1,
+            }}
+          />
+        )}
+
         {spans}
+
+        {/* Ghost text (inline completion preview) */}
+        {ghostText && ghostTextCol !== undefined && (
+          <span
+            style={{
+              position: "absolute",
+              left: `calc(${CONTENT_PADDING_LEFT}px + ${ghostTextCol * CHAR_WIDTH_PX}px)`,
+              top: 0,
+              lineHeight: "21px",
+              opacity: 0.4,
+              fontStyle: "italic",
+              color: "inherit",
+              pointerEvents: "none",
+              userSelect: "none",
+              zIndex: 2,
+              whiteSpace: "pre",
+            }}
+          >
+            {ghostText}
+          </span>
+        )}
+
+        {/* Folded indicator */}
+        {isFolded && (
+          <span className={styles.foldedPlaceholder} title="Folded lines">
+            {" ···"}
+          </span>
+        )}
+
         {inlineValue && (
           <span className={styles.inlineDebugValue} title="Evaluated variable values">
             // {inlineValue}

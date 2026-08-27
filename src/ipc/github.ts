@@ -56,6 +56,13 @@ export interface CreateIssueParams {
   labels: string[];
 }
 
+export interface GitHubUser {
+  login: string;
+  name?: string;
+  avatar_url: string;
+  html_url: string;
+}
+
 // Authentication commands
 export async function githubStoreToken(token: string): Promise<void> {
   return invoke("store_github_token", { token });
@@ -71,6 +78,10 @@ export async function githubClearToken(): Promise<void> {
 
 export async function githubValidateTokenFormat(token: string): Promise<void> {
   return invoke("validate_token_format", { token });
+}
+
+export async function githubVerifyToken(token?: string): Promise<GitHubUser> {
+  return invoke("github_verify_token", { token: token || null });
 }
 
 // GitHub API commands

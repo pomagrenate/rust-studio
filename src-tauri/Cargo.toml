@@ -1,6 +1,6 @@
 [package]
 name = "pomai-studio"
-version = "0.1.0"
+version = "0.1.5"
 description = "pomai-studio — a high-performance Rust/Tauri code editor"
 authors = ["Pomai"]
 edition = "2021"
@@ -67,6 +67,11 @@ tree-sitter-highlight = "0.24"
 octocrab = "0.41"
 keyring = "3"
 base64 = "0.22"
+
+# ── AST Parsing & Test Generator ─────────────────────────────────────────────
+syn = { version = "2", features = ["full", "extra-traits", "parsing"] }
+quote = "1"
+proc-macro2 = { version = "1", features = ["span-locations"] }
 
 [dev-dependencies]
 tempfile = "3.8"

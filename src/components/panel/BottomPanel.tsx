@@ -4,7 +4,7 @@
  * dynamic width/height drag resizing, profiles, and theme synchronization via useTheme.
  */
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
@@ -323,7 +323,7 @@ function TerminalSessionView({ pane, cwd, theme, onClearTerminalRef }: TerminalS
 }
 
 // ── Root JetBrains RustRover Terminal Tool Window ──
-export function BottomPanel({
+export const BottomPanel = React.memo(function BottomPanel({
   onClose,
   cwd,
 }: BottomPanelProps) {
@@ -793,6 +793,6 @@ export function BottomPanel({
       </div>
     </div>
   );
-}
+});
 
 export default BottomPanel;

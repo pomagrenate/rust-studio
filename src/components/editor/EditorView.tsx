@@ -11,17 +11,23 @@ import { useTextMeasurement } from "../../hooks/useTextMeasurement";
 import { useRopeBuffer } from "../../hooks/useRopeBuffer";
 import { useCodeActions } from "../../hooks/useCodeActions";
 import { lspCompletion, pathToUri, lspSyncDocument } from "../../ipc/lsp";
-import { undoEdit, redoEdit } from "../../ipc/buffer";
-import { ViewModel } from "./viewModel/ViewModel";
+import { ViewModel, type Selection } from "./viewModel/ViewModel";
 import { commandRegistry } from "./commands/CommandRegistry";
 import { MouseHandler } from "./controller/MouseHandler";
 import { ContextMenu } from "./contextmenu/ContextMenu";
 import { ContextMenuController } from "./contextmenu/ContextMenuController";
 import type { MenuItem, EditorContextState } from "./contextmenu/types";
 import { applySurroundTemplate, detectBaseIndentation, type SurroundTemplate } from "../../utils/surroundWith";
+import { GoToLineWidget } from "./GoToLineWidget";
+import { StickyScroll } from "./StickyScroll";
+import { Minimap } from "./Minimap";
+import { useWordHighlighter } from "../../hooks/useWordHighlighter";
+import { useBracketMatcher } from "../../hooks/useBracketMatcher";
+import { computeFoldingRanges, buildFoldableLineSet, getHiddenLines } from "./folding/FoldingProvider";
 import "./commands/NavigationCommands";
 import "./commands/SelectionCommands";
 import "./commands/EditingCommands";
+import "./commands/LinesOperationsCommands";
 import "./commands/MultiCursorCommands";
 import "./commands/AutoClosingCommands";
 import "./commands/ScrollCommands";
@@ -65,7 +71,10 @@ function formatKeybinding(e: ReactKeyboardEvent): string {
     'Insert': 'Insert',
   };
   
-  const key = keyMap[e.key] || e.key;
+  let key = keyMap[e.key] || e.key;
+  if (key.length === 1) {
+    key = key.toUpperCase();
+  }
   parts.push(key);
   
   return parts.join('+');
@@ -151,6 +160,14 @@ export function EditorView({
   const [surroundWithPosition, setSurroundWithPosition] = useState({ x: 0, y: 0 });
   const [selectedTextForSurround, setSelectedTextForSurround] = useState("");
 
+  // Go to Line widget state
+  const [isGoToLineOpen, setIsGoToLineOpen] = useState(false);
+  // Feature toggles
+  const [showMinimap] = useState(true);
+  const [showStickyScroll] = useState(true);
+  // Code folding state
+  const [foldedLines, setFoldedLines] = useState<Set<number>>(new Set());
+
   // Handle quick-fix action application
   const handleQuickFixApply = useCallback((_action: any) => {
     // For now, just close the widget
@@ -206,25 +223,68 @@ export function EditorView({
     if (executionLine !== undefined && containerRef.current) {
       const targetScrollTop = Math.max(0, executionLine * LINE_HEIGHT_PX - viewportHeight / 2);
       containerRef.current.scrollTo({ top: targetScrollTop, behavior: "smooth" });
+    } else if (activeLine !== undefined && activeLine >= 0 && containerRef.current) {
+      const targetScrollTop = Math.max(0, activeLine * LINE_HEIGHT_PX - viewportHeight / 3);
+      containerRef.current.scrollTo({ top: targetScrollTop, behavior: "smooth" });
+      if (viewModelRef.current) {
+        viewModelRef.current.setCursorPosition({ line: activeLine, column: activeCol || 0 });
+      }
     }
-  }, [executionLine, viewportHeight]);
+  }, [executionLine, activeLine, activeCol, viewportHeight]);
 
   const { measureText } = useTextMeasurement({
-    fontFamily: '"JetBrains Mono", Consolas, monospace',
-    fontSize: 13.5,
+    fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, Monaco, Consolas, monospace",
+    fontSize: 14,
     fontWeight: 600,
-    charWidth: 8.1,
+    charWidth: 8.4,
   });
+
+  // Synchronous text model buffer ref (VS Code TextModel pattern)
+  const bufferRef = useRef<{ lines: string[]; activeLine: number; activeCol: number }>({
+    lines: lines || [],
+    activeLine: activeLine || 0,
+    activeCol: activeCol || 0,
+  });
+
+  const undoStackRef = useRef<Array<{ lines: string[]; line: number; col: number }>>([]);
+  const redoStackRef = useRef<Array<{ lines: string[]; line: number; col: number }>>([]);
+  const prevFilePathRef = useRef<string | undefined>(filePath);
+
+  // Local state for view updates
+  const [localLines, setLocalLines] = useState<string[]>(lines || []);
+  const [localActiveLine, setLocalActiveLine] = useState(activeLine);
+  const [localActiveCol, setLocalActiveCol] = useState(activeCol);
+  const [selection, setSelection] = useState<Selection | null>(null);
+
+  const isDraggingRef = useRef<boolean>(false);
+  const dragStartPosRef = useRef<{ line: number; column: number } | null>(null);
+
+  // Synchronize buffer with props only on active file change or when undo stack is clean
+  useEffect(() => {
+    if (filePath !== prevFilePathRef.current) {
+      prevFilePathRef.current = filePath;
+      undoStackRef.current = [];
+      redoStackRef.current = [];
+      bufferRef.current = {
+        lines: lines || [],
+        activeLine: activeLine || 0,
+        activeCol: activeCol || 0,
+      };
+      setLocalLines(lines || []);
+      setLocalActiveLine(activeLine || 0);
+      setLocalActiveCol(activeCol || 0);
+    } else if (undoStackRef.current.length === 0) {
+      bufferRef.current.lines = lines || [];
+      setLocalLines(lines || []);
+    }
+  }, [filePath, lines, activeLine, activeCol]);
 
   // Integrate rope buffer when enabled
   const ropeBuffer = useRopeBuffer(enableRopeBuffer ? filePath : undefined);
-  // Memoize so the array reference only changes when the content actually changes,
-  // preventing downstream effects from firing on every parent render.
-  const effectiveLines = useMemo(
-    () => (enableRopeBuffer && ropeBuffer && ropeBuffer.lines.length > 0) ? ropeBuffer.lines : (lines || []),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [enableRopeBuffer, ropeBuffer?.lines, lines]
-  );
+  
+  const effectiveLines = (enableRopeBuffer && ropeBuffer && ropeBuffer.lines.length > 0)
+    ? ropeBuffer.lines
+    : localLines;
   const effectiveLineCount = (enableRopeBuffer && ropeBuffer && ropeBuffer.lineCount > 0)
     ? ropeBuffer.lineCount
     : effectiveLines.length;
@@ -233,27 +293,32 @@ export function EditorView({
   const viewModelRef = useRef<ViewModel | null>(null);
   const mouseHandlerRef = useRef<MouseHandler | null>(null);
 
+  const onLinesChangeRef = useRef(onLinesChange);
+  useEffect(() => {
+    onLinesChangeRef.current = onLinesChange;
+  }, [onLinesChange]);
+
   // Keep ViewModel's internal lines in sync WITHOUT triggering notifyChange
   // (which would call onLinesChange → parent setState → infinite cascade).
   useEffect(() => {
     if (!viewModelRef.current) {
       viewModelRef.current = new ViewModel(effectiveLines, (newLines, line, col) => {
-        onLinesChange?.(newLines, line, col);
+        onLinesChangeRef.current?.(newLines, line, col);
       });
     } else {
       // Directly update internal lines reference to avoid notifyChange feedback loop
       (viewModelRef.current as any).lines = [...effectiveLines];
     }
-  }, [effectiveLines, onLinesChange]);
+  }, [effectiveLines]);
 
   useEffect(() => {
     if (!mouseHandlerRef.current && viewModelRef.current) {
       mouseHandlerRef.current = new MouseHandler({
         viewModel: viewModelRef.current,
-        onLinesChange
+        onLinesChange: (...args) => onLinesChangeRef.current?.(...args)
       });
     }
-  }, [onLinesChange]);
+  }, []);
 
   // Initialize ContextMenuController
   useEffect(() => {
@@ -339,11 +404,16 @@ export function EditorView({
         return true;
       });
     };
+    const handleGoToLineEvent = () => {
+      setIsGoToLineOpen((prev) => !prev);
+    };
     window.addEventListener("pm:find", handleFindEvent);
     window.addEventListener("pm:replace", handleReplaceEvent);
+    window.addEventListener("pm:gotoline", handleGoToLineEvent);
     return () => {
       window.removeEventListener("pm:find", handleFindEvent);
       window.removeEventListener("pm:replace", handleReplaceEvent);
+      window.removeEventListener("pm:gotoline", handleGoToLineEvent);
     };
   }, [isReplaceOpen]);
 
@@ -364,24 +434,56 @@ export function EditorView({
       viewportHeightPx: viewportHeight,
     });
 
+  // Word occurrence highlighter
+  const wordHighlightMap = useWordHighlighter(
+    effectiveLines,
+    localActiveLine,
+    localActiveCol,
+    startLine,
+    endLine,
+    true
+  );
+
+  // Bracket pair matcher
+  const bracketMatch = useBracketMatcher(
+    effectiveLines,
+    localActiveLine,
+    localActiveCol,
+    true
+  );
+
+  // Code folding computations
+  const foldingRanges = useMemo(
+    () => computeFoldingRanges(effectiveLines),
+    [effectiveLines]
+  );
+  const foldableSet = useMemo(
+    () => buildFoldableLineSet(foldingRanges),
+    [foldingRanges]
+  );
+  const hiddenLinesSet = useMemo(
+    () => getHiddenLines(foldedLines, foldingRanges),
+    [foldedLines, foldingRanges]
+  );
+
   useEffect(() => {
-    const activeLineText = effectiveLines[activeLine] || "";
-    const textBeforeCursor = activeLineText.slice(0, activeCol);
+    const activeLineText = effectiveLines[localActiveLine] || "";
+    const textBeforeCursor = activeLineText.slice(0, localActiveCol);
     const normalizedText = textBeforeCursor.replace(/\t/g, "    ");
     const width = measureText(normalizedText);
     setCursorX(width);
-  }, [activeCol, activeLine, effectiveLines, measureText]);
+  }, [localActiveCol, localActiveLine, effectiveLines, measureText]);
 
   useEffect(() => {
     if (!containerRef.current) return;
-    const lineY = activeLine * LINE_HEIGHT_PX;
+    const lineY = localActiveLine * LINE_HEIGHT_PX;
     const st = containerRef.current.scrollTop;
     if (lineY < st) {
       containerRef.current.scrollTop = lineY;
     } else if (lineY > st + viewportHeight - LINE_HEIGHT_PX * 2) {
       containerRef.current.scrollTop = lineY - viewportHeight + LINE_HEIGHT_PX * 2;
     }
-  }, [activeLine, viewportHeight]);
+  }, [localActiveLine, viewportHeight]);
 
   // Memoize visible slice — new array reference only when startLine/endLine or content changes
   const visibleLines = useMemo(
@@ -430,8 +532,8 @@ export function EditorView({
         return tokens;
       });
 
-      setTokenCache((prev) => {
-        const next = { ...prev };
+      setTokenCache(() => {
+        const next: Record<number, number[]> = {};
         fallbackTokens.forEach((tokens, i) => {
           next[startLine + i] = tokens;
         });
@@ -446,8 +548,8 @@ export function EditorView({
       invoke<number[][]>("tokenize_lines", { lines: visibleLines })
         .then((tokenArrays) => {
           if (!isMounted) return;
-          setTokenCache((prev) => {
-            const next = { ...prev };
+          setTokenCache(() => {
+            const next: Record<number, number[]> = {};
             tokenArrays.forEach((tokens, i) => {
               next[startLine + i] = tokens;
             });
@@ -463,28 +565,82 @@ export function EditorView({
     };
   }, [visibleLines, startLine]);
 
+  const getLineSelectionRange = useCallback(
+    (lineIdx: number): { startCol: number; endCol: number } | null => {
+      const vm = viewModelRef.current;
+      if (!vm || !vm.hasSelection()) return null;
+      const sel = vm.getSelection();
+
+      let l1 = sel.start.line;
+      let c1 = sel.start.column;
+      let l2 = sel.end.line;
+      let c2 = sel.end.column;
+
+      if (l1 > l2 || (l1 === l2 && c1 > c2)) {
+        [l1, l2] = [l2, l1];
+        [c1, c2] = [c2, c1];
+      }
+
+      if (lineIdx < l1 || lineIdx > l2) return null;
+
+      const lineLen = effectiveLines[lineIdx] ? effectiveLines[lineIdx].length : 0;
+
+      if (l1 === l2) {
+        return { startCol: c1, endCol: c2 };
+      }
+      if (lineIdx === l1) {
+        return { startCol: c1, endCol: lineLen + 1 };
+      }
+      if (lineIdx === l2) {
+        return { startCol: 0, endCol: c2 };
+      }
+      return { startCol: 0, endCol: lineLen + 1 };
+    },
+    [effectiveLines]
+  );
+
   const handleContextMenu = (e: ReactMouseEvent<HTMLDivElement>) => {
     e.preventDefault();
-    
     if (!contextMenuControllerRef.current) return;
 
-    // Update context state based on current position
+    const vm = viewModelRef.current;
+    const hasSel = vm ? vm.hasSelection() : false;
+    let selText = "";
+    if (hasSel && vm) {
+      const sel = vm.getSelection();
+      let l1 = sel.start.line, c1 = sel.start.column;
+      let l2 = sel.end.line, c2 = sel.end.column;
+      if (l1 > l2 || (l1 === l2 && c1 > c2)) {
+        [l1, l2] = [l2, l1];
+        [c1, c2] = [c2, c1];
+      }
+      if (l1 === l2) {
+        selText = (effectiveLines[l1] || "").substring(c1, c2);
+      } else {
+        let t = (effectiveLines[l1] || "").substring(c1) + "\n";
+        for (let i = l1 + 1; i < l2; i++) {
+          t += (effectiveLines[i] || "") + "\n";
+        }
+        t += (effectiveLines[l2] || "").substring(0, c2);
+        selText = t;
+      }
+    }
+
     const line = effectiveLines[activeLine] || "";
     const tokenUnderCursor = ContextMenuController.detectTokenUnderCursor(line, activeCol);
     const diagnosticAtCursor = ContextMenuController.findDiagnosticAtCursor(diagnostics, activeLine, activeCol);
 
     contextMenuControllerRef.current.updateContextState({
-      hasSelection: false, // TODO: Integrate with actual selection state
-      selectionText: "",
+      hasSelection: hasSel,
+      selectionText: selText,
       cursorPosition: { line: activeLine, column: activeCol },
-      lspConnected: true, // TODO: Integrate with actual LSP state
+      lspConnected: true,
       tokenUnderCursor,
       diagnosticAtCursor,
       fileType: ContextMenuController.detectFileType(filePath),
       isTestContext: ContextMenuController.detectTestContext(effectiveLines, activeLine),
     });
 
-    // Get menu items for current context
     const items = contextMenuControllerRef.current.getMenuItems();
     setContextMenuItems(items);
     setContextMenuPosition({ x: e.clientX, y: e.clientY });
@@ -498,22 +654,124 @@ export function EditorView({
     setContextMenuOpen(false);
   };
 
+  const getPosFromMouseEvent = useCallback(
+    (e: ReactMouseEvent<HTMLDivElement> | MouseEvent): { line: number; column: number } => {
+      if (!containerRef.current) return { line: 0, column: 0 };
+      const rect = containerRef.current.getBoundingClientRect();
+      const scrollTop = containerRef.current.scrollTop;
+
+      const y = e.clientY - rect.top + scrollTop;
+      let clickedLine = Math.floor(y / LINE_HEIGHT_PX);
+
+      if (clickedLine >= effectiveLines.length) clickedLine = Math.max(0, effectiveLines.length - 1);
+      if (clickedLine < 0) clickedLine = 0;
+
+      let col = -1;
+
+      if (document.caretRangeFromPoint) {
+        const range = document.caretRangeFromPoint(e.clientX, e.clientY);
+        if (range && range.startContainer) {
+          const node = range.startContainer;
+          if (node.nodeType === Node.TEXT_NODE && node.parentElement) {
+            let charOffset = range.startOffset;
+            let sibling = node.parentElement.previousSibling;
+            while (sibling) {
+              charOffset += sibling.textContent?.length || 0;
+              sibling = sibling.previousSibling;
+            }
+            col = charOffset;
+          } else if (
+            (node as HTMLElement).className &&
+            typeof (node as HTMLElement).className === "string" &&
+            (node as HTMLElement).className.includes("lineContent")
+          ) {
+            col = effectiveLines[clickedLine] ? effectiveLines[clickedLine].length : 0;
+          }
+        }
+      } else if ((document as any).caretPositionFromPoint) {
+        const pos = (document as any).caretPositionFromPoint(e.clientX, e.clientY);
+        if (pos && pos.offsetNode) {
+          const node = pos.offsetNode;
+          if (node.nodeType === Node.TEXT_NODE && node.parentElement) {
+            let charOffset = pos.offset;
+            let sibling = node.parentElement.previousSibling;
+            while (sibling) {
+              charOffset += sibling.textContent?.length || 0;
+              sibling = sibling.previousSibling;
+            }
+            col = charOffset;
+          } else if (
+            (node as HTMLElement).className &&
+            typeof (node as HTMLElement).className === "string" &&
+            (node as HTMLElement).className.includes("lineContent")
+          ) {
+            col = effectiveLines[clickedLine] ? effectiveLines[clickedLine].length : 0;
+          }
+        }
+      }
+
+      if (col === -1) {
+        const targetClass = (e.target as HTMLElement)?.className || "";
+        if (
+          typeof targetClass === "string" &&
+          (targetClass.includes("lineContent") ||
+            targetClass.includes("editorScrollContainer") ||
+            targetClass.includes("linesContainer") ||
+            targetClass.includes("editorInner"))
+        ) {
+          col = effectiveLines[clickedLine] ? effectiveLines[clickedLine].length : 0;
+        } else {
+          const x = e.clientX - rect.left - GUTTER_TOTAL_OFFSET;
+          col = Math.max(0, Math.round(x / 8.4));
+        }
+      }
+
+      const lineLen = effectiveLines[clickedLine] ? effectiveLines[clickedLine].length : 0;
+      const finalCol = Math.min(col, lineLen);
+      return { line: clickedLine, column: finalCol };
+    },
+    [effectiveLines]
+  );
+
   const handleMouseMove = (e: ReactMouseEvent<HTMLDivElement>) => {
-    if (!onHover || !containerRef.current) return;
+    if (isDraggingRef.current && dragStartPosRef.current) {
+      const endPos = getPosFromMouseEvent(e);
+      const startPos = dragStartPosRef.current;
+      if (startPos.line !== endPos.line || startPos.column !== endPos.column) {
+        const newSel: Selection = { start: startPos, end: endPos };
+        setSelection(newSel);
+        if (viewModelRef.current) viewModelRef.current.setSelection(newSel);
+        bufferRef.current.activeLine = endPos.line;
+        bufferRef.current.activeCol = endPos.column;
+        setLocalActiveLine(endPos.line);
+        setLocalActiveCol(endPos.column);
+        return;
+      }
+    }
 
-    const rect = containerRef.current.getBoundingClientRect();
-    const scrollTop = containerRef.current.scrollTop;
-    const y = e.clientY - rect.top + scrollTop;
-    const line = Math.floor(y / LINE_HEIGHT_PX);
+    if (onHover && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const scrollTop = containerRef.current.scrollTop;
+      const y = e.clientY - rect.top + scrollTop;
+      const line = Math.floor(y / LINE_HEIGHT_PX);
 
-    if (line >= 0 && line < lines.length && line !== activeLine) {
-      const lineText = lines[line] || "";
-      const x = e.clientX - rect.left - GUTTER_TOTAL_OFFSET;
-      const col = Math.max(0, Math.min(Math.round(x / 8.1), lineText.length));
+      if (line >= 0 && line < effectiveLines.length && line !== activeLine) {
+        const lineText = effectiveLines[line] || "";
+        const x = e.clientX - rect.left - GUTTER_TOTAL_OFFSET;
+        const col = Math.max(0, Math.min(Math.round(x / 8.1), lineText.length));
 
-      onHover(line, col);
+        onHover(line, col);
+      }
     }
   };
+
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      isDraggingRef.current = false;
+    };
+    window.addEventListener("mouseup", handleGlobalMouseUp);
+    return () => window.removeEventListener("mouseup", handleGlobalMouseUp);
+  }, []);
 
   // Extract word prefix before cursor for completion
   const getWordPrefix = useCallback((line: string, col: number): { prefix: string; start: number } => {
@@ -526,23 +784,40 @@ export function EditorView({
   }, []);
 
   // Request completions from LSP
-  const requestCompletions = useCallback(async () => {
+  const requestCompletions = useCallback(async (isManualTrigger = false) => {
     if (!filePath) return;
     
-    const uri = pathToUri(filePath);
-    const { prefix } = getWordPrefix(effectiveLines[activeLine] || "", activeCol);
+    const lineText = effectiveLines[activeLine] || "";
+    const charBeforeCursor = activeCol > 0 ? lineText[activeCol - 1] : "";
+    const { prefix } = getWordPrefix(lineText, activeCol);
+    const isTriggerChar = [".", ":", "#", "$"].includes(charBeforeCursor);
+
+    // Don't auto-popup on empty lines or spaces unless manually triggered (Ctrl+Space) or after a trigger char or active word prefix
+    if (!isManualTrigger && !isTriggerChar && !prefix) {
+      setCompletionOpen(false);
+      return;
+    }
     
+    const uri = pathToUri(filePath);
     try {
       // Use the provided onLspCompletion if available, otherwise fall back to direct IPC call
-      let items: CompletionItem[];
+      let rawItems: CompletionItem[] = [];
       if (onLspCompletion) {
-        items = await onLspCompletion(uri, activeLine, activeCol);
+        rawItems = (await onLspCompletion(uri, activeLine, activeCol)) || [];
       } else {
-        items = await lspCompletion(uri, activeLine, activeCol);
+        rawItems = (await lspCompletion(uri, activeLine, activeCol)) || [];
       }
       
-      setCompletionItems(items);
-      setFilterText(prefix);
+      const validItems = (Array.isArray(rawItems) ? rawItems : [])
+        .filter((item): item is CompletionItem => Boolean(item && (item.label || (item as any).insert_text || (item as any).insertText)))
+        .map((item) => ({
+          ...item,
+          label: item.label || (item as any).insert_text || (item as any).insertText || "",
+          insertText: item.insertText || (item as any).insert_text || item.label || "",
+        }));
+
+      setCompletionItems(validItems);
+      setFilterText(prefix || "");
       setSelectedIndex(0);
       
       // Calculate widget position
@@ -553,10 +828,11 @@ export function EditorView({
         setCompletionPosition({ x, y });
       }
       
-      setCompletionOpen(items.length > 0);
+      setCompletionOpen(validItems.length > 0);
     } catch (err) {
       console.error("Completion request failed:", err);
       setCompletionOpen(false);
+      setCompletionItems([]);
     }
   }, [filePath, effectiveLines, activeLine, activeCol, cursorX, startLine, getWordPrefix, onLspCompletion]);
 
@@ -565,40 +841,58 @@ export function EditorView({
     if (completionTimeoutRef.current) {
       clearTimeout(completionTimeoutRef.current);
     }
-    
     const delay = triggerInstant ? 0 : 75;
     completionTimeoutRef.current = setTimeout(() => {
-      requestCompletions();
+      requestCompletions(triggerInstant);
     }, delay);
   }, [requestCompletions]);
 
   // Handle completion selection with Rust-specific insertion logic
   const handleCompletionSelect = useCallback((item: CompletionItem) => {
-    if (!onLinesChange) return;
-    
-    const line = lines[activeLine] || "";
+    if (!item) {
+      setCompletionOpen(false);
+      return;
+    }
+    const currentLines = bufferRef.current.lines.length > 0 ? bufferRef.current.lines : effectiveLines;
+    const line = currentLines[activeLine] || "";
     const { start } = getWordPrefix(line, activeCol);
-    let insertText = item.insertText || item.label;
-    let newCol = start + insertText.length;
+    const label = item.label || "";
+    const rawInsertText = item.insertText || (item as any).insert_text || label;
+    let insertText = String(rawInsertText || "");
+    const replaceStart = Math.max(0, start);
+    let newCol = replaceStart + insertText.length;
     
     // Rust-specific: Position cursor inside parentheses for function calls
     if (insertText.endsWith("()") && !insertText.includes("$0")) {
       insertText = insertText.slice(0, -1) + "$0)";
-      newCol = start + insertText.indexOf("$0");
+      newCol = replaceStart + insertText.indexOf("$0");
     }
     
     // Rust-specific: Preserve macro delimiters
-    if (item.label.endsWith("!") && !insertText.endsWith("!")) {
+    if (label.endsWith("!") && !insertText.endsWith("!")) {
       insertText += "!";
-      newCol = start + insertText.length;
+      newCol = replaceStart + insertText.length;
     }
     
-    // Replace prefix with insert text
-    const newLine = line.slice(0, start) + insertText.replace("$0", "") + line.slice(activeCol);
-    const newLines = [...lines];
+    const cleanText = insertText.replace(/\$0/g, "");
+    // Replace word prefix (from start to activeCol) with cleanText
+    const newLine = line.slice(0, replaceStart) + cleanText + line.slice(activeCol);
+    const newLines = [...currentLines];
     newLines[activeLine] = newLine;
     
-    onLinesChange(newLines, activeLine, newCol);
+    bufferRef.current = {
+      lines: newLines,
+      activeLine,
+      activeCol: newCol,
+    };
+    setLocalLines(newLines);
+    setLocalActiveLine(activeLine);
+    setLocalActiveCol(newCol);
+    if (viewModelRef.current) {
+      viewModelRef.current.setLines(newLines);
+      viewModelRef.current.setCursorPosition({ line: activeLine, column: newCol });
+    }
+    onLinesChangeRef.current?.(newLines, activeLine, newCol);
     setCompletionOpen(false);
     setFilterText("");
     
@@ -610,14 +904,14 @@ export function EditorView({
         version: Date.now(),
         changes: [{
           range: {
-            start: { line: activeLine, character: start },
+            start: { line: activeLine, character: replaceStart },
             end: { line: activeLine, character: activeCol }
           },
-          text: insertText.replace("$0", "")
+          text: cleanText
         }]
       }).catch(console.error);
     }
-  }, [lines, activeLine, activeCol, onLinesChange, filePath, getWordPrefix]);
+  }, [effectiveLines, activeLine, activeCol, filePath, getWordPrefix, lspSyncDocument]);
 
   // Handle completion navigation
   const handleCompletionNavigate = useCallback((direction: "up" | "down") => {
@@ -640,6 +934,42 @@ export function EditorView({
     }
   }, []);
 
+  // Synchronize state from ViewModel after command execution
+  const syncFromViewModel = useCallback(() => {
+    if (!viewModelRef.current) return;
+    const vm = viewModelRef.current;
+    const newLines = vm.getLines();
+    const cursor = vm.getCursorPosition();
+
+    const linesChanged =
+      newLines.length !== bufferRef.current.lines.length ||
+      newLines.some((l, idx) => l !== bufferRef.current.lines[idx]);
+
+    if (linesChanged) {
+      undoStackRef.current.push({
+        lines: [...bufferRef.current.lines],
+        line: bufferRef.current.activeLine,
+        col: bufferRef.current.activeCol,
+      });
+      if (undoStackRef.current.length > 200) {
+        undoStackRef.current.shift();
+      }
+      redoStackRef.current = [];
+    }
+
+    bufferRef.current = {
+      lines: newLines,
+      activeLine: cursor.line,
+      activeCol: cursor.column,
+    };
+    setLocalLines(newLines);
+    setLocalActiveLine(cursor.line);
+    setLocalActiveCol(cursor.column);
+    const sel = vm.hasSelection() ? vm.getSelection() : null;
+    setSelection(sel);
+    onLinesChange?.(newLines, cursor.line, cursor.column);
+  }, [onLinesChange]);
+
   const handleKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
     // Intercept keys when completion is open
     if (completionOpen) {
@@ -653,8 +983,19 @@ export function EditorView({
         return;
       } else if (e.key === "Enter" || e.key === "Tab") {
         e.preventDefault();
-        if (completionItems[selectedIndex]) {
-          handleCompletionSelect(completionItems[selectedIndex]);
+        const safeItems = Array.isArray(completionItems) ? completionItems : [];
+        const filtered = filterText
+          ? safeItems.filter((item) => {
+              const lbl = item?.label || (item as any)?.insert_text || "";
+              return lbl.toLowerCase().includes(filterText.toLowerCase());
+            })
+          : safeItems;
+
+        const targetItem = filtered[selectedIndex] || safeItems[selectedIndex] || safeItems[0];
+        if (targetItem) {
+          handleCompletionSelect(targetItem);
+        } else {
+          closeCompletion();
         }
         return;
       }
@@ -674,6 +1015,13 @@ export function EditorView({
           setQuickFixOpen(true);
         }
       }
+      return;
+    }
+
+    // Go To Line trigger: Ctrl+G
+    if (e.ctrlKey && e.key.toLowerCase() === "g" && !e.shiftKey && !e.altKey) {
+      e.preventDefault();
+      setIsGoToLineOpen((prev) => !prev);
       return;
     }
 
@@ -739,81 +1087,105 @@ export function EditorView({
     
     if (command && viewModelRef.current) {
       e.preventDefault();
-      command.execute({ viewModel: viewModelRef.current });
+      const vm = viewModelRef.current;
+      vm.setLines(bufferRef.current.lines);
+      vm.setCursorPosition({
+        line: bufferRef.current.activeLine,
+        column: bufferRef.current.activeCol,
+      });
+
+      const res = command.execute({ viewModel: vm });
+      if (res && typeof (res as any).then === "function") {
+        (res as Promise<void>).then(() => syncFromViewModel());
+      } else {
+        syncFromViewModel();
+      }
       return;
     }
 
-    // Undo/Redo shortcuts (fallback if not in command registry)
+    // In-memory Undo / Redo shortcuts for zero-latency instant editing
     if (e.ctrlKey && e.key.toLowerCase() === "z" && !e.shiftKey && !e.altKey) {
       e.preventDefault();
-      if (filePath) {
-        undoEdit(filePath)
-          .then(({ edit, cursor }) => {
-            // Apply the inverse edit to the lines
-            const newLines = [...lines];
-            const { start, end } = edit.range;
-            
-            // Delete the affected range
-            if (start.line === end.line) {
-              const line = newLines[start.line];
-              newLines[start.line] = line.slice(0, start.column) + line.slice(end.column);
-            } else {
-              // Multi-line delete (simplified)
-              const firstLine = newLines[start.line].slice(0, start.column);
-              const lastLine = newLines[end.line].slice(end.column);
-              newLines[start.line] = firstLine + lastLine;
-              for (let i = start.line + 1; i <= end.line; i++) {
-                newLines.splice(start.line + 1, 1);
-              }
-            }
-            
-            // Restore cursor position
-            onLinesChange?.(newLines, cursor.line, cursor.column);
-          })
-          .catch(console.error);
+      const prev = undoStackRef.current.pop();
+      if (prev) {
+        redoStackRef.current.push({
+          lines: [...bufferRef.current.lines],
+          line: bufferRef.current.activeLine,
+          col: bufferRef.current.activeCol,
+        });
+        bufferRef.current = { lines: prev.lines, activeLine: prev.line, activeCol: prev.col };
+        setLocalLines(prev.lines);
+        setLocalActiveLine(prev.line);
+        setLocalActiveCol(prev.col);
+        onLinesChange?.(prev.lines, prev.line, prev.col);
       }
       return;
-    } else if ((e.ctrlKey && e.key.toLowerCase() === "y" && !e.shiftKey && !e.altKey) ||
-               (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "z" && !e.altKey)) {
+    } else if (
+      (e.ctrlKey && e.key.toLowerCase() === "y" && !e.shiftKey && !e.altKey) ||
+      (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "z" && !e.altKey)
+    ) {
       e.preventDefault();
-      if (filePath) {
-        redoEdit(filePath)
-          .then(({ edit, result }) => {
-            // Apply the redo edit
-            const newLines = [...lines];
-            const { start, end } = edit.range;
-            
-            if (start.line === end.line) {
-              const line = newLines[start.line];
-              newLines[start.line] = line.slice(0, start.column) + edit.new_text + line.slice(end.column);
-            } else {
-              // Multi-line insert (simplified)
-              const insertedLines = edit.new_text.split('\n');
-              const firstLine = newLines[start.line].slice(0, start.column) + insertedLines[0];
-              const lastLine = insertedLines[insertedLines.length - 1] + newLines[end.line].slice(end.column);
-              newLines[start.line] = firstLine;
-              for (let i = 1; i < insertedLines.length - 1; i++) {
-                newLines.splice(start.line + i, 0, insertedLines[i]);
-              }
-              if (insertedLines.length > 1) {
-                newLines[start.line + insertedLines.length - 1] = lastLine;
-              }
-            }
-            
-            // Move cursor to end of edit
-            onLinesChange?.(newLines, result.affected_range.end.line, result.affected_range.end.column);
-          })
-          .catch(console.error);
+      const next = redoStackRef.current.pop();
+      if (next) {
+        undoStackRef.current.push({
+          lines: [...bufferRef.current.lines],
+          line: bufferRef.current.activeLine,
+          col: bufferRef.current.activeCol,
+        });
+        bufferRef.current = { lines: next.lines, activeLine: next.line, activeCol: next.col };
+        setLocalLines(next.lines);
+        setLocalActiveLine(next.line);
+        setLocalActiveCol(next.col);
+        onLinesChange?.(next.lines, next.line, next.col);
       }
       return;
     }
     
     if (!onLinesChange) return;
 
-    let newLines = [...lines];
-    let nLine = activeLine;
-    let nCol = activeCol;
+    let newLines = [...bufferRef.current.lines];
+    let nLine = bufferRef.current.activeLine;
+    let nCol = bufferRef.current.activeCol;
     let isTriggerChar = false;
+
+    // Handle selection deletion when Backspace, Delete, Enter, or a printable key is pressed
+    const vmForSelection = viewModelRef.current;
+    let selectionWasDeleted = false;
+    if (
+      vmForSelection &&
+      vmForSelection.hasSelection() &&
+      (e.key === "Backspace" ||
+        e.key === "Delete" ||
+        e.key === "Enter" ||
+        (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey))
+    ) {
+      const sel = vmForSelection.getSelection();
+      let l1 = sel.start.line;
+      let c1 = sel.start.column;
+      let l2 = sel.end.line;
+      let c2 = sel.end.column;
+
+      if (l1 > l2 || (l1 === l2 && c1 > c2)) {
+        [l1, l2] = [l2, l1];
+        [c1, c2] = [c2, c1];
+      }
+
+      const startLineText = newLines[l1] || "";
+      const endLineText = newLines[l2] || "";
+      const prefix = startLineText.slice(0, c1);
+      const suffix = endLineText.slice(c2);
+
+      newLines.splice(l1, l2 - l1 + 1, prefix + suffix);
+      if (newLines.length === 0) {
+        newLines.push("");
+      }
+
+      nLine = l1;
+      nCol = c1;
+      vmForSelection.clearSelection();
+      setSelection(null);
+      selectionWasDeleted = true;
+    }
 
     if (e.ctrlKey && e.key.toLowerCase() === "f" && !e.shiftKey && !e.altKey) {
       e.preventDefault();
@@ -840,7 +1212,7 @@ export function EditorView({
       e.preventDefault();
     } else if (e.key === "ArrowRight") {
       if (nCol < newLines[nLine].length) nCol += 1;
-      else if (nLine < lines.length - 1) {
+      else if (nLine < newLines.length - 1) {
         nLine += 1;
         nCol = 0;
       }
@@ -852,38 +1224,184 @@ export function EditorView({
       }
       e.preventDefault();
     } else if (e.key === "ArrowDown") {
-      if (nLine < lines.length - 1) {
+      if (nLine < newLines.length - 1) {
         nLine += 1;
         nCol = Math.min(nCol, newLines[nLine].length);
       }
       e.preventDefault();
-    } else if (e.key === "Backspace") {
-      if (nCol > 0) {
-        const line = newLines[nLine];
-        newLines[nLine] = line.slice(0, nCol - 1) + line.slice(nCol);
-        nCol -= 1;
-      } else if (nLine > 0) {
-        const prevLen = newLines[nLine - 1].length;
-        newLines[nLine - 1] += newLines[nLine];
-        newLines.splice(nLine, 1);
-        nLine -= 1;
-        nCol = prevLen;
+    } else if (e.key === "Backspace" || e.key === "Delete") {
+      if (selectionWasDeleted) {
+        e.preventDefault();
+        closeCompletion();
+      } else if (e.key === "Backspace") {
+        const line = newLines[nLine] || "";
+        if (nCol > 0) {
+          const charBefore = line[nCol - 1];
+          const charAfter = line[nCol];
+          const isBracketPair =
+            (charBefore === "(" && charAfter === ")") ||
+            (charBefore === "[" && charAfter === "]") ||
+            (charBefore === "{" && charAfter === "}") ||
+            (charBefore === '"' && charAfter === '"') ||
+            (charBefore === "'" && charAfter === "'") ||
+            (charBefore === "`" && charAfter === "`");
+
+          if (isBracketPair) {
+            newLines[nLine] = line.slice(0, nCol - 1) + line.slice(nCol + 1);
+            nCol -= 1;
+          } else {
+            const before = line.slice(0, nCol);
+            // Smart indentation backspace: if text before cursor is pure whitespace, delete full 4-space tab stop
+            if (/^\s+$/.test(before)) {
+              const deleteCount = before.length % 4 || 4;
+              newLines[nLine] = line.slice(0, nCol - deleteCount) + line.slice(nCol);
+              nCol -= deleteCount;
+            } else {
+              newLines[nLine] = line.slice(0, nCol - 1) + line.slice(nCol);
+              nCol -= 1;
+            }
+          }
+        } else if (nLine > 0) {
+          // Line merge: if current line is blank/whitespace-only, remove line cleanly without attaching trailing spaces to previous line
+          const currentTrimmed = line.trim();
+          const prevLine = newLines[nLine - 1] || "";
+          if (currentTrimmed === "") {
+            newLines.splice(nLine, 1);
+            nLine -= 1;
+            nCol = prevLine.length;
+          } else {
+            const prevLen = prevLine.length;
+            newLines[nLine - 1] += line.trimStart();
+            newLines.splice(nLine, 1);
+            nLine -= 1;
+            nCol = prevLen;
+          }
+        }
+        e.preventDefault();
+        closeCompletion();
+      } else if (e.key === "Delete") {
+        const line = newLines[nLine] || "";
+        if (nCol < line.length) {
+          newLines[nLine] = line.slice(0, nCol) + line.slice(nCol + 1);
+        } else if (nLine < newLines.length - 1) {
+          const nextLine = newLines[nLine + 1] || "";
+          newLines[nLine] += nextLine;
+          newLines.splice(nLine + 1, 1);
+        }
+        e.preventDefault();
+        closeCompletion();
+      }
+    } else if (e.key === "Enter") {
+      const line = newLines[nLine] || "";
+      const before = line.slice(0, nCol);
+      const after = line.slice(nCol);
+
+      // Inherit leading indentation from current line
+      const indentMatch = line.match(/^(\s*)/);
+      const baseIndent = indentMatch ? indentMatch[1] : "";
+
+      const trimmedBefore = before.trimEnd();
+      const trimmedAfter = after.trimStart();
+
+      // Bracket-split: e.g. cursor between `{` and `}`, `(` and `)`, or `[` and `]`
+      if (/[{(\[]$/.test(trimmedBefore) && /^[}\]\)]/.test(trimmedAfter)) {
+        const innerIndent = baseIndent + "    ";
+        newLines[nLine] = before;
+        newLines.splice(nLine + 1, 0, innerIndent);
+        newLines.splice(nLine + 2, 0, baseIndent + after);
+        nLine += 1;
+        nCol = innerIndent.length;
+      } else if (/[{(\[:]$/.test(trimmedBefore)) {
+        const nextIndent = baseIndent + "    ";
+        newLines[nLine] = before;
+        newLines.splice(nLine + 1, 0, nextIndent + after);
+        nLine += 1;
+        nCol = nextIndent.length;
+      } else {
+        newLines[nLine] = before;
+        newLines.splice(nLine + 1, 0, baseIndent + after);
+        nLine += 1;
+        nCol = baseIndent.length;
       }
       e.preventDefault();
       closeCompletion();
-    } else if (e.key === "Enter") {
-      const line = newLines[nLine];
-      const before = line.slice(0, nCol);
-      const after = line.slice(nCol);
-      newLines[nLine] = before;
-      newLines.splice(nLine + 1, 0, after);
-      nLine += 1;
-      nCol = 0;
+    } else if (e.key === "Tab") {
       e.preventDefault();
+      const tabSpaces = "    ";
+      const viewModel = viewModelRef.current;
+      
+      if (viewModel && viewModel.hasSelection()) {
+        const selection = viewModel.getSelection();
+        const startL = Math.min(selection.start.line, selection.end.line);
+        const endL = Math.max(selection.start.line, selection.end.line);
+
+        for (let l = startL; l <= endL; l++) {
+          const lText = newLines[l] || "";
+          if (e.shiftKey) {
+            if (lText.startsWith(tabSpaces)) {
+              newLines[l] = lText.slice(4);
+            } else if (lText.startsWith("\t")) {
+              newLines[l] = lText.slice(1);
+            } else {
+              let cnt = 0;
+              while (cnt < 4 && lText[cnt] === " ") cnt++;
+              if (cnt > 0) newLines[l] = lText.slice(cnt);
+            }
+          } else {
+            newLines[l] = tabSpaces + lText;
+          }
+        }
+        nCol = e.shiftKey ? Math.max(0, nCol - 4) : nCol + 4;
+      } else {
+        if (e.shiftKey) {
+          const lText = newLines[nLine] || "";
+          if (lText.slice(0, nCol).endsWith(tabSpaces)) {
+            newLines[nLine] = lText.slice(0, nCol - 4) + lText.slice(nCol);
+            nCol = Math.max(0, nCol - 4);
+          } else if (lText.slice(0, nCol).endsWith("\t")) {
+            newLines[nLine] = lText.slice(0, nCol - 1) + lText.slice(nCol);
+            nCol = Math.max(0, nCol - 1);
+          } else if (lText.startsWith(tabSpaces)) {
+            newLines[nLine] = lText.slice(4);
+            nCol = Math.max(0, nCol - 4);
+          }
+        } else {
+          const line = newLines[nLine] || "";
+          newLines[nLine] = line.slice(0, nCol) + tabSpaces + line.slice(nCol);
+          nCol += 4;
+        }
+      }
     } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
-      const line = newLines[nLine];
-      newLines[nLine] = line.slice(0, nCol) + e.key + line.slice(nCol);
-      nCol += 1;
+      const char = e.key;
+      const line = newLines[nLine] || "";
+
+      const bracketPairs: Record<string, string> = {
+        "(": ")",
+        "[": "]",
+        "{": "}",
+        '"': '"',
+        "'": "'",
+        "`": "`",
+      };
+      const closingChars = new Set([")", "]", "}", '"', "'", "`"]);
+
+      if (closingChars.has(char) && line[nCol] === char) {
+        // Skip over existing closing character
+        nCol += 1;
+      } else if (bracketPairs[char]) {
+        const closing = bracketPairs[char];
+        const charAfter = line[nCol] || "";
+        if ((char === '"' || char === "'" || char === "`") && /[a-zA-Z0-9_]/.test(charAfter)) {
+          newLines[nLine] = line.slice(0, nCol) + char + line.slice(nCol);
+          nCol += 1;
+        } else {
+          newLines[nLine] = line.slice(0, nCol) + char + closing + line.slice(nCol);
+          nCol += 1;
+        }
+      } else {
+        newLines[nLine] = line.slice(0, nCol) + char + line.slice(nCol);
+        nCol += 1;
+      }
       e.preventDefault();
       
       // Check for Rust-idiomatic trigger characters
@@ -894,6 +1412,21 @@ export function EditorView({
       return;
     }
 
+    // Save snapshot for undo before committing edit mutation
+    undoStackRef.current.push({
+      lines: [...bufferRef.current.lines],
+      line: bufferRef.current.activeLine,
+      col: bufferRef.current.activeCol,
+    });
+    if (undoStackRef.current.length > 200) {
+      undoStackRef.current.shift();
+    }
+    redoStackRef.current = [];
+
+    bufferRef.current = { lines: newLines, activeLine: nLine, activeCol: nCol };
+    setLocalLines(newLines);
+    setLocalActiveLine(nLine);
+    setLocalActiveCol(nCol);
     onLinesChange(newLines, nLine, nCol);
     
     // Trigger completion after character insertion
@@ -907,80 +1440,49 @@ export function EditorView({
   const handleMouseDown = (e: ReactMouseEvent<HTMLDivElement>) => {
     containerRef.current?.focus();
     if (!onLinesChange || !containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const scrollTop = containerRef.current.scrollTop;
 
-    const y = e.clientY - rect.top + scrollTop;
-    let clickedLine = Math.floor(y / LINE_HEIGHT_PX);
+    const pos = getPosFromMouseEvent(e);
 
-    if (clickedLine >= effectiveLines.length) clickedLine = effectiveLines.length - 1;
-    if (clickedLine < 0) clickedLine = 0;
-
-    let col = -1;
-
-    if (document.caretRangeFromPoint) {
-      const range = document.caretRangeFromPoint(e.clientX, e.clientY);
-      if (range && range.startContainer) {
-        const node = range.startContainer;
-        if (node.nodeType === Node.TEXT_NODE && node.parentElement) {
-          let charOffset = range.startOffset;
-          let sibling = node.parentElement.previousSibling;
-          while (sibling) {
-            charOffset += sibling.textContent?.length || 0;
-            sibling = sibling.previousSibling;
-          }
-          col = charOffset;
-        } else if (
-          (node as HTMLElement).className &&
-          typeof (node as HTMLElement).className === "string" &&
-          (node as HTMLElement).className.includes("lineContent")
-        ) {
-          col = effectiveLines[clickedLine].length;
+    // Right click (button 2): preserve selection if clicked inside active selection
+    if (e.button === 2) {
+      const vm = viewModelRef.current;
+      if (vm && vm.hasSelection()) {
+        const sel = vm.getSelection();
+        let l1 = sel.start.line, c1 = sel.start.column;
+        let l2 = sel.end.line, c2 = sel.end.column;
+        if (l1 > l2 || (l1 === l2 && c1 > c2)) {
+          [l1, l2] = [l2, l1];
+          [c1, c2] = [c2, c1];
         }
-      }
-    }
-    // @ts-ignore
-    else if (document.caretPositionFromPoint) {
-      // @ts-ignore
-      const pos = document.caretPositionFromPoint(e.clientX, e.clientY);
-      if (pos && pos.offsetNode) {
-        const node = pos.offsetNode;
-        if (node.nodeType === Node.TEXT_NODE && node.parentElement) {
-          let charOffset = pos.offset;
-          let sibling = node.parentElement.previousSibling;
-          while (sibling) {
-            charOffset += sibling.textContent?.length || 0;
-            sibling = sibling.previousSibling;
-          }
-          col = charOffset;
-        } else if (
-          (node as HTMLElement).className &&
-          typeof (node as HTMLElement).className === "string" &&
-          (node as HTMLElement).className.includes("lineContent")
-        ) {
-          col = effectiveLines[clickedLine].length;
+        const inside =
+          pos.line >= l1 &&
+          pos.line <= l2 &&
+          (pos.line !== l1 || pos.column >= c1) &&
+          (pos.line !== l2 || pos.column <= c2);
+
+        if (inside) {
+          return;
         }
       }
     }
 
-    if (col === -1) {
-      const targetClass = (e.target as HTMLElement).className || "";
-      if (
-        typeof targetClass === "string" &&
-        (targetClass.includes("lineContent") ||
-          targetClass.includes("editorScrollContainer") ||
-          targetClass.includes("linesContainer") ||
-          targetClass.includes("editorInner"))
-      ) {
-        col = effectiveLines[clickedLine].length;
-      } else {
-        const x = e.clientX - rect.left - GUTTER_TOTAL_OFFSET;
-        col = Math.max(0, Math.round(x / 8.1));
-      }
-    }
+    dragStartPosRef.current = pos;
+    isDraggingRef.current = true;
 
-    const finalCol = Math.min(col, effectiveLines[clickedLine].length);
-    onLinesChange(effectiveLines, clickedLine, finalCol);
+    if (e.shiftKey && bufferRef.current) {
+      const anchor = selection ? selection.start : { line: bufferRef.current.activeLine, column: bufferRef.current.activeCol };
+      const newSel: Selection = { start: anchor, end: pos };
+      setSelection(newSel);
+      if (viewModelRef.current) viewModelRef.current.setSelection(newSel);
+    } else {
+      bufferRef.current.activeLine = pos.line;
+      bufferRef.current.activeCol = pos.column;
+      setLocalActiveLine(pos.line);
+      setLocalActiveCol(pos.column);
+      setSelection(null);
+      if (viewModelRef.current) viewModelRef.current.clearSelection();
+      onLinesChange(effectiveLines, pos.line, pos.column);
+    }
   };
 
   const calculatedTotalHeight = Math.max(
@@ -1054,14 +1556,49 @@ export function EditorView({
         />
       )}
 
-      {quickFixOpen && (
-        <QuickFixWidget
-          actions={actions}
-          position={quickFixPosition}
-          onApply={handleQuickFixApply}
-          onClose={() => {
-            setQuickFixOpen(false);
-            clearActions();
+
+      {isGoToLineOpen && (
+        <GoToLineWidget
+          isOpen={isGoToLineOpen}
+          totalLines={effectiveLines.length}
+          onGoToLine={(targetLine) => {
+            if (viewModelRef.current) {
+              viewModelRef.current.setCursorPosition({ line: targetLine, column: 0 });
+            }
+            bufferRef.current.activeLine = targetLine;
+            bufferRef.current.activeCol = 0;
+            setLocalActiveLine(targetLine);
+            setLocalActiveCol(0);
+            onLinesChange?.(effectiveLines, targetLine, 0);
+          }}
+          onClose={() => setIsGoToLineOpen(false)}
+        />
+      )}
+
+      {showStickyScroll && (
+        <StickyScroll
+          lines={effectiveLines}
+          startLine={startLine}
+          onJumpToLine={(targetLine) => {
+            if (containerRef.current) {
+              containerRef.current.scrollTop = targetLine * LINE_HEIGHT_PX;
+            }
+          }}
+        />
+      )}
+
+      {showMinimap && (
+        <Minimap
+          lines={effectiveLines}
+          totalLines={effectiveLines.length}
+          startLine={startLine}
+          endLine={endLine}
+          activeLine={activeLine}
+          viewportHeight={viewportHeight}
+          onJumpToLine={(targetLine) => {
+            if (containerRef.current) {
+              containerRef.current.scrollTop = targetLine * LINE_HEIGHT_PX;
+            }
           }}
         />
       )}
@@ -1088,6 +1625,19 @@ export function EditorView({
           <div className={styles.linesContainer} onMouseDown={handleMouseDown}>
             {visibleLines.map((content, i) => {
               const lineIndex = startLine + i;
+
+              if (hiddenLinesSet.has(lineIndex)) {
+                return null;
+              }
+
+              const wordRanges = wordHighlightMap.ranges.get(lineIndex) || [];
+              const bracketRange =
+                bracketMatch.source?.line === lineIndex
+                  ? bracketMatch.source
+                  : bracketMatch.target?.line === lineIndex
+                  ? bracketMatch.target
+                  : null;
+
               return (
                 <EditorLine
                   key={lineIndex}
@@ -1101,6 +1651,19 @@ export function EditorView({
                   onToggleBreakpoint={onToggleBreakpoint}
                   diagnosticSeverity={lineGutterSeverities[lineIndex]}
                   lineDiagnostics={lineDiagnosticsMap[lineIndex]}
+                  selectionRange={getLineSelectionRange(lineIndex)}
+                  wordHighlightRanges={wordRanges}
+                  bracketMatchRange={bracketRange}
+                  isFoldable={foldableSet.has(lineIndex)}
+                  isFolded={foldedLines.has(lineIndex)}
+                  onToggleFold={(idx) => {
+                    setFoldedLines((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(idx)) next.delete(idx);
+                      else next.add(idx);
+                      return next;
+                    });
+                  }}
                 />
               );
             })}
@@ -1109,8 +1672,10 @@ export function EditorView({
               <div
                 className={styles.cursor}
                 style={{
-                  top: `${(activeLine - startLine) * LINE_HEIGHT_PX + 1}px`,
-                  left: `${GUTTER_TOTAL_OFFSET + cursorX}px`,
+                  top: 0,
+                  left: 0,
+                  transform: `translate3d(${GUTTER_TOTAL_OFFSET + cursorX}px, ${(activeLine - startLine) * LINE_HEIGHT_PX + 1}px, 0)`,
+                  willChange: "transform",
                 }}
               />
             )}

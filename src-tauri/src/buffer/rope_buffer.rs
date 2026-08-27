@@ -56,8 +56,15 @@ impl RopeBuffer {
     ///
     /// Runs in O(log N) — traverses the rope's B-tree by line count.
     fn position_to_char_idx(&self, pos: Position) -> usize {
-        let line_start = self.rope.line_to_char(pos.line);
-        line_start + pos.column
+        if self.rope.len_chars() == 0 {
+            return 0;
+        }
+        let max_line = self.rope.len_lines().saturating_sub(1);
+        let line = pos.line.min(max_line);
+        let line_start = self.rope.line_to_char(line);
+        let line_len = self.line_len(line);
+        let col = pos.column.min(line_len);
+        line_start + col
     }
 
     /// Compute the line delta introduced by inserting or removing `text`
@@ -127,8 +134,8 @@ impl TextBuffer for RopeBuffer {
     /// 1. Deletes the range content
     /// 2. Inserts the new text at the (now empty) range start
     fn apply_edit(&mut self, edit: &TextEdit) -> EditResult {
-        // TODO: caller must supply the current document version and increment it.
-        // For now we use 0 as a placeholder — the Document struct will track this.
+        // Document struct tracks and increments the version counter.
+        // For standalone RopeBuffer edits, 0 is returned as default version.
         let version = 0;
 
         let start_char = self.position_to_char_idx(edit.range.start);

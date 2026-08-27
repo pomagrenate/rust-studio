@@ -1,18 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   VscClose,
   VscKey,
   VscCheck,
   VscError,
   VscLoading,
+  VscAccount,
 } from "react-icons/vsc";
-import { githubStoreToken, githubValidateTokenFormat } from "../../ipc/github";
+import { githubStoreToken, githubValidateTokenFormat, githubVerifyToken, githubGetToken, GitHubUser } from "../../ipc/github";
 import styles from "./GitHubAuthDialog.module.css";
 
 interface GitHubAuthDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onAuthSuccess: () => void;
+  onAuthSuccess: (user: GitHubUser) => void;
 }
 
 export function GitHubAuthDialog({
@@ -23,12 +24,27 @@ export function GitHubAuthDialog({
   const [token, setToken] = useState("");
   const [isValidating, setIsValidating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<GitHubUser | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      githubGetToken()
+        .then((existingToken) => {
+          if (existingToken) {
+            return githubVerifyToken(existingToken);
+          }
+          return null;
+        })
+        .then((user) => setCurrentUser(user))
+        .catch(() => setCurrentUser(null));
+    }
+  }, [isOpen]);
 
   const handleTokenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setToken(e.target.value);
     setError(null);
-    setSuccess(false);
+    setSuccess(null);
   };
 
   const handleSave = async () => {
@@ -41,17 +57,20 @@ export function GitHubAuthDialog({
     setError(null);
 
     try {
-      // Validate token format
+      // 1. Validate token format
       await githubValidateTokenFormat(token);
+
+      // 2. Verify token against GitHub API
+      const user = await githubVerifyToken(token);
       
-      // Store the token
+      // 3. Store verified token securely in OS keyring
       await githubStoreToken(token);
       
-      setSuccess(true);
+      setSuccess(`Authenticated as @${user.login}!`);
       setTimeout(() => {
-        onAuthSuccess();
+        onAuthSuccess(user);
         handleClose();
-      }, 1000);
+      }, 600);
     } catch (err) {
       setError(err as string);
     } finally {
@@ -62,7 +81,7 @@ export function GitHubAuthDialog({
   const handleClose = () => {
     setToken("");
     setError(null);
-    setSuccess(false);
+    setSuccess(null);
     onClose();
   };
 
@@ -84,20 +103,28 @@ export function GitHubAuthDialog({
 
         <div className={styles.content}>
           <div className={styles.description}>
-            <p>
-              Enter your GitHub Personal Access Token to enable GitHub integration
-              features (Pull Requests, Issues, etc.).
-            </p>
+            {currentUser ? (
+              <div style={{ padding: "8px 12px", backgroundColor: "rgba(0,122,204,0.15)", border: "1px solid #007acc", borderRadius: "6px", marginBottom: "12px", fontSize: "12px", color: "#ffffff" }}>
+                <strong style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <VscAccount /> Active Session: @{currentUser.login}
+                </strong>
+                Paste a new token below to replace or update your current credential.
+              </div>
+            ) : (
+              <p>
+                Enter your GitHub Personal Access Token to enable GitHub integration
+                features (Pull Requests, Issues, etc.).
+              </p>
+            )}
             <p className={styles.note}>
-              <strong>Note:</strong> The token will be stored securely in your OS
-              keyring.
+              <strong>Note:</strong> The token will be verified against GitHub and stored securely in your OS keyring.
             </p>
           </div>
 
           <div className={styles.formGroup}>
             <label htmlFor="token-input">
               <VscKey />
-              Personal Access Token
+              {currentUser ? "New Personal Access Token" : "Personal Access Token"}
             </label>
             <input
               id="token-input"
@@ -106,7 +133,7 @@ export function GitHubAuthDialog({
               placeholder="ghp_... or github_pat_..."
               value={token}
               onChange={handleTokenChange}
-              disabled={isValidating || success}
+              disabled={isValidating || Boolean(success)}
               autoFocus
             />
             <div className={styles.hint}>
@@ -125,7 +152,7 @@ export function GitHubAuthDialog({
           {success && (
             <div className={styles.success}>
               <VscCheck />
-              <span>Token saved successfully!</span>
+              <span>{success}</span>
             </div>
           )}
 
@@ -133,14 +160,14 @@ export function GitHubAuthDialog({
             <button
               className={styles.cancelButton}
               onClick={handleClose}
-              disabled={isValidating || success}
+              disabled={isValidating || Boolean(success)}
             >
               Cancel
             </button>
             <button
               className={styles.saveButton}
               onClick={handleSave}
-              disabled={!token.trim() || isValidating || success}
+              disabled={!token.trim() || isValidating || Boolean(success)}
             >
               {isValidating ? (
                 <>
@@ -150,8 +177,10 @@ export function GitHubAuthDialog({
               ) : success ? (
                 <>
                   <VscCheck />
-                  Saved
+                  Verified
                 </>
+              ) : currentUser ? (
+                "Update Token"
               ) : (
                 "Save Token"
               )}

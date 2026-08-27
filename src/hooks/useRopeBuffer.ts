@@ -44,6 +44,31 @@ export function useRopeBuffer(filePath: string | undefined) {
   }, [filePath]);
 
   /**
+   * Fetch a range of lines from the rope buffer along with version metadata.
+   */
+  const fetchLineRangeVersioned = useCallback(
+    async (startLine: number, endLine: number) => {
+      if (!filePath) return null;
+
+      try {
+        const result = await invoke<{ version: number; start_line: number; lines: string[] }>(
+          "get_line_range_versioned",
+          {
+            path: filePath,
+            startLine,
+            endLine,
+          }
+        );
+        return result;
+      } catch (err) {
+        console.error("fetchLineRangeVersioned error:", err);
+        return null;
+      }
+    },
+    [filePath]
+  );
+
+  /**
    * Fetch a range of lines from the rope buffer.
    */
   const fetchLineRange = useCallback(
@@ -134,6 +159,7 @@ export function useRopeBuffer(filePath: string | undefined) {
   return {
     ...state,
     fetchLineRange,
+    fetchLineRangeVersioned,
     updateVisibleRange,
     applyEdit,
     reloadBuffer,

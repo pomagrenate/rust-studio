@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
   VscSearch,
@@ -40,7 +40,52 @@ interface SearchEverywhereModalProps {
   onExecuteAction?: (actionName: string) => void;
 }
 
-export function SearchEverywhereModal({
+interface SearchItemRowProps {
+  item: SearchItem;
+  idx: number;
+  isSelected: boolean;
+  onSelectItem: (item: SearchItem) => void;
+  onHover: (idx: number) => void;
+}
+
+const SearchItemRow = React.memo(function SearchItemRow({
+  item,
+  idx,
+  isSelected,
+  onSelectItem,
+  onHover,
+}: SearchItemRowProps) {
+  return (
+    <div
+      className={`${styles.resultItem} ${isSelected ? styles.resultItemSelected : ""}`}
+      onClick={() => onSelectItem(item)}
+      onMouseEnter={() => onHover(idx)}
+    >
+      <div className={styles.resultLeft}>
+        <div className={styles.resultIcon}>
+          {item.iconType === "rust" && <FaRust color="#dea584" />}
+          {item.iconType === "code" && <VscFileCode color="#f85149" />}
+          {item.iconType === "json" && <VscJson color="#cbcb41" />}
+          {item.iconType === "markdown" && <VscMarkdown color="#61afef" />}
+          {item.iconType === "type" && <VscSymbolClass color="#e5c07b" />}
+          {item.iconType === "symbol" && <VscSymbolMethod color="#61afef" />}
+          {item.iconType === "action" && <VscPlay color="#98c379" />}
+          {item.iconType === "file" && <VscFile color="#9da0a8" />}
+        </div>
+        <span className={styles.resultTitle}>{item.title}</span>
+        {item.subtitle && (
+          <span className={styles.resultSubtitle}>{item.subtitle}</span>
+        )}
+      </div>
+
+      <div className={styles.resultRight}>
+        {item.category === "action" ? "Action" : item.category === "file" ? "File" : item.category}
+      </div>
+    </div>
+  );
+});
+
+export const SearchEverywhereModal = React.memo(function SearchEverywhereModal({
   isOpen,
   isDocked = false,
   onToggleDock,
@@ -253,7 +298,7 @@ export function SearchEverywhereModal({
     return items;
   }, [activeCategory, query, workspaceFiles, standardActions, rustSymbols]);
 
-  const handleSelectItem = (item: SearchItem) => {
+  const handleSelectItem = useCallback((item: SearchItem) => {
     if (item.category === "action" && item.action) {
       item.action();
       if (!isDocked) onClose();
@@ -261,7 +306,11 @@ export function SearchEverywhereModal({
       onOpenFile(item.path);
       if (!isDocked) onClose();
     }
-  };
+  }, [isDocked, onClose, onOpenFile]);
+
+  const handleHoverItem = useCallback((idx: number) => {
+    setSelectedIndex(idx);
+  }, []);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Escape") {
@@ -387,38 +436,16 @@ export function SearchEverywhereModal({
 
       <div className={styles.resultsList} ref={resultsContainerRef}>
         {filteredItems.length > 0 ? (
-          filteredItems.map((item, idx) => {
-            const isSelected = idx === selectedIndex;
-            return (
-              <div
-                key={item.id}
-                className={`${styles.resultItem} ${isSelected ? styles.resultItemSelected : ""}`}
-                onClick={() => handleSelectItem(item)}
-                onMouseEnter={() => setSelectedIndex(idx)}
-              >
-                <div className={styles.resultLeft}>
-                  <div className={styles.resultIcon}>
-                    {item.iconType === "rust" && <FaRust color="#dea584" />}
-                    {item.iconType === "code" && <VscFileCode color="#f85149" />}
-                    {item.iconType === "json" && <VscJson color="#cbcb41" />}
-                    {item.iconType === "markdown" && <VscMarkdown color="#61afef" />}
-                    {item.iconType === "type" && <VscSymbolClass color="#e5c07b" />}
-                    {item.iconType === "symbol" && <VscSymbolMethod color="#61afef" />}
-                    {item.iconType === "action" && <VscPlay color="#98c379" />}
-                    {item.iconType === "file" && <VscFile color="#9da0a8" />}
-                  </div>
-                  <span className={styles.resultTitle}>{item.title}</span>
-                  {item.subtitle && (
-                    <span className={styles.resultSubtitle}>{item.subtitle}</span>
-                  )}
-                </div>
-
-                <div className={styles.resultRight}>
-                  {item.category === "action" ? "Action" : item.category === "file" ? "File" : item.category}
-                </div>
-              </div>
-            );
-          })
+          filteredItems.map((item, idx) => (
+            <SearchItemRow
+              key={item.id}
+              item={item}
+              idx={idx}
+              isSelected={idx === selectedIndex}
+              onSelectItem={handleSelectItem}
+              onHover={handleHoverItem}
+            />
+          ))
         ) : (
           <div className={styles.emptyState}>
             <VscSearch size={28} color="#6c707e" />
@@ -448,6 +475,6 @@ export function SearchEverywhereModal({
       {content}
     </div>
   );
-}
+});
 
 export default SearchEverywhereModal;

@@ -1,0 +1,261 @@
+/* RustTestGenModal.module.css */
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.modalDark {
+  background-color: #1e1e1e;
+  color: #cccccc;
+  border: 1px solid #333333;
+  width: 860px;
+  max-width: 90vw;
+  max-height: 85vh;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.modalLight {
+  background-color: #ffffff;
+  color: #24292f;
+  border: 1px solid #d0d7de;
+  width: 860px;
+  max-width: 90vw;
+  max-height: 85vh;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+
+.headerDark {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid #2d2d2d;
+  background-color: #252526;
+}
+
+.headerLight {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid #e1e4e8;
+  background-color: #f6f8fa;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.headerIcon {
+  color: #dea584; /* Rust Crab color */
+  display: flex;
+  align-items: center;
+}
+
+.titleDark {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.titleLight {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #24292f;
+}
+
+.closeBtn {
+  background: transparent;
+  border: none;
+  color: #858585;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+  }
+}
+
+.body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.optionsCardDark {
+  background-color: #252526;
+  border: 1px solid #333333;
+  border-radius: 6px;
+  padding: 14px 18px;
+}
+
+.optionsCardLight {
+  background-color: #f6f8fa;
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+  padding: 14px 18px;
+}
+
+.optionsTitle {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+  color: #dea584;
+}
+
+.checkboxGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.codeSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-height: 240px;
+}
+
+.codeHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  color: #888888;
+}
+
+.codeBlockDark {
+  background-color: #141414;
+  color: #ce9178;
+  border: 1px solid #2d2d2d;
+  border-radius: 6px;
+  padding: 14px;
+  font-family: "Fira Code", "Cascadia Code", Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.5;
+  white-space: pre;
+  overflow-x: auto;
+  flex: 1;
+}
+
+.codeBlockLight {
+  background-color: #f6f8fa;
+  color: #0550ae;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  padding: 14px;
+  font-family: "Fira Code", "Cascadia Code", Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.5;
+  white-space: pre;
+  overflow-x: auto;
+  flex: 1;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-top: 1px solid #2d2d2d;
+  background-color: #252526;
+}
+
+.btnPrimary {
+  background-color: #dea584;
+  color: #1e1e1e;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: opacity 0.15s ease;
+
+  &:hover {
+    opacity: 0.9;
+  }
+}
+
+.btnSecondaryDark {
+  background-color: #333333;
+  color: #cccccc;
+  border: 1px solid #444444;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  &:hover {
+    background-color: #444444;
+    color: #ffffff;
+  }
+}
+
+.btnSecondaryLight {
+  background-color: #ffffff;
+  color: #24292f;
+  border: 1px solid #d0d7de;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  &:hover {
+    background-color: #f3f4f6;
+  }
+}

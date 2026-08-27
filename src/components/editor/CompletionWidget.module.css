@@ -6,34 +6,36 @@
 .completionWidget {
   position: fixed;
   z-index: 10000;
-  background-color: var(--pm-bg-tooltip, #1e1e1e);
-  border: 1px solid var(--pm-border-default, #3c3c3c);
+  background-color: var(--pm-bg-tooltip, var(--pm-bg-panel, #ffffff));
+  border: 1px solid var(--pm-border-default, #d8d8d8);
   border-radius: 6px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-  font-family: var(--font-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
-  font-size: var(--font-size-sm, 13px);
-  color: var(--pm-fg-default, #cccccc);
+  box-shadow: var(--pm-shadow-dropdown, 0 6px 18px rgba(0, 0, 0, 0.15));
+  font-family: var(--pm-font-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+  font-size: 12px;
+  color: var(--pm-fg-default, #24292f);
   pointer-events: auto;
   overflow: hidden;
 }
 
 .completionContainer {
   display: flex;
-  min-width: 300px;
-  max-width: 600px;
+  min-width: 260px;
+  max-width: 520px;
+  max-height: 220px;
 }
 
 .completionList {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 4px 0;
-  min-width: 250px;
-  max-width: 400px;
+  padding: 2px 0;
+  min-width: 220px;
+  max-width: 320px;
+  max-height: 220px;
 }
 
 .completionList::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 .completionList::-webkit-scrollbar-track {
@@ -41,7 +43,7 @@
 }
 
 .completionList::-webkit-scrollbar-thumb {
-  background: var(--pm-border-default, #3c3c3c);
+  background: var(--pm-border-default, #d8d8d8);
   border-radius: 4px;
 }
 
@@ -52,81 +54,85 @@
 .completionItem {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 12px;
+  gap: 6px;
+  padding: 0 8px;
   cursor: pointer;
   transition: background-color 0.1s ease;
   white-space: nowrap;
   user-select: none;
+  font-size: 12px;
 }
 
 .completionItem:hover {
-  background-color: var(--pm-bg-line-hover, #2a2d2e);
+  background-color: var(--pm-bg-sidebar-hover, rgba(0, 0, 0, 0.05));
 }
 
 .completionItemSelected {
-  background-color: var(--pm-bg-selection, #094771);
+  background-color: var(--pm-accent-muted, rgba(0, 95, 184, 0.15)) !important;
+  color: var(--pm-accent, #005fb8) !important;
 }
 
 .completionIcon {
   flex-shrink: 0;
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--pm-fg-subtle, #858585);
+  color: var(--pm-fg-subtle, #57606a);
 }
 
 .completionItemSelected .completionIcon {
-  color: var(--pm-fg-default, #ffffff);
+  color: var(--pm-accent, #005fb8);
 }
 
 .completionLabel {
   flex: 1;
-  font-weight: var(--font-weight-bold, 700);
-  color: var(--pm-fg-default, #cccccc);
+  font-weight: 500;
+  color: var(--pm-fg-default, #24292f);
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .completionItemSelected .completionLabel {
-  color: var(--pm-fg-default, #ffffff);
+  color: var(--pm-accent, #005fb8);
+  font-weight: 600;
 }
 
 .highlight {
-  font-weight: var(--font-weight-semibold, 600);
-  color: var(--pm-accent, #4fc1ff);
+  font-weight: 700;
+  color: var(--pm-accent, #005fb8);
 }
 
 .completionDetail {
   flex-shrink: 0;
-  color: var(--pm-fg-subtle, #858585);
-  font-size: var(--font-size-sm, 12px);
-  opacity: 0.8;
-  max-width: 200px;
+  color: var(--pm-fg-muted, #57606a);
+  font-size: 11px;
+  opacity: 0.85;
+  max-width: 160px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .docPane {
-  width: 300px;
-  min-width: 250px;
-  max-width: 400px;
-  padding: 12px;
-  border-left: 1px solid var(--pm-border-default, #3c3c3c);
+  width: 260px;
+  min-width: 200px;
+  max-width: 320px;
+  max-height: 220px;
+  padding: 8px 10px;
+  border-left: 1px solid var(--pm-border-default, #d8d8d8);
   overflow-y: auto;
   overflow-x: hidden;
-  background-color: var(--pm-bg-tooltip, #1e1e1e);
+  background-color: var(--pm-bg-tooltip, var(--pm-bg-panel, #ffffff));
 }
 
 .docPane.left {
   border-left: none;
-  border-right: 1px solid var(--pm-border-default, #3c3c3c);
+  border-right: 1px solid var(--pm-border-default, #d8d8d8);
 }
 
 .docPane::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 .docPane::-webkit-scrollbar-track {
@@ -134,7 +140,7 @@
 }
 
 .docPane::-webkit-scrollbar-thumb {
-  background: var(--pm-border-default, #3c3c3c);
+  background: var(--pm-border-default, #d8d8d8);
   border-radius: 4px;
 }
 
@@ -143,69 +149,111 @@
 }
 
 .docDetail {
-  font-family: var(--font-mono, "JetBrains Mono", Consolas, monospace);
-  font-size: var(--font-size-sm, 12px);
-  color: var(--pm-accent, #4fc1ff);
-  margin-bottom: 8px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--pm-border-default, #3c3c3c);
+  font-family: var(--pm-font-mono, "JetBrains Mono", Consolas, monospace);
+  font-size: 11px;
+  color: var(--pm-accent, #005fb8);
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--pm-border-default, #d8d8d8);
   white-space: pre-wrap;
   word-break: break-word;
 }
 
 .docDocumentation {
-  font-size: var(--font-size-sm, 13px);
-  line-height: 1.5;
-  color: var(--pm-fg-default, #cccccc);
-  white-space: pre-wrap;
-  word-break: break-word;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--pm-fg-default, #24292f);
 }
 
-.docDocumentation code {
-  font-family: var(--font-mono, "JetBrains Mono", Consolas, monospace);
-  background-color: var(--pm-bg-line-hover, #2a2d2e);
-  padding: 2px 4px;
-  border-radius: 3px;
-  font-size: var(--font-size-sm, 12px);
+.docHeader {
+  font-weight: 700;
+  color: var(--pm-fg-default, #24292f);
+  margin-top: 6px;
+  margin-bottom: 4px;
 }
 
-.docDocumentation p {
-  margin: 0 0 8px 0;
+.docHeader1 {
+  font-size: 12.5px;
+  border-bottom: 1px solid var(--pm-border-default, #d8d8d8);
+  padding-bottom: 3px;
+  margin-bottom: 6px;
 }
 
-.docDocumentation p:last-child {
+.docHeader2,
+.docHeader3 {
+  font-size: 11.5px;
+}
+
+.docParagraph {
+  margin: 0 0 6px 0;
+  line-height: 1.45;
+}
+
+.docParagraph:last-child {
   margin: 0;
+}
+
+.docCodeInline {
+  font-family: var(--pm-font-mono, "JetBrains Mono", Consolas, monospace);
+  background-color: var(--pm-accent-muted, rgba(0, 95, 184, 0.1));
+  color: var(--pm-accent, #005fb8);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.docLink {
+  color: var(--pm-accent, #005fb8);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.docBullet {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.bulletDot {
+  color: var(--pm-fg-subtle, #57606a);
+  font-weight: 700;
+}
+
+.docSpacer {
+  height: 4px;
 }
 
 /* Rust-specific styling */
 .visibilityBadge {
   display: inline-block;
-  font-size: var(--font-size-2xs, 10px);
-  font-weight: var(--font-weight-semibold, 600);
+  font-size: 10px;
+  font-weight: 600;
   padding: 1px 4px;
   border-radius: 2px;
-  background-color: var(--pm-bg-line-hover, #2a2d2e);
-  color: var(--pm-fg-subtle, #858585);
-  margin-right: 6px;
+  background-color: var(--pm-bg-sidebar-hover, rgba(0, 0, 0, 0.06));
+  color: var(--pm-fg-subtle, #57606a);
+  margin-right: 4px;
   text-transform: uppercase;
 }
 
 .macroIndicator {
-  color: var(--pm-accent, #4fc1ff);
-  font-weight: var(--font-weight-semibold, 600);
+  color: var(--pm-accent, #005fb8);
+  font-weight: 600;
 }
 
 .rustSignature {
-  font-family: var(--font-mono, "JetBrains Mono", Consolas, monospace);
+  font-family: var(--pm-font-mono, "JetBrains Mono", Consolas, monospace);
   font-size: 11px;
-  color: var(--pm-fg-subtle, #858585);
+  color: var(--pm-fg-muted, #57606a);
   margin-top: 4px;
 }
 
 .crateOrigin {
-  font-size: 11px;
-  color: var(--pm-fg-subtle, #858585);
-  opacity: 0.7;
+  font-size: 10.5px;
+  color: var(--pm-fg-muted, #57606a);
+  opacity: 0.8;
   font-style: italic;
   margin-top: 4px;
 }

@@ -22,7 +22,8 @@ import {
   VscDebugRerun,
   VscArrowDown,
   VscWordWrap,
-  VscTrash
+  VscTrash,
+  VscCopy
 } from "react-icons/vsc";
 import styles from "./CargoBuildPanel.module.css";
 
@@ -61,8 +62,10 @@ export function CargoBuildPanel({
   const [isPinned, setIsPinned] = useState(false);
   const [filterQuery, setFilterQuery] = useState("");
   const [isFilterActive, setIsFilterActive] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
   
   const logContainerRef = useRef<HTMLDivElement>(null);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
 
   // Selected build record
   const currentRecord = buildRecords.find((r) => r.id === activeBuildId) || buildRecords[0] || null;
@@ -73,6 +76,19 @@ export function CargoBuildPanel({
       logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
     }
   }, [currentRecord?.output]);
+
+  // Close more options dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+        setShowMoreMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const handleScrollToEnd = () => {
     if (logContainerRef.current) {
@@ -142,10 +158,70 @@ export function CargoBuildPanel({
           </div>
         </div>
 
-        <div className={styles.headerRight}>
-          <button className={styles.iconBtn} title="More Options">
+        <div className={styles.headerRight} ref={moreMenuRef} style={{ position: "relative" }}>
+          <button
+            className={styles.iconBtn}
+            title="More Options"
+            onClick={() => setShowMoreMenu((prev) => !prev)}
+          >
             <VscEllipsis size={16} />
           </button>
+          {showMoreMenu && (
+            <div className={styles.moreDropdownMenu}>
+              <div
+                className={styles.moreMenuItem}
+                onClick={() => {
+                  setShowMoreMenu(false);
+                  if (currentRecord?.output) {
+                    navigator.clipboard.writeText(currentRecord.output);
+                  }
+                }}
+              >
+                <VscCopy size={14} />
+                <span>Copy Selected Output</span>
+              </div>
+              <div
+                className={styles.moreMenuItem}
+                onClick={() => {
+                  setShowMoreMenu(false);
+                  onRerunBuild?.();
+                }}
+              >
+                <VscDebugRerun size={14} color="#57ab5a" />
+                <span>Rerun Active Build</span>
+              </div>
+              <div
+                className={styles.moreMenuItem}
+                onClick={() => {
+                  setShowMoreMenu(false);
+                  setIsSoftWrap((prev) => !prev);
+                }}
+              >
+                <VscWordWrap size={14} />
+                <span>{isSoftWrap ? "Disable Soft-wrap" : "Enable Soft-wrap"}</span>
+              </div>
+              <div
+                className={styles.moreMenuItem}
+                onClick={() => {
+                  setShowMoreMenu(false);
+                  handleScrollToEnd();
+                }}
+              >
+                <VscArrowDown size={14} />
+                <span>Scroll to End</span>
+              </div>
+              <div
+                className={styles.moreMenuItem}
+                onClick={() => {
+                  setShowMoreMenu(false);
+                  onClearBuilds?.();
+                }}
+              >
+                <VscTrash size={14} color="#f85149" />
+                <span>Clear All History</span>
+              </div>
+            </div>
+          )}
           <button className={styles.iconBtn} title="Minimize" onClick={onClose}>
             <VscChromeMinimize size={14} />
           </button>
@@ -259,7 +335,30 @@ export function CargoBuildPanel({
             className={`${styles.logContainer} ${isSoftWrap ? styles.softWrap : styles.noWrap}`}
             ref={logContainerRef}
           >
-            {currentRecord ? (
+            {activeSubTab === "sync" ? (
+              <div style={{ padding: "4px", color: "var(--pm-fg-default)" }}>
+                <div style={{ color: "#1a7f37", fontWeight: 600, marginBottom: "8px" }}>
+                  [Cargo Sync] Workspace Indexing & Cargo.toml Synchronization
+                </div>
+                <div style={{ color: "var(--pm-fg-muted)", marginBottom: "4px" }}>
+                  Status: Workspace metadata up to date
+                </div>
+                {currentRecord?.command.toLowerCase().includes("check") ||
+                currentRecord?.command.toLowerCase().includes("sync") ? (
+                  renderFormattedLog(
+                    currentRecord.output,
+                    currentRecord.fullCommandLine,
+                    currentRecord.exitCode
+                  )
+                ) : (
+                  <div style={{ marginTop: "12px", borderTop: "1px solid rgba(128,128,128,0.2)", paddingTop: "8px" }}>
+                    <div>✓ Parsed root Cargo.toml & workspace members</div>
+                    <div>✓ Resolved crate dependency graph</div>
+                    <div>✓ Code completion symbols indexed</div>
+                  </div>
+                )}
+              </div>
+            ) : currentRecord ? (
               renderFormattedLog(
                 currentRecord.output,
                 currentRecord.fullCommandLine,

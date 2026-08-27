@@ -68,8 +68,10 @@ pub fn get_github_repo_info(repo_path: &str) -> Result<GitHubRepoInfo, RepoError
         return Err(RepoError::NotAGitRepo);
     }
     
+    use crate::utils::CommandExtHideWindow;
     // Get current branch
     let branch_output = Command::new("git")
+        .hide_window()
         .args(&["branch", "--show-current"])
         .current_dir(path)
         .output()
@@ -85,6 +87,7 @@ pub fn get_github_repo_info(repo_path: &str) -> Result<GitHubRepoInfo, RepoError
     
     // Get remote URL (try origin first)
     let remote_output = Command::new("git")
+        .hide_window()
         .args(&["remote", "get-url", "origin"])
         .current_dir(path)
         .output();
@@ -96,6 +99,7 @@ pub fn get_github_repo_info(repo_path: &str) -> Result<GitHubRepoInfo, RepoError
         _ => {
             // Try to get any remote
             let remotes_output = Command::new("git")
+                .hide_window()
                 .args(&["remote", "-v"])
                 .current_dir(path)
                 .output()

@@ -355,6 +355,23 @@
   align-items: center;
 }
 
+.runChevronBtn {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  color: var(--pm-fg-muted, #57606a);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.runChevronBtn:hover {
+  background: rgba(206, 65, 43, 0.12);
+  color: var(--pm-fg-default, #24292f);
+}
+
 .runDropdown {
   position: absolute;
   top: 100%;

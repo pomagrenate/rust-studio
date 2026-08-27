@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter};
 
 use crate::cargo::diagnostic_mapper::{DiagnosticSeverity, DiagnosticRange, CodeSuggestion};
+use crate::utils::CommandExtHideWindow;
 
 // ── Clippy Diagnostic Types ─────────────────────────────────────────────────
 
@@ -53,8 +54,10 @@ pub async fn run_clippy_diagnostics(
     tokio::task::spawn_blocking(move || {
         let root = Path::new(&workspace_path);
         
+        use crate::utils::CommandExtHideWindow;
         // Run cargo clippy with JSON output
         let mut cmd = Command::new("cargo");
+        cmd.hide_window();
         cmd.args([
             "clippy",
             "--message-format=json",
@@ -104,6 +107,7 @@ pub async fn apply_clippy_fix(
         
         // Build cargo clippy --fix command
         let mut cmd = Command::new("cargo");
+        cmd.hide_window();
         cmd.args(["clippy", "--fix", "--message-format=json"]);
         
         if allow_dirty {

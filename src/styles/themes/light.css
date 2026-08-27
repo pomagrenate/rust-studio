@@ -25,6 +25,7 @@
 
   /* ─── Inputs & Controls ────────────────────────────────────────────── */
   --pm-bg-input:              #ffffff;
+  --pm-bg-tooltip:            #ffffff;
   --pm-border-input:          #cecece;
   --pm-border-input-focus:    #005fb8;
 

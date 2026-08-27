@@ -3,7 +3,7 @@
  * Uses a recursive tree structure and React Icons.
  */
 
-import { useState, Fragment } from "react";
+import React, { useState, Fragment } from "react";
 import { VscChevronRight, VscChevronDown, VscFolder, VscFolderOpened, VscFile } from "react-icons/vsc";
 import { SiTypescript, SiCss, SiJson } from "react-icons/si";
 import styles from "./Sidebar.module.css";
@@ -56,7 +56,7 @@ function getFileIcon(filename: string) {
   return <VscFile />;
 }
 
-export function Sidebar({
+export const Sidebar = React.memo(function Sidebar({
   tree = MOCK_TREE,
   activeFile,
   onFileClick,
@@ -132,6 +132,6 @@ export function Sidebar({
       </nav>
     </aside>
   );
-}
+});
 
 export default Sidebar;

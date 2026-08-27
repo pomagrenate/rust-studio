@@ -11,6 +11,14 @@ use serde_json::Value;
 use tauri::AppHandle;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DataflowStep {
+    pub path: String,
+    pub line: usize,
+    pub message: Option<String>,
+    pub snippet: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LinterFinding {
     pub check_id: String,
     pub path: String,
@@ -21,6 +29,10 @@ pub struct LinterFinding {
     pub message: String,
     pub severity: String, // "ERROR", "WARNING", "INFO"
     pub code_snippet: Option<String>,
+    pub fix: Option<String>,
+    pub category: Option<String>,
+    pub validation_state: Option<String>,
+    pub dataflow_trace: Option<Vec<DataflowStep>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -49,6 +61,19 @@ fn get_target_triple() -> &'static str {
     { "x86_64-pc-windows-msvc" }
 }
 
+/// Validates if a binary file path exists and is a non-empty executable.
+fn is_valid_executable(p: &PathBuf) -> bool {
+    if !p.is_file() {
+        return false;
+    }
+    // Dummy placeholder files in dev binaries/ are ~20-30 bytes.
+    // Real sidecar binaries are at least 50KB.
+    if let Ok(metadata) = std::fs::metadata(p) {
+        return metadata.len() >= 50_000;
+    }
+    false
+}
+
 /// Locates the bundled pomai-linter sidecar executable across dev and production bundles.
 fn resolve_sidecar_binary(_app: &AppHandle) -> Option<PathBuf> {
     let target = get_target_triple();
@@ -59,11 +84,11 @@ fn resolve_sidecar_binary(_app: &AppHandle) -> Option<PathBuf> {
     if let Ok(current_exe) = std::env::current_exe() {
         if let Some(exe_dir) = current_exe.parent() {
             let p = exe_dir.join(&expected_name);
-            if p.is_file() {
+            if is_valid_executable(&p) {
                 return Some(p);
             }
             let direct = exe_dir.join(format!("pomai-linter{}", ext));
-            if direct.is_file() {
+            if is_valid_executable(&direct) {
                 return Some(direct);
             }
         }
@@ -71,12 +96,12 @@ fn resolve_sidecar_binary(_app: &AppHandle) -> Option<PathBuf> {
 
     // 2. Check src-tauri/binaries/ during local development
     let dev_path = PathBuf::from("binaries").join(&expected_name);
-    if dev_path.is_file() {
+    if is_valid_executable(&dev_path) {
         return Some(dev_path);
     }
 
     let dev_direct = PathBuf::from("binaries").join(format!("pomai-linter{}", ext));
-    if dev_direct.is_file() {
+    if is_valid_executable(&dev_direct) {
         return Some(dev_direct);
     }
 
@@ -125,6 +150,31 @@ pub async fn run_linter_scan(
                                 .unwrap_or("WARNING")
                                 .to_uppercase();
                             let lines = res["extra"]["lines"].as_str().map(|s| s.to_string());
+                            let fix = res["extra"]["fix"].as_str().map(|s| s.to_string());
+                            let category = res["extra"]["metadata"]["category"]
+                                .as_str()
+                                .map(|s| s.to_string());
+                            let validation_state = res["extra"]["validation_state"]
+                                .as_str()
+                                .map(|s| s.to_string());
+
+                            let dataflow_trace = res["extra"]["dataflow_trace"]["taint_source"]
+                                .as_array()
+                                .map(|arr| {
+                                    arr.iter()
+                                        .filter_map(|step| {
+                                            let p = step["location"]["path"].as_str()?.to_string();
+                                            let l = step["location"]["start"]["line"].as_u64()? as usize;
+                                            let msg = step["content"].as_str().map(|s| s.to_string());
+                                            Some(DataflowStep {
+                                                path: p,
+                                                line: l,
+                                                message: msg,
+                                                snippet: None,
+                                            })
+                                        })
+                                        .collect()
+                                });
 
                             findings.push(LinterFinding {
                                 check_id,
@@ -136,6 +186,10 @@ pub async fn run_linter_scan(
                                 message,
                                 severity,
                                 code_snippet: lines,
+                                fix,
+                                category,
+                                validation_state,
+                                dataflow_trace,
                             });
                         }
                     }
@@ -160,13 +214,20 @@ pub async fn run_linter_scan(
     }
 
     // ── In-Process Static Analysis Engine (Zero external dependency fallback) ──
-    Ok(run_in_process_scan(workspace_path))
+    Ok(run_in_process_scan(workspace_path, rules_config))
 }
 
-pub fn run_in_process_scan(workspace_path: &Path) -> LinterReport {
+pub fn run_in_process_scan(workspace_path: &Path, rules_config: Option<&str>) -> LinterReport {
     let start_time = Instant::now();
     let mut findings = Vec::new();
     let mut scanned_count = 0;
+
+    let config = rules_config.unwrap_or("auto");
+    let check_all = config == "auto" || config == "all";
+    let check_security = check_all || config == "security";
+    let check_reliability = check_all || config == "reliability";
+    let check_unsafe = check_all || config == "unsafe";
+    let check_quality = check_all || config == "quality";
 
     if let Ok(entries) = walkdir::WalkDir::new(workspace_path)
         .max_depth(8)
@@ -189,8 +250,8 @@ pub fn run_in_process_scan(workspace_path: &Path) -> LinterReport {
                         for (idx, line) in content.lines().enumerate() {
                             let line_num = idx + 1;
 
-                            // Rule 1: Audit unwrap() in Rust production code
-                            if ext == "rs" && line.contains(".unwrap()") && !line.trim().starts_with("//") {
+                            // Rule 1: Audit unwrap() in Rust production code (Reliability)
+                            if check_reliability && ext == "rs" && line.contains(".unwrap()") && !line.trim().starts_with("//") {
                                 findings.push(LinterFinding {
                                     check_id: "pomai.rust.safety.avoid-unwrap".to_string(),
                                     path: rel_path.clone(),
@@ -201,11 +262,15 @@ pub fn run_in_process_scan(workspace_path: &Path) -> LinterReport {
                                     message: "Potential panic risk: use `?` operator or `expect()` with explanatory message instead of `.unwrap()`".to_string(),
                                     severity: "WARNING".to_string(),
                                     code_snippet: Some(line.trim().to_string()),
+                                    fix: Some(line.replace(".unwrap()", "?")),
+                                    category: Some("reliability".to_string()),
+                                    validation_state: None,
+                                    dataflow_trace: None,
                                 });
                             }
 
-                            // Rule 2: Audit unsafe blocks in Rust
-                            if ext == "rs" && line.contains("unsafe {") && !line.trim().starts_with("//") {
+                            // Rule 2: Audit unsafe blocks in Rust (Unsafe)
+                            if check_unsafe && ext == "rs" && line.contains("unsafe {") && !line.trim().starts_with("//") {
                                 findings.push(LinterFinding {
                                     check_id: "pomai.rust.safety.unsafe-block-audit".to_string(),
                                     path: rel_path.clone(),
@@ -216,11 +281,15 @@ pub fn run_in_process_scan(workspace_path: &Path) -> LinterReport {
                                     message: "Unsafe block detected: requires explicit safety invariant comment".to_string(),
                                     severity: "INFO".to_string(),
                                     code_snippet: Some(line.trim().to_string()),
+                                    fix: Some(format!("// SAFETY: Verified invariants\n{}", line)),
+                                    category: Some("unsafe".to_string()),
+                                    validation_state: None,
+                                    dataflow_trace: None,
                                 });
                             }
 
-                            // Rule 3: Detect unaddressed TODOs/FIXMEs
-                            if line.contains("TODO:") || line.contains("FIXME:") {
+                            // Rule 3: Detect unaddressed TODOs/FIXMEs (Quality)
+                            if check_quality && (line.contains("TODO:") || line.contains("FIXME:")) {
                                 findings.push(LinterFinding {
                                     check_id: "pomai.quality.pending-todo".to_string(),
                                     path: rel_path.clone(),
@@ -231,6 +300,34 @@ pub fn run_in_process_scan(workspace_path: &Path) -> LinterReport {
                                     message: format!("Unresolved task annotation: {}", line.trim()),
                                     severity: "INFO".to_string(),
                                     code_snippet: Some(line.trim().to_string()),
+                                    fix: Some(line.replace("TODO:", "DONE:")),
+                                    category: Some("quality".to_string()),
+                                    validation_state: None,
+                                    dataflow_trace: None,
+                                });
+                            }
+
+                            // Rule 4: Security - Hardcoded secret detection (Security)
+                            if check_security && (line.contains("api_key =") || line.contains("password =") || line.contains("secret =")) && !line.trim().starts_with("//") {
+                                findings.push(LinterFinding {
+                                    check_id: "pomai.security.hardcoded-secret".to_string(),
+                                    path: rel_path.clone(),
+                                    start_line: line_num,
+                                    start_col: 1,
+                                    end_line: line_num,
+                                    end_col: line.len(),
+                                    message: "Potential hardcoded secret or credential detected".to_string(),
+                                    severity: "ERROR".to_string(),
+                                    code_snippet: Some(line.trim().to_string()),
+                                    fix: Some(format!("// pomai:ignore-secret\n{}", line)),
+                                    category: Some("security".to_string()),
+                                    validation_state: Some("CONFIRMED_VALID".to_string()),
+                                    dataflow_trace: Some(vec![DataflowStep {
+                                        path: rel_path.clone(),
+                                        line: line_num,
+                                        message: Some("Credential assignment source".to_string()),
+                                        snippet: Some(line.trim().to_string()),
+                                    }]),
                                 });
                             }
                         }

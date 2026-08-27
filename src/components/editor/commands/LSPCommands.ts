@@ -184,7 +184,9 @@ commandRegistry.registerCommand({
   },
   keybindings: [
     { key: 'F12' }
-  ]
+  ],
+  title: 'Go to Definition',
+  category: 'LSP'
 });
 
 commandRegistry.registerCommand({
@@ -194,7 +196,9 @@ commandRegistry.registerCommand({
       goToTypeDefinition(args);
     }
   },
-  keybindings: []
+  keybindings: [],
+  title: 'Go to Type Definition',
+  category: 'LSP'
 });
 
 commandRegistry.registerCommand({
@@ -206,7 +210,9 @@ commandRegistry.registerCommand({
   },
   keybindings: [
     { key: 'Shift+F12' }
-  ]
+  ],
+  title: 'Find All References',
+  category: 'LSP'
 });
 
 commandRegistry.registerCommand({
@@ -218,7 +224,9 @@ commandRegistry.registerCommand({
   },
   keybindings: [
     { key: 'Alt+F12' }
-  ]
+  ],
+  title: 'Peek Definition',
+  category: 'LSP'
 });
 
 commandRegistry.registerCommand({
@@ -231,7 +239,9 @@ commandRegistry.registerCommand({
   keybindings: [
     { key: 'Alt+Enter' },
     { key: 'Ctrl+.' }
-  ]
+  ],
+  title: 'Quick Fix / Code Actions',
+  category: 'LSP'
 });
 
 commandRegistry.registerCommand({
@@ -243,7 +253,9 @@ commandRegistry.registerCommand({
   },
   keybindings: [
     { key: 'F2' }
-  ]
+  ],
+  title: 'Rename Symbol',
+  category: 'LSP'
 });
 
 commandRegistry.registerCommand({
@@ -253,7 +265,9 @@ commandRegistry.registerCommand({
       // This is a submenu action, doesn't execute directly
     }
   },
-  keybindings: []
+  keybindings: [],
+  title: 'Refactor...',
+  category: 'LSP'
 });
 
 commandRegistry.registerCommand({
@@ -263,7 +277,9 @@ commandRegistry.registerCommand({
       extractVariable(args);
     }
   },
-  keybindings: []
+  keybindings: [],
+  title: 'Extract Variable',
+  category: 'LSP'
 });
 
 commandRegistry.registerCommand({
@@ -273,7 +289,9 @@ commandRegistry.registerCommand({
       extractFunction(args);
     }
   },
-  keybindings: []
+  keybindings: [],
+  title: 'Extract Function',
+  category: 'LSP'
 });
 
 commandRegistry.registerCommand({
@@ -283,7 +301,9 @@ commandRegistry.registerCommand({
       inlineVariable(args);
     }
   },
-  keybindings: []
+  keybindings: [],
+  title: 'Inline Variable',
+  category: 'LSP'
 });
 
 commandRegistry.registerCommand({
@@ -293,7 +313,9 @@ commandRegistry.registerCommand({
       runTestAtCursor(args);
     }
   },
-  keybindings: []
+  keybindings: [],
+  title: 'Run Test at Cursor',
+  category: 'LSP'
 });
 
 commandRegistry.registerCommand({
@@ -303,7 +325,9 @@ commandRegistry.registerCommand({
       explainErrorWithAI(args);
     }
   },
-  keybindings: []
+  keybindings: [],
+  title: 'Explain Error with AI',
+  category: 'LSP'
 });
 
 commandRegistry.registerCommand({
@@ -313,7 +337,9 @@ commandRegistry.registerCommand({
       // This is a submenu action, doesn't execute directly
     }
   },
-  keybindings: []
+  keybindings: [],
+  title: 'Rust Tools',
+  category: 'LSP'
 });
 
 commandRegistry.registerCommand({
@@ -323,7 +349,9 @@ commandRegistry.registerCommand({
       expandMacroRecursively(args);
     }
   },
-  keybindings: []
+  keybindings: [],
+  title: 'Expand Macro Recursively',
+  category: 'LSP'
 });
 
 commandRegistry.registerCommand({
@@ -333,5 +361,7 @@ commandRegistry.registerCommand({
       viewCrateGraph(args);
     }
   },
-  keybindings: []
+  keybindings: [],
+  title: 'View Crate Graph',
+  category: 'LSP'
 });

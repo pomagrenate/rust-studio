@@ -4,7 +4,7 @@
  * and integrates the Search Everywhere trigger.
  */
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   VscMenu,
   VscArrowLeft,
@@ -111,11 +111,11 @@ interface RecentlyOpened {
 type DropdownKind = "hamburger" | "workspace" | "git" | null;
 type HamburgerSubmenu = "file" | "edit" | "view" | "navigate" | "code" | "build" | "run" | "git" | "tools" | "help" | null;
 
-export function Navbar({
+export const Navbar = React.memo(function Navbar({
   workspaceRoot,
-  activeBranch = "main",
-  branches = ["main", "dev"],
-  onSelectBranch,
+  activeBranch: _activeBranch = "main",
+  branches: _branches = ["main", "dev"],
+  onSelectBranch: _onSelectBranch,
   onNewBranch,
   onNewFile,
   onNewPhysicalFile,
@@ -182,103 +182,6 @@ export function Navbar({
   const [recentItems, setRecentItems] = useState<RecentlyOpened>({ workspaces: [], files: [] });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const navRef = useRef<HTMLDivElement>(null);
-
-  // Real Git branch state driven by Rust invoke
-  const [localActiveBranch, setLocalActiveBranch] = useState<string>(activeBranch);
-  const [localBranches, setLocalBranches] = useState<string[]>(branches);
-
-  // Sync state if props update
-  useEffect(() => {
-    if (activeBranch) setLocalActiveBranch(activeBranch);
-  }, [activeBranch]);
-
-  useEffect(() => {
-    if (branches && branches.length > 0) setLocalBranches(branches);
-  }, [branches]);
-
-  // Fetch branch information directly from Rust src-tauri/src/github & src-tauri/src/commands/git_commands
-  const refreshGitBranchInfo = useCallback(async () => {
-    if (!workspaceRoot || !window.__TAURI_INTERNALS__) return;
-
-    try {
-      const fetchedBranches = await invoke<string[]>("git_get_branches", { repoPath: workspaceRoot });
-      if (fetchedBranches && fetchedBranches.length > 0) {
-        setLocalBranches(fetchedBranches);
-      }
-    } catch (err) {
-      console.error("Failed to fetch git branches from Rust:", err);
-    }
-
-    try {
-      const statusRes = await invoke<{ branch?: string }>("git_status", { repoPath: workspaceRoot });
-      if (statusRes && statusRes.branch) {
-        setLocalActiveBranch(statusRes.branch);
-      }
-    } catch (_err) {
-      try {
-        const repoInfo = await invoke<{ current_branch?: string }>("github_get_repo_info", { repoPath: workspaceRoot });
-        if (repoInfo && repoInfo.current_branch) {
-          setLocalActiveBranch(repoInfo.current_branch);
-        }
-      } catch (e) {
-        console.error("Failed to fetch repo info from Rust src-tauri/src/github:", e);
-      }
-    }
-  }, [workspaceRoot]);
-
-  useEffect(() => {
-    refreshGitBranchInfo();
-  }, [refreshGitBranchInfo]);
-
-  useEffect(() => {
-    if (activeDropdown === "git") {
-      refreshGitBranchInfo();
-    }
-  }, [activeDropdown, refreshGitBranchInfo]);
-
-  const handleSelectBranchItem = async (b: string) => {
-    setActiveDropdown(null);
-    setActiveSubmenu(null);
-
-    if (window.__TAURI_INTERNALS__ && workspaceRoot) {
-      try {
-        await invoke("git_checkout", { repoPath: workspaceRoot, branch: b });
-        setLocalActiveBranch(b);
-        await refreshGitBranchInfo();
-      } catch (err) {
-        console.error("Failed to checkout branch via Rust:", err);
-      }
-    } else {
-      setLocalActiveBranch(b);
-    }
-
-    onSelectBranch?.(b);
-  };
-
-  const handleNewBranchItem = async () => {
-    setActiveDropdown(null);
-    setActiveSubmenu(null);
-
-    const branchName = prompt("Enter new branch name:");
-    if (branchName && branchName.trim()) {
-      const trimmed = branchName.trim();
-      if (window.__TAURI_INTERNALS__ && workspaceRoot) {
-        try {
-          await invoke("git_create_branch", { repoPath: workspaceRoot, branchName: trimmed });
-          await invoke("git_checkout", { repoPath: workspaceRoot, branch: trimmed });
-          setLocalActiveBranch(trimmed);
-          await refreshGitBranchInfo();
-        } catch (err) {
-          console.error("Failed to create new branch via Rust:", err);
-        }
-      } else {
-        setLocalActiveBranch(trimmed);
-        setLocalBranches(prev => [...prev.filter(x => x !== trimmed), trimmed]);
-      }
-
-      onNewBranch?.();
-    }
-  };
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -404,20 +307,6 @@ export function Navbar({
           <span>{workspaceName}</span>
           <VscChevronDown className={styles.pillChevron} />
         </button>
-
-        {/* Git Branch Pill */}
-        <button
-          className={`${styles.gitPill} ${activeDropdown === "git" ? styles.gitPillActive : ""}`}
-          onClick={() => {
-            setActiveDropdown(activeDropdown === "git" ? null : "git");
-            setActiveSubmenu(null);
-          }}
-          title={`Git Branch: ${localActiveBranch}`}
-        >
-          <VscGitPullRequest size={17} color="#3574f0" />
-          <span>{localActiveBranch || "Git"}</span>
-          <VscChevronDown className={styles.pillChevron} />
-        </button>
       </div>
 
       {/* ── Right Controls: Build/Run/Debug, AI Assistant, Search Everywhere, Settings, Window Controls ── */}
@@ -507,12 +396,20 @@ export function Navbar({
           {/* Start / Run (Green Play) with Dropdown */}
           <div className={styles.runDropdownWrapper}>
             <button
-              className={`${styles.iconBtn} ${showRunDropdown ? styles.iconBtnActive : ""}`}
-              title="Run Project (Shift+F10 / Cargo Run)"
-              onClick={() => setShowRunDropdown(!showRunDropdown)}
+              className={styles.iconBtn}
+              title="Run Project (Shift+F10 / Cargo Run / Dev Server)"
+              onClick={() => onStartRun?.()}
               aria-label="Start Run"
             >
               <VscPlay size={16} color="#388a34" />
+            </button>
+            <button
+              className={`${styles.runChevronBtn} ${showRunDropdown ? styles.iconBtnActive : ""}`}
+              title="Run Options"
+              onClick={() => setShowRunDropdown(!showRunDropdown)}
+              aria-label="Run Options"
+            >
+              <VscChevronDown size={12} />
             </button>
             
             {showRunDropdown && (
@@ -709,44 +606,7 @@ export function Navbar({
         </div>
       )}
 
-      {/* ── Dropdown 2: Git Branch Dropdown ── */}
-      {activeDropdown === "git" && (
-        <div className={`${styles.dropdownMenu} ${styles.gitDropdown}`}>
-          <div className={styles.dropdownSectionTitle}>Branches</div>
-          {localBranches.map((b) => (
-            <div
-              key={b}
-              className={styles.menuItem}
-              onClick={() => handleSelectBranchItem(b)}
-            >
-              <div className={styles.menuItemIcon}><VscGitPullRequest /></div>
-              <span className={styles.menuItemText}>{b} {b === localActiveBranch && "✓"}</span>
-            </div>
-          ))}
-
-          <div className={styles.dropdownDivider} />
-          <div
-            className={styles.menuItem}
-            onClick={handleNewBranchItem}
-          >
-            <div className={styles.menuItemIcon}><VscAdd /></div>
-            <span className={styles.menuItemText}>New Branch...</span>
-          </div>
-
-          <div
-            className={styles.menuItem}
-            onClick={() => {
-              closeDropdowns();
-              onCloneVcs?.();
-            }}
-          >
-            <div className={styles.menuItemIcon}><VscGitPullRequest /></div>
-            <span className={styles.menuItemText}>Clone Repository...</span>
-          </div>
-        </div>
-      )}
-
-      {/* ── Dropdown 3: Hamburger Main Menu (Collapses traditional menu bar) ── */}
+      {/* ── Dropdown 2: Hamburger Main Menu (Collapses traditional menu bar) ── */}
       {activeDropdown === "hamburger" && (
         <div className={`${styles.dropdownMenu} ${styles.hamburgerDropdown}`}>
           {/* File Menu */}
@@ -980,6 +840,6 @@ export function Navbar({
     {isSettingsOpen && <SettingsPanel isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />}
     </>
   );
-}
+});
 
 export default Navbar;

@@ -122,24 +122,29 @@ export function moveToDocumentEnd(viewModel: any): Position {
 }
 
 /**
- * Move cursor left
+ * Move cursor left with line-boundary wrapping
  */
 export function moveLeft(viewModel: any): Position {
   const cursor = viewModel.getCursorPosition();
   if (cursor.column > 0) {
     return { line: cursor.line, column: cursor.column - 1 };
+  } else if (cursor.line > 0) {
+    const prevLineLen = viewModel.getLine(cursor.line - 1).length;
+    return { line: cursor.line - 1, column: prevLineLen };
   }
   return cursor;
 }
 
 /**
- * Move cursor right
+ * Move cursor right with line-boundary wrapping
  */
 export function moveRight(viewModel: any): Position {
   const cursor = viewModel.getCursorPosition();
   const line = viewModel.getLine(cursor.line);
   if (cursor.column < line.length) {
     return { line: cursor.line, column: cursor.column + 1 };
+  } else if (cursor.line < viewModel.getLineCount() - 1) {
+    return { line: cursor.line + 1, column: 0 };
   }
   return cursor;
 }
@@ -328,4 +333,62 @@ commandRegistry.registerCommand({
   ],
   title: 'Move Cursor Down',
   category: 'Navigation'
+});
+
+commandRegistry.registerCommand({
+  command: {
+    id: 'goToLine',
+    execute: () => {
+      window.dispatchEvent(new CustomEvent('pm:gotoline'));
+    }
+  },
+  keybindings: [
+    { key: 'Ctrl+G' },
+    { key: 'Cmd+G', platform: 'mac' }
+  ],
+  title: 'Go to Line...',
+  category: 'Navigation'
+});
+
+commandRegistry.registerCommand({
+  command: {
+    id: 'actions.find',
+    execute: () => {
+      window.dispatchEvent(new CustomEvent('pm:find'));
+    }
+  },
+  keybindings: [
+    { key: 'Ctrl+F' },
+    { key: 'Cmd+F', platform: 'mac' }
+  ],
+  title: 'Find in File',
+  category: 'Navigation'
+});
+
+commandRegistry.registerCommand({
+  command: {
+    id: 'actions.replace',
+    execute: () => {
+      window.dispatchEvent(new CustomEvent('pm:replace'));
+    }
+  },
+  keybindings: [
+    { key: 'Ctrl+H' },
+    { key: 'Cmd+H', platform: 'mac' }
+  ],
+  title: 'Replace in File',
+  category: 'Navigation'
+});
+
+commandRegistry.registerCommand({
+  command: {
+    id: 'surroundWith',
+    execute: () => {}
+  },
+  keybindings: [
+    { key: 'Ctrl+Alt+T' },
+    { key: 'Cmd+Alt+T', platform: 'mac' }
+  ],
+  title: 'Surround With...',
+  category: 'Editor'
 });

@@ -153,3 +153,22 @@
     color: inherit;
     font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
+
+.nodeFocused {
+    outline: 1px solid #007acc;
+    outline-offset: -1px;
+}
+
+.renameInput {
+    flex: 1;
+    background-color: #2b2d30;
+    border: 1px solid #007acc;
+    border-radius: 2px;
+    color: #ffffff;
+    font-size: 12px;
+    font-family: inherit;
+    padding: 1px 4px;
+    outline: none;
+    height: 20px;
+    box-sizing: border-box;
+}

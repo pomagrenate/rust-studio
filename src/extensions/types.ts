@@ -30,6 +30,21 @@ export interface ISCMHistoryItem {
   localRef?: string;
 }
 
+export interface ISCMStashItem {
+  index: number;
+  name: string;
+  branch: string;
+  message: string;
+}
+
+export interface ISCMCommitDetail {
+  hash: string;
+  author: string;
+  date: string;
+  message: string;
+  files: ISCMResource[];
+}
+
 export interface ISCMRepositoryState {
   isRepo: boolean;
   branch: string;
@@ -37,7 +52,10 @@ export interface ISCMRepositoryState {
   behind: number;
   stagedChanges: ISCMResource[];
   unstagedChanges: ISCMResource[];
+  conflictedChanges: ISCMResource[];
+  hasConflicts: boolean;
   history: ISCMHistoryItem[];
+  stashes: ISCMStashItem[];
   isLoading: boolean;
 }
 
@@ -56,6 +74,13 @@ export interface ISCMRepository {
   discardAll(): Promise<void>;
   commit(message: string): Promise<void>;
   sync(): Promise<void>;
+  fetch(): Promise<void>;
+  stashSave(message?: string): Promise<void>;
+  stashPop(): Promise<void>;
+  checkoutOurs(path: string): Promise<void>;
+  checkoutTheirs(path: string): Promise<void>;
+  abortMerge(): Promise<void>;
+  getCommitDetails(hash: string): Promise<ISCMCommitDetail>;
   initRepo(): Promise<void>;
   getBranches(): Promise<string[]>;
   checkoutBranch(branchName: string): Promise<void>;

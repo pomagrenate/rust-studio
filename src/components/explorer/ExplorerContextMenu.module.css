@@ -1,0 +1,76 @@
+.contextMenu {
+  position: fixed;
+  z-index: 9999;
+  min-width: 210px;
+  background-color: #1e1f22;
+  border: 1px solid #31343a;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  padding: 4px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 12px;
+  color: #dfe1e5;
+  user-select: none;
+  animation: fadeIn 0.12s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+}
+
+.menuItem:hover {
+  background-color: #2b2d30;
+  color: #ffffff;
+}
+
+.icon {
+  font-size: 14px;
+  color: #a9b7c6;
+  flex-shrink: 0;
+}
+
+.label {
+  flex: 1;
+  white-space: nowrap;
+}
+
+.shortcut {
+  font-size: 11px;
+  color: #6e7681;
+  margin-left: 12px;
+}
+
+.divider {
+  height: 1px;
+  background-color: #2b2d30;
+  margin: 4px 2px;
+}
+
+.dangerIcon {
+  color: #f85149;
+}
+
+.dangerText {
+  color: #f85149;
+}
+
+.menuItem:hover .dangerText {
+  color: #ff6b6b;
+}

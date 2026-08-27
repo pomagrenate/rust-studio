@@ -55,6 +55,7 @@ interface FuzzyMatchResult {
 
 // Fuzzy matching algorithm (IntelliJ-style)
 function fuzzyMatch(query: string, target: string): FuzzyMatchResult | null {
+  if (!target || typeof target !== "string") return null;
   if (!query) return { score: 1, indices: [] };
   
   const queryLower = query.toLowerCase();
@@ -93,7 +94,8 @@ function fuzzyMatch(query: string, target: string): FuzzyMatchResult | null {
 
 // Highlight matched characters in label
 function renderHighlightedLabel(label: string, indices: number[]): React.ReactNode {
-  if (!indices || indices.length === 0) return label;
+  if (!label || typeof label !== "string") return "";
+  if (!indices || !Array.isArray(indices) || indices.length === 0) return label;
   
   const parts: React.ReactNode[] = [];
   let lastIdx = 0;
@@ -113,6 +115,94 @@ function renderHighlightedLabel(label: string, indices: number[]): React.ReactNo
   return parts;
 }
 
+// Inline Markdown formatter: [`code`], `code`, [text][link], [text](link), **bold**, *italic*
+function formatInlineMarkdown(text: string): React.ReactNode {
+  if (!text) return null;
+  const tokenRegex = /(\[`[^`]+`\]|`[^`]+`|\[[^\]]+\](?:\([^)]+\)|\[[^\]]*\])?|\*\*[^*]+\*\*|\*[^*]+\*)/g;
+  const parts = text.split(tokenRegex);
+
+  return parts.map((part, i) => {
+    if (!part) return null;
+
+    // [`code`] or `code`
+    if ((part.startsWith("[`") && part.endsWith("`]")) || (part.startsWith("`") && part.endsWith("`"))) {
+      const codeText = part.replace(/^\[?`|`\]?$/g, "");
+      return <code key={i} className={styles.docCodeInline}>{codeText}</code>;
+    }
+
+    // [text](url) or [text][ref] or [text]
+    if (part.startsWith("[")) {
+      const linkMatch = part.match(/^\[([^\]]+)\](?:\(([^)]+)\)|\[([^\]]*)\])?$/);
+      if (linkMatch) {
+        const linkText = linkMatch[1];
+        return <span key={i} className={styles.docLink}>{linkText}</span>;
+      }
+    }
+
+    // **bold**
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    }
+
+    // *italic*
+    if (part.startsWith("*") && part.endsWith("*")) {
+      return <em key={i}>{part.slice(1, -1)}</em>;
+    }
+
+    return part;
+  });
+}
+
+// Render LSP Markdown Documentation into styled HTML elements
+function renderMarkdownDoc(content: string): React.ReactNode {
+  if (!content) return null;
+
+  const lines = content.split(/\r?\n/);
+  const elements: React.ReactNode[] = [];
+
+  lines.forEach((line, idx) => {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      elements.push(<div key={idx} className={styles.docSpacer} />);
+      return;
+    }
+
+    // Headers: # Heading, ## Heading
+    const headerMatch = trimmed.match(/^(#{1,6})\s+(.*)$/);
+    if (headerMatch) {
+      const level = Math.min(headerMatch[1].length, 3);
+      const titleNode = formatInlineMarkdown(headerMatch[2]);
+      elements.push(
+        <div key={idx} className={`${styles.docHeader} ${styles[`docHeader${level}`]}`}>
+          {titleNode}
+        </div>
+      );
+      return;
+    }
+
+    // Bullet items: - item, * item
+    const bulletMatch = trimmed.match(/^[-*]\s+(.*)$/);
+    if (bulletMatch) {
+      elements.push(
+        <div key={idx} className={styles.docBullet}>
+          <span className={styles.bulletDot}>•</span>
+          <span>{formatInlineMarkdown(bulletMatch[1])}</span>
+        </div>
+      );
+      return;
+    }
+
+    // Normal paragraph
+    elements.push(
+      <p key={idx} className={styles.docParagraph}>
+        {formatInlineMarkdown(line)}
+      </p>
+    );
+  });
+
+  return elements;
+}
+
 export function CompletionWidget({
   x,
   y,
@@ -121,21 +211,25 @@ export function CompletionWidget({
   filterText,
   onSelect,
   onClose,
-  onNavigate,
+  onNavigate: _onNavigate,
 }: CompletionWidgetProps) {
   const widgetRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ x, y });
   const [docPanePosition, setDocPanePosition] = useState<"right" | "left">("right");
-  const VISIBLE_ITEM_COUNT = 12;
-  const ITEM_HEIGHT = 32;
+  const VISIBLE_ITEM_COUNT = 7;
+  const ITEM_HEIGHT = 24;
 
   // Filter and sort items with fuzzy matching
   const filteredItems = useMemo(() => {
-    if (!filterText) return items;
+    if (!items || !Array.isArray(items)) return [];
     
-    const scored = items.map((item) => {
-      const match = fuzzyMatch(filterText, item.label);
+    const valid = items.filter(item => Boolean(item && (item.label || (item as any).insert_text)));
+    if (!filterText) return valid;
+    
+    const scored = valid.map((item) => {
+      const labelText = item.label || (item as any).insert_text || "";
+      const match = fuzzyMatch(filterText, labelText);
       return { item, match };
     });
     
@@ -199,30 +293,6 @@ export function CompletionWidget({
       }
     }
   }, [selectedIndex]);
-
-  // Keyboard event handling
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        onNavigate("up");
-      } else if (e.key === "ArrowDown") {
-        e.preventDefault();
-        onNavigate("down");
-      } else if (e.key === "Enter" || e.key === "Tab") {
-        e.preventDefault();
-        if (filteredItems[selectedIndex]) {
-          onSelect(filteredItems[selectedIndex]);
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, onNavigate, onSelect, filteredItems, selectedIndex]);
 
   // Click outside to close
   useEffect(() => {
@@ -305,7 +375,6 @@ export function CompletionWidget({
                 className={`${styles.completionItem} ${actualIndex === selectedIndex ? styles.completionItemSelected : ""}`}
                 style={{ height: `${ITEM_HEIGHT}px` }}
                 onClick={() => onSelect(item)}
-                onMouseEnter={() => onNavigate("down")}
               >
                 <span className={styles.completionIcon}>{getKindIcon(item.kind)}</span>
                 <span className={styles.completionLabel}>
@@ -339,7 +408,7 @@ export function CompletionWidget({
             
             {selectedItem?.documentation && (
               <div className={styles.docDocumentation}>
-                {selectedItem.documentation}
+                {renderMarkdownDoc(selectedItem.documentation)}
               </div>
             )}
             

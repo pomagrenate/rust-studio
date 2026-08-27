@@ -329,6 +329,9 @@
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-all;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  cursor: text;
 }
 
 .emptyState {

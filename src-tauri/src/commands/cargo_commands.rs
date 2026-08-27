@@ -10,6 +10,7 @@ use tokio::sync::Mutex as TokioMutex;
 
 use crate::cargo::{CargoProcessManager, CargoCommand, CodeSuggestion, apply_compiler_suggestion};
 use crate::buffer::{RopeBuffer, TextBuffer};
+use crate::utils::CommandExtHideWindow;
 
 // ── Managed State ─────────────────────────────────────────────────────────
 
@@ -120,6 +121,15 @@ pub struct RustTestItem {
     pub file_path: String,
     pub line: usize,
     pub module_path: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct SingleTestResult {
+    pub name: String,
+    pub status: String,
+    pub duration_ms: u64,
+    pub stdout: String,
+    pub stderr: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -322,6 +332,7 @@ pub async fn cargo_check_diagnostics(project_path: String) -> Result<Vec<CargoDi
         }
 
         let output = Command::new("cargo")
+            .hide_window()
             .args(&["check", "--message-format=json", "--all-targets"])
             .current_dir(root)
             .output()
@@ -348,6 +359,7 @@ pub async fn cargo_check_workspace_diagnostics(
         }
 
         let output = Command::new("cargo")
+            .hide_window()
             .args(&["check", "--message-format=json", "--all-targets"])
             .current_dir(root)
             .output()
@@ -418,6 +430,7 @@ pub async fn cargo_run_command(
 
         let start = Instant::now();
         let mut cmd = Command::new("cargo");
+        cmd.hide_window();
 
         match action.as_str() {
             "run" => {
@@ -494,39 +507,49 @@ pub async fn cargo_test_discovery(project_path: String) -> Result<Vec<RustTestIt
         }
 
         let mut tests = Vec::new();
-        let src_dir = root.join("src");
-        let tests_dir = root.join("tests");
-
         let test_fn_regex = regex::Regex::new(r"fn\s+([a-zA-Z0-9_]+)\s*\(").unwrap();
 
-        let mut search_dirs = Vec::new();
-        if src_dir.exists() { search_dirs.push(src_dir); }
-        if tests_dir.exists() { search_dirs.push(tests_dir); }
+        // Walk through workspace directory, ignoring target, .git, node_modules, .cargo
+        let walker = walkdir::WalkDir::new(root)
+            .into_iter()
+            .filter_entry(|e| {
+                let name = e.file_name().to_string_lossy();
+                name != "target" && name != ".git" && name != "node_modules" && name != ".cargo"
+            });
 
-        for dir in search_dirs {
-            for entry in walkdir::WalkDir::new(&dir).into_iter().flatten() {
-                let p = entry.path();
-                if p.extension().map_or(false, |ext| ext == "rs") {
-                    if let Ok(content) = fs::read_to_string(p) {
-                        let lines: Vec<&str> = content.lines().collect();
-                        for (idx, line) in lines.iter().enumerate() {
-                            let trimmed = line.trim();
-                            if trimmed.contains("#[test]") || trimmed.contains("#[tokio::test]") {
-                                // Next few lines check for fn name
-                                for j in 1..=3 {
-                                    if idx + j < lines.len() {
-                                        let next_line = lines[idx + j];
-                                        if let Some(caps) = test_fn_regex.captures(next_line) {
-                                            if let Some(fn_name) = caps.get(1) {
-                                                let rel_path = p.strip_prefix(root).unwrap_or(p).to_string_lossy().to_string();
-                                                tests.push(RustTestItem {
-                                                    name: fn_name.as_str().to_string(),
-                                                    file_path: p.to_string_lossy().to_string(),
-                                                    line: idx + j,
-                                                    module_path: rel_path,
-                                                });
-                                                break;
-                                            }
+        for entry in walker.flatten() {
+            let p = entry.path();
+            if p.is_file() && p.extension().map_or(false, |ext| ext == "rs") {
+                if let Ok(content) = fs::read_to_string(p) {
+                    let lines: Vec<&str> = content.lines().collect();
+                    for (idx, line) in lines.iter().enumerate() {
+                        let trimmed = line.trim();
+                        let is_test_attr = trimmed.contains("#[test]")
+                            || trimmed.contains("#[tokio::test]")
+                            || trimmed.contains("#[async_std::test]")
+                            || trimmed.contains("#[actix_rt::test]")
+                            || trimmed.contains("#[rstest]")
+                            || (trimmed.starts_with("#[") && trimmed.contains("test"));
+
+                        if is_test_attr {
+                            // Look ahead up to 10 lines for fn signature
+                            for j in 1..=10 {
+                                if idx + j < lines.len() {
+                                    let next_line = lines[idx + j];
+                                    if let Some(caps) = test_fn_regex.captures(next_line) {
+                                        if let Some(fn_name) = caps.get(1) {
+                                            let rel_path = p.strip_prefix(root).unwrap_or(p).to_string_lossy().replace('\\', "/");
+                                            let module_path = rel_path
+                                                .trim_end_matches(".rs")
+                                                .replace('/', "::");
+
+                                            tests.push(RustTestItem {
+                                                name: fn_name.as_str().to_string(),
+                                                file_path: p.to_string_lossy().to_string(),
+                                                line: idx + j + 1,
+                                                module_path,
+                                            });
+                                            break;
                                         }
                                     }
                                 }
@@ -536,6 +559,8 @@ pub async fn cargo_test_discovery(project_path: String) -> Result<Vec<RustTestIt
                 }
             }
         }
+
+        tests.dedup_by(|a, b| a.file_path == b.file_path && a.name == b.name);
 
         Ok(tests)
     }).await.map_err(|e| e.to_string())?
@@ -547,10 +572,12 @@ pub async fn cargo_format(project_path: String, file_path: Option<String>) -> Re
         let root = Path::new(&project_path);
         let mut cmd = if let Some(fp) = file_path {
             let mut c = Command::new("rustfmt");
+            c.hide_window();
             c.arg(&fp);
             c
         } else {
             let mut c = Command::new("cargo");
+            c.hide_window();
             c.arg("fmt");
             c.current_dir(root);
             c
@@ -573,6 +600,7 @@ pub async fn cargo_create_project(parent_dir: String, name: String, is_lib: bool
         }
 
         let mut cmd = Command::new("cargo");
+        cmd.hide_window();
         cmd.arg("new");
         if is_lib {
             cmd.arg("--lib");
@@ -607,6 +635,7 @@ pub async fn git_clone_project(target_parent_dir: String, repo_url: String) -> R
             .unwrap_or("cloned-repo");
 
         let mut cmd = Command::new("git");
+        cmd.hide_window();
         cmd.args(&["clone", &repo_url]);
         cmd.current_dir(parent);
 
@@ -638,6 +667,7 @@ pub async fn cargo_scaffold_project(
             let cmd_str = cmd_raw.replace("{name}", &name);
             let mut shell_cmd = if cfg!(target_os = "windows") {
                 let mut c = Command::new("powershell");
+                c.hide_window();
                 c.args(&["-NoProfile", "-Command", &cmd_str]);
                 c
             } else {
@@ -646,7 +676,6 @@ pub async fn cargo_scaffold_project(
                 c
             };
 
-            // Run in parent dir initially, or project dir once created
             if project_dir.exists() {
                 shell_cmd.current_dir(&project_dir);
             } else {
@@ -666,12 +695,10 @@ pub async fn cargo_scaffold_project(
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct SingleTestResult {
-    pub name: String,
-    pub status: String, // "passed" | "failed" | "ignored"
-    pub duration_ms: u64,
-    pub stdout: String,
-    pub stderr: String,
+pub struct AllTestResults {
+    pub results: HashMap<String, SingleTestResult>,
+    pub total_duration_ms: u64,
+    pub full_output: String,
 }
 
 #[tauri::command]
@@ -683,7 +710,9 @@ pub async fn cargo_run_single_test(
         let root = Path::new(&project_path);
         let start = Instant::now();
         let mut cmd = Command::new("cargo");
+        cmd.hide_window();
         cmd.arg("test")
+            .arg("--workspace")
             .arg(&test_name)
             .arg("--")
             .arg("--exact")
@@ -713,6 +742,71 @@ pub async fn cargo_run_single_test(
             duration_ms: start.elapsed().as_millis() as u64,
             stdout,
             stderr,
+        })
+    }).await.map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn cargo_run_all_tests(project_path: String) -> Result<AllTestResults, String> {
+    tokio::task::spawn_blocking(move || {
+        let root = Path::new(&project_path);
+        let start = Instant::now();
+
+        let mut cmd = Command::new("cargo");
+        cmd.hide_window();
+        cmd.arg("test")
+            .arg("--workspace")
+            .arg("--no-fail-fast")
+            .arg("--")
+            .arg("--nocapture");
+        cmd.current_dir(root);
+
+        #[cfg(target_os = "windows")]
+        {
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(0x08000000);
+        }
+
+        let output = cmd.output().map_err(|e| format!("Failed to run cargo test: {e}"))?;
+        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        let combined = format!("{}\n{}", stdout, stderr);
+
+        let mut results: HashMap<String, SingleTestResult> = HashMap::new();
+        let test_line_regex = regex::Regex::new(r"test\s+([a-zA-Z0-9_:]+)\s*\.\.\.\s*(ok|FAILED|ignored)").unwrap();
+
+        for line in combined.lines() {
+            if let Some(caps) = test_line_regex.captures(line) {
+                if let (Some(full_name), Some(status_match)) = (caps.get(1), caps.get(2)) {
+                    let full_test_name = full_name.as_str();
+                    let raw_status = status_match.as_str();
+                    let status = match raw_status {
+                        "ok" => "passed",
+                        "FAILED" => "failed",
+                        "ignored" => "ignored",
+                        _ => "failed",
+                    };
+
+                    let short_name = full_test_name.split("::").last().unwrap_or(full_test_name).to_string();
+
+                    let res = SingleTestResult {
+                        name: short_name.clone(),
+                        status: status.to_string(),
+                        duration_ms: 0,
+                        stdout: line.to_string(),
+                        stderr: String::new(),
+                    };
+
+                    results.insert(short_name, res.clone());
+                    results.insert(full_test_name.to_string(), res);
+                }
+            }
+        }
+
+        Ok(AllTestResults {
+            results,
+            total_duration_ms: start.elapsed().as_millis() as u64,
+            full_output: combined,
         })
     }).await.map_err(|e| e.to_string())?
 }
@@ -828,6 +922,7 @@ pub async fn cargo_get_external_libraries(project_path: String) -> Result<Vec<Ex
                 }
             }
         }
+        cargo_cmd.hide_window();
 
         let output = cargo_cmd
             .args(["metadata", "--format-version", "1"])
@@ -876,6 +971,7 @@ pub async fn cargo_get_external_libraries(project_path: String) -> Result<Vec<Ex
                 }
             }
         }
+        rustc_cmd.hide_window();
 
         if let Ok(sysroot_out) = rustc_cmd.args(["--print", "sysroot"]).output() {
             if sysroot_out.status.success() {

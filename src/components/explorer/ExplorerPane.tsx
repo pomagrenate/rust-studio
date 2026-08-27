@@ -17,6 +17,8 @@ import { OutlinePane } from "../outline/OutlinePane";
 import { TimelinePane } from "../timeline/TimelinePane";
 import { WorkspaceDiagnostics } from "../../extensions/builtin/rust/CargoProvider";
 import { AddDropdown } from "./AddDropdown";
+import { ExplorerContextMenu } from "./ExplorerContextMenu";
+import { DeleteConfirmModal } from "./DeleteConfirmModal";
 import styles from "./Explorer.module.css";
 
 export interface ExplorerPaneProps {
@@ -47,7 +49,7 @@ export interface ExternalLibraryItem {
   is_stdlib: boolean;
 }
 
-export function ExplorerPane({ 
+export const ExplorerPane = React.memo(function ExplorerPane({ 
   workspaceRoots, 
   activeFile, 
   openFiles, 
@@ -69,6 +71,10 @@ export function ExplorerPane({
   const [externalLibraries, setExternalLibraries] = useState<ExternalLibraryItem[]>([]);
   const [isAddDropdownOpen, setIsAddDropdownOpen] = useState(false);
   const [pendingCreation, setPendingCreation] = useState<{ kind: CreationKind; targetDir: string } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; path: string; isDir: boolean } | null>(null);
+  const [renamingPath, setRenamingPath] = useState<string | null>(null);
+  const [deleteModalPaths, setDeleteModalPaths] = useState<string[] | null>(null);
+  const [focusedNodePath, setFocusedNodePath] = useState<string | null>(null);
 
   const addTriggerRef = useRef<HTMLDivElement>(null);
 
@@ -134,7 +140,143 @@ export function ExplorerPane({
     return () => window.removeEventListener("pm:refreshExplorer", handleRefresh);
   }, [workspaceRoots, refreshRoot]);
 
+  const handleNodeContextMenu = useCallback((e: React.MouseEvent, path: string, isDir: boolean) => {
+    setContextMenu({ x: e.clientX, y: e.clientY, path, isDir });
+    setFocusedNodePath(path);
+    if (!selectedFiles.has(path)) {
+      setSelectedFiles(new Set([path]));
+    }
+  }, [selectedFiles]);
+
+  const handleCommitRename = useCallback(async (oldPath: string, newName: string) => {
+    setRenamingPath(null);
+    const trimmed = newName.trim();
+    if (!trimmed) return;
+
+    const parts = oldPath.split(/[/\\]/);
+    parts.pop();
+    const parentDir = parts.join("/");
+    const sep = oldPath.includes("\\") ? "\\" : "/";
+    const newPath = parentDir ? `${parentDir}${sep}${trimmed}` : trimmed;
+
+    if (oldPath === newPath) return;
+
+    try {
+      if (window.__TAURI_INTERNALS__) {
+        await invoke("rename_path", { oldPath, newPath });
+      }
+      workspaceRoots.forEach(refreshRoot);
+      window.dispatchEvent(new Event("pm:refreshExplorer"));
+    } catch (err) {
+      console.error("Rename failed:", err);
+    }
+  }, [workspaceRoots, refreshRoot]);
+
+  const handleConfirmDelete = useCallback(async (_useTrash: boolean) => {
+    const targets = deleteModalPaths;
+    setDeleteModalPaths(null);
+    if (!targets || targets.length === 0) return;
+
+    try {
+      if (window.__TAURI_INTERNALS__) {
+        for (const target of targets) {
+          await invoke("delete_path", { path: target });
+        }
+      }
+      workspaceRoots.forEach(refreshRoot);
+      window.dispatchEvent(new Event("pm:refreshExplorer"));
+    } catch (err) {
+      console.error("Delete failed:", err);
+    }
+  }, [deleteModalPaths, workspaceRoots, refreshRoot]);
+
+  const handleShowInFolder = useCallback(async (path: string) => {
+    try {
+      if (window.__TAURI_INTERNALS__) {
+        await invoke("show_in_folder", { path });
+      }
+    } catch (err) {
+      console.error("Show in folder failed:", err);
+    }
+  }, []);
+
+  const handleCopyPath = useCallback((targets?: string[]) => {
+    const pathsToCopy = targets && targets.length > 0 ? targets : Array.from(selectedFiles);
+    navigator.clipboard.writeText(pathsToCopy.join("\n"));
+  }, [selectedFiles]);
+
+  const handleCopyRelativePath = useCallback((targets?: string[]) => {
+    const root = workspaceRoots[0] || "";
+    const pathsToCopy = targets && targets.length > 0 ? targets : Array.from(selectedFiles);
+    const rels = pathsToCopy.map(path => {
+      if (root && path.startsWith(root)) {
+        return path.slice(root.length).replace(/^[/\\]/, "");
+      }
+      return path;
+    });
+    navigator.clipboard.writeText(rels.join("\n"));
+  }, [selectedFiles, workspaceRoots]);
+
+  const getTargetFileOrDir = useCallback(() => {
+    if (focusedNodePath) return focusedNodePath;
+    if (selectedFiles.size > 0) return Array.from(selectedFiles)[0];
+    if (activeFile) return activeFile;
+    return workspaceRoots[0] || null;
+  }, [focusedNodePath, selectedFiles, activeFile, workspaceRoots]);
+
   const handleKeyDown = async (e: React.KeyboardEvent) => {
+    if (renamingPath) return; // Don't intercept when actively typing rename
+
+    if (e.key === "F2") {
+      e.preventDefault();
+      const target = getTargetFileOrDir();
+      if (target) setRenamingPath(target);
+      return;
+    }
+
+    if (e.key === "Delete") {
+      e.preventDefault();
+      if (selectedFiles.size > 0) {
+        setDeleteModalPaths(Array.from(selectedFiles));
+      } else {
+        const target = getTargetFileOrDir();
+        if (target) setDeleteModalPaths([target]);
+      }
+      return;
+    }
+
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      const nodes = Array.from(document.querySelectorAll('[data-explorer-path]')) as HTMLElement[];
+      if (nodes.length === 0) return;
+
+      let currentIndex = nodes.findIndex(n => n.getAttribute('data-explorer-path') === focusedNodePath);
+      if (currentIndex === -1) {
+        currentIndex = 0;
+      } else {
+        if (e.key === "ArrowDown") {
+          currentIndex = Math.min(currentIndex + 1, nodes.length - 1);
+        } else {
+          currentIndex = Math.max(currentIndex - 1, 0);
+        }
+      }
+      const newPath = nodes[currentIndex]?.getAttribute('data-explorer-path');
+      if (newPath) {
+        setFocusedNodePath(newPath);
+        setSelectedFiles(new Set([newPath]));
+        nodes[currentIndex].scrollIntoView({ block: "nearest" });
+      }
+      return;
+    }
+
+    if (e.key === "Enter") {
+      if (focusedNodePath) {
+        e.preventDefault();
+        onFileClick(focusedNodePath, true);
+      }
+      return;
+    }
+
     if (e.ctrlKey || e.metaKey) {
       const key = e.key.toLowerCase();
       if (key === 'a') {
@@ -194,7 +336,52 @@ export function ExplorerPane({
     }
   };
 
-  const handleNodeClick = (path: string, isDoubleClick = false, isCtrl = false, isDirectory = false) => {
+  const [lastClickedPath, setLastClickedPath] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (activeFile && activeFile !== "Welcome") {
+      setFocusedNodePath(activeFile);
+      setSelectedFiles(new Set([activeFile]));
+      window.dispatchEvent(
+        new CustomEvent("pm:revealFileExpand", { detail: { path: activeFile } })
+      );
+    }
+  }, [activeFile]);
+
+  const handleNodeClick = (
+    path: string, 
+    isDoubleClick = false, 
+    isCtrl = false, 
+    isShift = false, 
+    isDirectory = false
+  ) => {
+    setFocusedNodePath(path);
+
+    if (isShift && lastClickedPath) {
+      const allVisibleElements = Array.from(document.querySelectorAll('[data-explorer-path]'));
+      const visiblePaths = allVisibleElements
+        .map(el => el.getAttribute('data-explorer-path'))
+        .filter(Boolean) as string[];
+      
+      const startIdx = visiblePaths.indexOf(lastClickedPath);
+      const endIdx = visiblePaths.indexOf(path);
+      
+      if (startIdx !== -1 && endIdx !== -1) {
+        const low = Math.min(startIdx, endIdx);
+        const high = Math.max(startIdx, endIdx);
+        const rangePaths = visiblePaths.slice(low, high + 1);
+        
+        if (isCtrl) {
+          setSelectedFiles(prev => new Set([...prev, ...rangePaths]));
+        } else {
+          setSelectedFiles(new Set(rangePaths));
+        }
+      }
+      return;
+    }
+
+    setLastClickedPath(path);
+
     if (isCtrl) {
       setSelectedFiles(prev => {
         const next = new Set(prev);
@@ -202,9 +389,13 @@ export function ExplorerPane({
         else next.add(path);
         return next;
       });
-    } else {
-      setSelectedFiles(new Set([path]));
+      if (isDirectory) {
+        setFocusedDirectory(path);
+      }
+      return;
     }
+
+    setSelectedFiles(new Set([path]));
 
     if (isDirectory) {
       setFocusedDirectory(path);
@@ -223,14 +414,23 @@ export function ExplorerPane({
       return root;
     }
 
-    if (focusedDirectory) {
-      return focusedDirectory;
+    let target = focusedNodePath || focusedDirectory;
+
+    if (!target && activeFile && activeFile !== "Welcome") {
+      target = activeFile;
     }
 
-    if (activeFile && activeFile !== "Welcome") {
-      const parts = activeFile.split(/[/\\]/);
-      parts.pop();
-      return parts.join("/") || root;
+    if (target) {
+      const normTarget = target.replace(/\\/g, "/");
+      const parts = normTarget.split("/");
+      const lastPart = parts[parts.length - 1] || "";
+      
+      // If target is a file (contains an extension dot), use its parent directory
+      if (lastPart.includes(".")) {
+        parts.pop();
+        return parts.join("/") || root;
+      }
+      return normTarget;
     }
 
     return root;
@@ -396,6 +596,11 @@ export function ExplorerPane({
             clipboard={clipboard}
             workspaceDiagnostics={workspaceDiagnostics}
             pendingCreation={pendingCreation}
+            renamingPath={renamingPath}
+            focusedNodePath={focusedNodePath}
+            onNodeContextMenu={handleNodeContextMenu}
+            onCommitRename={handleCommitRename}
+            onCancelRename={() => setRenamingPath(null)}
             onResetPendingCreation={() => setPendingCreation(null)}
             onFileClick={handleNodeClick}
             onRefresh={() => refreshRoot(root)}
@@ -453,9 +658,41 @@ export function ExplorerPane({
           activeFile={activeFile}
         />
       </div>
+
+      {contextMenu && (
+        <ExplorerContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          path={contextMenu.path}
+          isDir={contextMenu.isDir}
+          activeFile={activeFile}
+          onClose={() => setContextMenu(null)}
+          onNewFile={() => setPendingCreation({ kind: "file", targetDir: contextMenu.isDir ? contextMenu.path : (contextMenu.path.split(/[/\\]/).slice(0, -1).join("/") || workspaceRoots[0]) })}
+          onNewFolder={() => setPendingCreation({ kind: "directory", targetDir: contextMenu.isDir ? contextMenu.path : (contextMenu.path.split(/[/\\]/).slice(0, -1).join("/") || workspaceRoots[0]) })}
+          onNewRustModule={() => setPendingCreation({ kind: "rust_module", targetDir: contextMenu.isDir ? contextMenu.path : (contextMenu.path.split(/[/\\]/).slice(0, -1).join("/") || workspaceRoots[0]) })}
+          onCut={() => { setClipboard({ action: "cut", files: selectedFiles.has(contextMenu.path) ? new Set(selectedFiles) : new Set([contextMenu.path]) }); setContextMenu(null); }}
+          onCopy={() => { setClipboard({ action: "copy", files: selectedFiles.has(contextMenu.path) ? new Set(selectedFiles) : new Set([contextMenu.path]) }); setContextMenu(null); }}
+          onPaste={() => { setContextMenu(null); }}
+          onCopyPath={() => { handleCopyPath(selectedFiles.has(contextMenu.path) ? Array.from(selectedFiles) : [contextMenu.path]); setContextMenu(null); }}
+          onCopyRelativePath={() => { handleCopyRelativePath(selectedFiles.has(contextMenu.path) ? Array.from(selectedFiles) : [contextMenu.path]); setContextMenu(null); }}
+          onRename={() => { setRenamingPath(contextMenu.path); setContextMenu(null); }}
+          onDelete={() => { setDeleteModalPaths(selectedFiles.has(contextMenu.path) ? Array.from(selectedFiles) : [contextMenu.path]); setContextMenu(null); }}
+          onShowInFolder={() => { handleShowInFolder(contextMenu.path); setContextMenu(null); }}
+          onCompareWithActive={() => { onFileClick(contextMenu.path, true); setContextMenu(null); }}
+        />
+      )}
+
+      {deleteModalPaths && deleteModalPaths.length > 0 && (
+        <DeleteConfirmModal
+          isOpen={true}
+          targetPaths={deleteModalPaths}
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setDeleteModalPaths(null)}
+        />
+      )}
     </div>
   );
-}
+});
 
 interface WorkspaceFolderSectionProps {
   rootPath: string;
@@ -466,13 +703,18 @@ interface WorkspaceFolderSectionProps {
   clipboard?: ClipboardState | null;
   workspaceDiagnostics?: WorkspaceDiagnostics;
   pendingCreation: { kind: CreationKind; targetDir: string } | null;
+  renamingPath: string | null;
+  focusedNodePath: string | null;
+  onNodeContextMenu: (e: React.MouseEvent, path: string, isDir: boolean) => void;
+  onCommitRename: (oldPath: string, newName: string) => void;
+  onCancelRename: () => void;
   onResetPendingCreation: () => void;
   onFileClick: (path: string, isDoubleClick?: boolean, ctrlKey?: boolean, isDirectory?: boolean) => void;
   onRefresh: () => void;
   onFileCreated: (path: string) => void;
 }
 
-function WorkspaceFolderSection({ 
+const WorkspaceFolderSection = React.memo(function WorkspaceFolderSection({ 
   rootPath, 
   entries, 
   activeFile, 
@@ -480,6 +722,11 @@ function WorkspaceFolderSection({
   clipboard, 
   workspaceDiagnostics,
   pendingCreation,
+  renamingPath,
+  focusedNodePath,
+  onNodeContextMenu,
+  onCommitRename,
+  onCancelRename,
   onResetPendingCreation,
   onFileClick, 
   onRefresh, 
@@ -495,7 +742,7 @@ function WorkspaceFolderSection({
       const normRoot = rootPath.replace(/\\/g, "/");
       const normTarget = pendingCreation.targetDir.replace(/\\/g, "/");
       
-      if (normTarget === normRoot || normTarget.startsWith(normRoot + "/")) {
+      if (normTarget === normRoot) {
         setInputValue("");
         setActiveCreation(pendingCreation);
         setIsExpanded(true);
@@ -617,13 +864,21 @@ function WorkspaceFolderSection({
               selectedFiles={selectedFiles}
               clipboard={clipboard}
               diagnostics={workspaceDiagnostics}
+              renamingPath={renamingPath}
+              focusedNodePath={focusedNodePath}
+              pendingCreation={pendingCreation}
+              onResetPendingCreation={onResetPendingCreation}
+              onFileCreated={onFileCreated}
               onFileClick={onFileClick}
+              onNodeContextMenu={onNodeContextMenu}
+              onCommitRename={onCommitRename}
+              onCancelRename={onCancelRename}
             />
           ))}
         </div>
       )}
     </div>
   );
-}
+});
 
 export default ExplorerPane;

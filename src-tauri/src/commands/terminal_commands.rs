@@ -69,7 +69,9 @@ fn find_git_bash() -> Option<String> {
 fn get_wsl_distros() -> Vec<String> {
     #[cfg(target_os = "windows")]
     {
+        use crate::utils::CommandExtHideWindow;
         if let Ok(output) = std::process::Command::new("wsl.exe")
+            .hide_window()
             .args(["-l", "-q"])
             .output()
         {

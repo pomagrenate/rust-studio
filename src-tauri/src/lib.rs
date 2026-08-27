@@ -15,8 +15,10 @@ pub mod github;
 pub mod codewiki;
 pub mod backup;
 pub mod settings;
+pub mod rust_testgen;
+pub mod utils;
 
-use commands::{buffer_commands, fs_commands, viewport_commands, terminal_commands, search_commands, timeline_commands, git_commands, cargo_commands, syntax_commands, lsp_commands, clippy_commands, codewiki_commands, backup_commands, settings_commands};
+use commands::{buffer_commands, fs_commands, viewport_commands, terminal_commands, search_commands, timeline_commands, git_commands, cargo_commands, syntax_commands, lsp_commands, clippy_commands, codewiki_commands, backup_commands, settings_commands, testgen_commands};
 use github::{api, auth};
 use debugger::{DebuggerState, debugger_embed::EmbeddedDebugger, start_debug_session, send_dap_request, stop_debug_session};
 use linter::scan_workspace_linter;
@@ -65,6 +67,7 @@ pub fn run() {
             fs_commands::rename_path,
             fs_commands::copy_path,
             fs_commands::move_path,
+            fs_commands::show_in_folder,
             fs_commands::read_file,
             fs_commands::create_rust_file,
             fs_commands::create_rust_module,
@@ -76,6 +79,7 @@ pub fn run() {
             buffer_commands::close_document,
             buffer_commands::apply_edit,
             buffer_commands::get_line_range,
+            buffer_commands::get_line_range_versioned,
             buffer_commands::get_document_info,
             buffer_commands::get_line_count,
             buffer_commands::undo_edit,
@@ -126,6 +130,7 @@ pub fn run() {
             search_commands::replace_in_files,
             search_commands::get_call_hierarchy,
             search_commands::get_type_hierarchy,
+            search_commands::search_ast_grep,
 
             // Terminal commands
             terminal_commands::list_terminal_profiles,
@@ -154,9 +159,16 @@ pub fn run() {
             git_commands::git_init,
             git_commands::git_get_branches,
             git_commands::git_checkout,
-            git_commands::git_create_branch,
             git_commands::git_get_conflicts,
             git_commands::git_resolve_conflict_file,
+            git_commands::git_stash_save,
+            git_commands::git_stash_pop,
+            git_commands::git_stash_list,
+            git_commands::git_get_commit_details,
+            git_commands::git_checkout_ours,
+            git_commands::git_checkout_theirs,
+            git_commands::git_abort_merge,
+            git_commands::git_get_file_diff,
 
             // Rust IDE (Cargo) commands
             cargo_commands::cargo_get_project_info,
@@ -168,6 +180,7 @@ pub fn run() {
             cargo_commands::cargo_create_project,
             cargo_commands::cargo_scaffold_project,
             cargo_commands::cargo_run_single_test,
+            cargo_commands::cargo_run_all_tests,
             cargo_commands::cargo_check_streaming,
             cargo_commands::cargo_clippy_streaming,
             cargo_commands::cargo_build_streaming,
@@ -202,6 +215,7 @@ pub fn run() {
             auth::get_github_token,
             auth::clear_github_token,
             auth::validate_token_format,
+            api::github_verify_token,
 
             // CodeWiki commands
             codewiki_commands::build_code_wiki_index,
@@ -219,6 +233,10 @@ pub fn run() {
             // IDE Settings commands
             settings_commands::get_user_settings,
             settings_commands::save_user_settings,
+
+            // Rust AST Test Synthesizer commands
+            testgen_commands::generate_rust_tests,
+            testgen_commands::inject_rust_tests_to_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
