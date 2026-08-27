@@ -1,6 +1,6 @@
 [package]
 name = "pomai-studio"
-version = "0.1.5"
+version = "0.1.6"
 description = "pomai-studio — a high-performance Rust/Tauri code editor"
 authors = ["Pomai"]
 edition = "2021"

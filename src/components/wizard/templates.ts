@@ -157,5 +157,26 @@ export const RUST_PROJECT_TEMPLATES: ProjectTemplate[] = [
       "Single codebase for Desktop and Web",
       "Built-in hot reloading"
     ]
-  }
+  },
+  // -- Python Projects -- 
+  {
+    id: "fastapi-uv",
+    name: "FastAPI Web Service (uv)",
+    category: "Web Backend",
+    description: "High-performance Python async REST API powered by FastAPI and the blazing-fast uv package manager.",
+    badge: "Python",
+    tags: ["FastAPI", "Python", "uv", "Async", "REST API"],
+    defaultName: "my_fastapi_app",
+    setupCommands: [
+      "uv init --app {name}",
+      "cd {name} && uv add \"fastapi[standard]\"",
+      "cd {name} && uv add pydantic-settings"
+    ],
+    features: [
+      "Instant virtual environment & dependency locking via uv",
+      "Auto-generated OpenAPI (Swagger) documentation",
+      "Type validation with Pydantic v2",
+      "Production-ready ASGI server integration (Uvicorn)"
+    ]
+  },
 ];

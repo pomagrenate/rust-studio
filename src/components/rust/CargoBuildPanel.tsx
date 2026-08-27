@@ -136,7 +136,7 @@ export function CargoBuildPanel({
 
   return (
     <div className={styles.buildPanelContainer}>
-      {/* ── Subheader Tabs Bar ── */}
+      {/* Subheader Tabs Bar  */}
       <div className={styles.panelHeader}>
         <div className={styles.headerLeft}>
           <span className={styles.headerTitleBadge}>Build</span>

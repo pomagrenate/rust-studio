@@ -3,7 +3,7 @@
  * Features: fuzzy matching, VS Code icons, side-docked documentation, virtual scrolling
  */
 
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   VscSymbolMethod,
   VscSymbolStructure,
@@ -203,6 +203,46 @@ function renderMarkdownDoc(content: string): React.ReactNode {
   return elements;
 }
 
+// Icon mapping for Rust-idiomatic LSP completion kinds
+function getKindIcon(kind?: string | null, label?: string) {
+  const kindNum = kind ? parseInt(kind, 10) : undefined;
+  const labelLower = (label || "").toLowerCase();
+  
+  // Special handling for macros (ending with !)
+  if (labelLower.endsWith("!")) {
+    return <VscSymbolColor size={16} />;
+  }
+  
+  switch (kindNum) {
+    case 1: return <VscSymbolSnippet size={16} />; // Text
+    case 2: return <VscSymbolMethod size={16} />; // Method
+    case 3: return <VscSymbolMethod size={16} />; // Function
+    case 4: return <VscSymbolClass size={16} />; // Constructor
+    case 5: return <VscSymbolField size={16} />; // Field
+    case 6: return <VscSymbolVariable size={16} />; // Variable
+    case 7: return <VscSymbolStructure size={16} />; // Class (Struct)
+    case 8: return <VscSymbolInterface size={16} />; // Interface (Trait)
+    case 9: return <VscSymbolNamespace size={16} />; // Module
+    case 10: return <VscSymbolProperty size={16} />; // Property
+    case 11: return <VscSymbolNumeric size={16} />; // Unit
+    case 12: return <VscSymbolVariable size={16} />; // Value
+    case 13: return <VscSymbolEnum size={16} />; // Enum
+    case 14: return <VscSymbolKeyword size={16} />; // Keyword
+    case 15: return <VscSymbolSnippet size={16} />; // Snippet
+    case 16: return <VscSymbolColor size={16} />; // Color
+    case 17: return <VscSymbolFile size={16} />; // File
+    case 18: return <VscSymbolKey size={16} />; // Reference
+    case 19: return <VscSymbolNamespace size={16} />; // Folder
+    case 20: return <VscSymbolVariable size={16} />; // EnumMember
+    case 21: return <VscSymbolConstant size={16} />; // Constant
+    case 22: return <VscSymbolStructure size={16} />; // Struct
+    case 23: return <VscSymbolEvent size={16} />; // Event
+    case 24: return <VscSymbolOperator size={16} />; // Operator
+    case 25: return <VscSymbolParameter size={16} />; // TypeParameter
+    default: return <VscSymbolVariable size={16} />;
+  }
+}
+
 export function CompletionWidget({
   x,
   y,
@@ -310,47 +350,6 @@ export function CompletionWidget({
 
   const selectedItem = filteredItems[selectedIndex];
   const hasDocumentation = selectedItem?.documentation || selectedItem?.detail;
-
-  // Icon mapping for Rust-idiomatic LSP completion kinds
-  const getKindIcon = useCallback((kind?: string | null) => {
-    const kindNum = kind ? parseInt(kind, 10) : undefined;
-    const labelLower = (selectedItem?.label || "").toLowerCase();
-    
-    // Special handling for macros (ending with !)
-    if (labelLower.endsWith("!")) {
-      return <VscSymbolColor size={16} />;
-    }
-    
-    switch (kindNum) {
-      case 1: return <VscSymbolSnippet size={16} />; // Text
-      case 2: return <VscSymbolMethod size={16} />; // Method
-      case 3: return <VscSymbolMethod size={16} />; // Function
-      case 4: return <VscSymbolClass size={16} />; // Constructor
-      case 5: return <VscSymbolField size={16} />; // Field
-      case 6: return <VscSymbolVariable size={16} />; // Variable
-      case 7: return <VscSymbolStructure size={16} />; // Class (Struct)
-      case 8: return <VscSymbolInterface size={16} />; // Interface (Trait)
-      case 9: return <VscSymbolNamespace size={16} />; // Module
-      case 10: return <VscSymbolProperty size={16} />; // Property
-      case 11: return <VscSymbolNumeric size={16} />; // Unit
-      case 12: return <VscSymbolVariable size={16} />; // Value
-      case 13: return <VscSymbolEnum size={16} />; // Enum
-      case 14: return <VscSymbolKeyword size={16} />; // Keyword
-      case 15: return <VscSymbolSnippet size={16} />; // Snippet
-      case 16: return <VscSymbolColor size={16} />; // Color
-      case 17: return <VscSymbolFile size={16} />; // File
-      case 18: return <VscSymbolKey size={16} />; // Reference
-      case 19: return <VscSymbolNamespace size={16} />; // Folder
-      case 20: return <VscSymbolVariable size={16} />; // EnumMember
-      case 21: return <VscSymbolConstant size={16} />; // Constant
-      case 22: return <VscSymbolStructure size={16} />; // Struct
-      case 23: return <VscSymbolEvent size={16} />; // Event
-      case 24: return <VscSymbolOperator size={16} />; // Operator
-      case 25: return <VscSymbolParameter size={16} />; // TypeParameter
-      default: return <VscSymbolVariable size={16} />;
-    }
-  }, [selectedItem]);
-
   const visibleItems = filteredItems.slice(startIdx, endIdx);
 
   return (
@@ -376,7 +375,7 @@ export function CompletionWidget({
                 style={{ height: `${ITEM_HEIGHT}px` }}
                 onClick={() => onSelect(item)}
               >
-                <span className={styles.completionIcon}>{getKindIcon(item.kind)}</span>
+                <span className={styles.completionIcon}>{getKindIcon(item.kind, item.label)}</span>
                 <span className={styles.completionLabel}>
                   {renderHighlightedLabel(item.label, (item as any).matchIndices)}
                 </span>
