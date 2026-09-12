@@ -86,16 +86,17 @@
   align-items: center;
   gap: 8px;
   margin-bottom: 20px;
-  overflow-x: auto;
-  padding-bottom: 4px;
+  padding: 4px 2px 12px 2px;
   flex-wrap: wrap;
 }
 
 .categoryPill {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 6px 14px;
+  height: 32px;
+  box-sizing: border-box;
   border-radius: 20px;
   background-color: #f6f8fa;
   border: 1px solid #d0d7de;
@@ -124,8 +125,9 @@
 .categoryPillCount {
   font-size: 11px;
   background-color: rgba(0, 0, 0, 0.08);
-  padding: 1px 6px;
+  padding: 1px 7px;
   border-radius: 10px;
+  line-height: 1.2;
 }
 
 .categoryPillActive .categoryPillCount {

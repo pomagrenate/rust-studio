@@ -8,6 +8,23 @@ import { ProjectTemplate } from "./types";
 export const RUST_PROJECT_TEMPLATES: ProjectTemplate[] = [
   // ── Basic ──
   {
+    id: "cargo-blank",
+    name: "Blank Rust Binary",
+    category: "Basic",
+    description: "Minimal Rust binary application initialized with cargo new containing only main.rs hello world.",
+    badge: "Minimal",
+    tags: ["Rust", "Binary", "Minimal", "Hello World"],
+    defaultName: "my_rust_app",
+    setupCommands: [
+      "cargo new {name} --bin"
+    ],
+    features: [
+      "Clean, unopinionated Rust binary project",
+      "Standard src/main.rs with Hello World print statement",
+      "Zero external dependencies"
+    ]
+  },
+  {
     id: "cargo-cli",
     name: "CLI Application (Clap + Anyhow)",
     category: "Basic",
@@ -177,6 +194,63 @@ export const RUST_PROJECT_TEMPLATES: ProjectTemplate[] = [
       "Auto-generated OpenAPI (Swagger) documentation",
       "Type validation with Pydantic v2",
       "Production-ready ASGI server integration (Uvicorn)"
+    ]
+  },
+  {
+    id: "flask-uv",
+    name: "Flask Web Application (uv)",
+    category: "Web Backend",
+    description: "Lightweight WSGI Python web application powered by Flask, Jinja2, and the ultra-fast uv package manager.",
+    badge: "Python",
+    tags: ["Flask", "Python", "uv", "WSGI", "Jinja2"],
+    defaultName: "my_flask_app",
+    setupCommands: [
+      "uv init --app {name}",
+      "uv add flask",
+      "uv add python-dotenv"
+    ],
+    features: [
+      "Lightweight microframework architecture",
+      "Template rendering via Jinja2 & static asset handling",
+      "Environment configuration support via python-dotenv",
+      "Instant virtual environment managed by uv"
+    ]
+  },
+  {
+    id: "python-blank",
+    name: "Blank Python Application (uv)",
+    category: "Basic",
+    description: "Minimal Python application initialized with uv containing only main.py hello world.",
+    badge: "Python",
+    tags: ["Python", "uv", "Minimal", "Hello World"],
+    defaultName: "my_python_app",
+    setupCommands: [
+      "uv init --app {name}"
+    ],
+    features: [
+      "Minimal Python script application with main.py",
+      "Instant virtual environment & pyproject.toml initialized via uv",
+      "Zero external dependencies"
+    ]
+  },
+  {
+    id: "django-uv",
+    name: "Django Web Framework (uv)",
+    category: "Web Backend",
+    description: "Batteries-included full-stack Python web framework with ORM, Admin interface, and manage.py scaffolding.",
+    badge: "Python",
+    tags: ["Django", "Python", "uv", "ORM", "Admin", "REST"],
+    defaultName: "my_django_app",
+    setupCommands: [
+      "uv init --app {name}",
+      "uv add django",
+      "uv run django-admin startproject app ."
+    ],
+    features: [
+      "Full-stack Web Framework with built-in ORM & Admin Panel",
+      "Automatic manage.py CLI & app settings module",
+      "Batteries-included authentication & security middleware",
+      "Instant virtual environment & dependency management via uv"
     ]
   },
 ];

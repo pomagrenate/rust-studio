@@ -54,9 +54,9 @@ impl UserData {
         start_byte: 10,
         old_end_byte: 10,
         new_end_byte: 11,
-        start_position: vec![1, 0],
-        old_end_position: vec![1, 0],
-        new_end_position: vec![1, 1],
+        start_position: [1, 0],
+        old_end_position: [1, 0],
+        new_end_position: [1, 1],
     };
     let modified_code = format!(" // edit\n{}", rust_code);
 

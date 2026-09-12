@@ -12,6 +12,14 @@ edition = "2021"
 name = "pomai_studio_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+[[bin]]
+name = "pomai-studio"
+path = "src/main.rs"
+
+[[bin]]
+name = "validate_perf"
+path = "src/bin/validate_perf.rs"
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
@@ -72,6 +80,7 @@ base64 = "0.22"
 syn = { version = "2", features = ["full", "extra-traits", "parsing"] }
 quote = "1"
 proc-macro2 = { version = "1", features = ["span-locations"] }
+tempfile = "3.8"
 
 [dev-dependencies]
 tempfile = "3.8"
@@ -94,7 +103,7 @@ name = "search_benchmarks"
 harness = false
 
 [profile.release]
-# Maximum optimisation for the release binary
+# Optimized for high performance and fast linking
 opt-level = 3
-lto = true
-codegen-units = 1
+lto = "thin"
+codegen-units = 16

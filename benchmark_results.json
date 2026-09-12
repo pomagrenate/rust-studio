@@ -1,0 +1,212 @@
+{
+  "timestamp": "2026-09-12 10:19:54",
+  "total_tests": 20,
+  "passed_tests": 20,
+  "failed_tests": 0,
+  "pass_rate_percent": 100.0,
+  "total_duration_secs": 1.6454417000000001,
+  "initial_rss_mb": 3.42578125,
+  "peak_rss_mb": 8.80078125,
+  "results": [
+    {
+      "category": "Fast (Speed & Latency)",
+      "name": "Keystroke Typing Latency (100,000 lines)",
+      "metric": "Average Latency",
+      "value_num": 3.138,
+      "value_str": "3.14 µs",
+      "sla": "< 50.00 µs",
+      "passed": true,
+      "details": "O(log N) rope insertion at line 50,000 in ~3.5MB document"
+    },
+    {
+      "category": "Fast (Speed & Latency)",
+      "name": "Massive File Typing Latency (500,000 lines)",
+      "metric": "Average Latency",
+      "value_num": 3.197,
+      "value_str": "3.20 µs",
+      "sla": "< 50.00 µs",
+      "passed": true,
+      "details": "Instantaneous edit in ~18MB code file without full reallocation"
+    },
+    {
+      "category": "Fast (Speed & Latency)",
+      "name": "Viewport 50-Line Slice (100k lines)",
+      "metric": "Average Latency",
+      "value_num": 43.306000000000004,
+      "value_str": "43.31 µs",
+      "sla": "< 50.00 µs (0.3% of 60fps frame)",
+      "passed": true,
+      "details": "Extracts 50 visible editor lines for 60+ FPS virtual scrolling"
+    },
+    {
+      "category": "Fast (Speed & Latency)",
+      "name": "Viewport Layout Virtualization Math",
+      "metric": "Calculation Time",
+      "value_num": 535.0,
+      "value_str": "535.0 ns",
+      "sla": "< 1,000.0 ns",
+      "passed": true,
+      "details": "Prefix-sum uniform line layout resolution for 500k-line document"
+    },
+    {
+      "category": "Fast (Speed & Latency)",
+      "name": "Tree-sitter Incremental Reparse",
+      "metric": "Incremental Time",
+      "value_num": 307.72200000000004,
+      "value_str": "307.7 µs (vs 9.27 ms full, 30.1x speedup)",
+      "sla": "< 350.0 µs (> 20x speedup)",
+      "passed": true,
+      "details": "Only re-parses mutated AST subtree; guarantees zero UI stutter"
+    },
+    {
+      "category": "Fast (Speed & Latency)",
+      "name": "Syntax Tokenizer Throughput",
+      "metric": "Throughput",
+      "value_num": 296343.71129010274,
+      "value_str": "296344 lines/s (9.50 MB/s)",
+      "sla": "> 80,000 lines/s",
+      "passed": true,
+      "details": "Fast syntax lexer for instant syntax highlighting"
+    },
+    {
+      "category": "Fast (Speed & Latency)",
+      "name": "Workspace Plain Text Search",
+      "metric": "Throughput",
+      "value_num": 8.074640478960996,
+      "value_str": "8.07 MB/s (10 files, 10 matches)",
+      "sla": "> 3.00 MB/s",
+      "passed": true,
+      "details": "Concurrent recursive workspace grep across files"
+    },
+    {
+      "category": "Fast (Speed & Latency)",
+      "name": "EditStack Push/Undo/Redo Latency",
+      "metric": "Cycle Time",
+      "value_num": 0.586,
+      "value_str": "0.59 µs",
+      "sla": "< 3.00 µs",
+      "passed": true,
+      "details": "Instantaneous undo/redo history navigation with 0 latency"
+    },
+    {
+      "category": "Low Memory (Allocation)",
+      "name": "Rope Buffer Memory Overhead Ratio",
+      "metric": "Rope/Raw Ratio",
+      "value_num": 1.1346284341110895,
+      "value_str": "1.13x (3.59 MB Rope / 3.16 MB Raw)",
+      "sla": "< 1.45x raw bytes",
+      "passed": true,
+      "details": "Compact B-tree chunking stores text with minimal heap metadata"
+    },
+    {
+      "category": "Low Memory (Allocation)",
+      "name": "100,000-Line Code Document Footprint",
+      "metric": "Heap Allocated",
+      "value_num": 3.587890625,
+      "value_str": "3.59 MB",
+      "sla": "< 5.50 MB",
+      "passed": true,
+      "details": "Complete 100k-line Rust file uses under 5 MB of heap memory"
+    },
+    {
+      "category": "Low Memory (Allocation)",
+      "name": "500,000-Line Massive Document Footprint",
+      "metric": "Heap Allocated",
+      "value_num": 18.0439453125,
+      "value_str": "18.04 MB (raw: 15.90 MB)",
+      "sla": "< 26.00 MB",
+      "passed": true,
+      "details": "Sub-30MB footprint for half a million lines of code"
+    },
+    {
+      "category": "Low Memory (Allocation)",
+      "name": "Multi-Document Cache Scaling (50 files)",
+      "metric": "Heap Allocated",
+      "value_num": 1.819192886352539,
+      "value_str": "1.82 MB (50 open files)",
+      "sla": "< 6.00 MB",
+      "passed": true,
+      "details": "CacheEngine manages 50 live open documents under 6 MB"
+    },
+    {
+      "category": "Low Memory (Allocation)",
+      "name": "Memory Reclaim (Zero Leak on Close)",
+      "metric": "Residual Leak",
+      "value_num": 0.0,
+      "value_str": "0.00 KB residual delta",
+      "sla": "< 100.00 KB",
+      "passed": true,
+      "details": "100% of buffer memory is cleanly released on document close"
+    },
+    {
+      "category": "Low Memory (Allocation)",
+      "name": "OS Process Working Set (RSS)",
+      "metric": "Resident Memory",
+      "value_num": 11.91796875,
+      "value_str": "11.92 MB",
+      "sla": "< 250.00 MB",
+      "passed": true,
+      "details": "Real OS working set verified via Windows K32GetProcessMemoryInfo"
+    },
+    {
+      "category": "Stability (Endurance & Fuzzing)",
+      "name": "20,000-Operation Mutation Fuzzer",
+      "metric": "Integrity Rate",
+      "value_num": 100.0,
+      "value_str": "100.0% (20k ops in 0.13s, 0 panics)",
+      "sla": "0 panics, 100% integrity",
+      "passed": true,
+      "details": "Random insertions, multi-line deletions & queries; 0 invariant violations"
+    },
+    {
+      "category": "Stability (Endurance & Fuzzing)",
+      "name": "8-Thread Concurrent Hammer Test",
+      "metric": "Throughput",
+      "value_num": 93835.19209119467,
+      "value_str": "93835 ops/s (40k ops, 0 deadlocks)",
+      "sla": "0 deadlocks, 0 race conditions",
+      "passed": true,
+      "details": "6 parallel readers + 2 writers hammering shared buffer simultaneously"
+    },
+    {
+      "category": "Stability (Endurance & Fuzzing)",
+      "name": "Degenerate Single-Line (250KB line)",
+      "metric": "Slice Time",
+      "value_num": 2.5909999999999997,
+      "value_str": "2.59 µs (250,000 char line)",
+      "sla": "< 20.00 µs, 0 stack overflow",
+      "passed": true,
+      "details": "Gracefully handles minified bundles without stack overflow or lockups"
+    },
+    {
+      "category": "Stability (Endurance & Fuzzing)",
+      "name": "Unicode Multibyte & Emoji Stress",
+      "metric": "Boundary Correctness",
+      "value_num": 100.0,
+      "value_str": "100.0% Exact Char Alignment",
+      "sla": "0 panics on UTF-8 boundaries",
+      "passed": true,
+      "details": "Proper scalar value navigation through emojis, CJK ideographs & RTL"
+    },
+    {
+      "category": "Stability (Endurance & Fuzzing)",
+      "name": "Rapid Open/Modify/Drop Churn",
+      "metric": "Cycle Time",
+      "value_num": 7.824599999999999,
+      "value_str": "7.82 ms (1,000 cycles)",
+      "sla": "< 150.00 ms total",
+      "passed": true,
+      "details": "1,000 document lifecycles with zero resource leaks"
+    },
+    {
+      "category": "Stability (Endurance & Fuzzing)",
+      "name": "10,000-Cycle Endurance Soak Test",
+      "metric": "Memory Growth",
+      "value_num": 29.0,
+      "value_str": "29.00 KB net growth after 10k edits",
+      "sla": "< 150.00 KB net growth",
+      "passed": true,
+      "details": "Sub-150KB heap delta over 10,000 continuous mutation cycles"
+    }
+  ]
+}
